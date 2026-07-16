@@ -4,18 +4,16 @@
  */
 
 import type { Booking, ContainerMaster, DispatchOrder, GateRecord, InventoryRow } from "../types"
-import { yardsSeed } from "../data/yards.seed"
+import { nowLocalStr } from "../now-local"
 
-export function nowLocalStr() {
-  const d = new Date()
-  const p = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
+export { nowLocalStr }
 
-/** 从提箱地/堆场名推断城市：优先查真实堆场表，否则回退旧规则 */
-export function cityFromPlace(place: string) {
-  const hit = yardsSeed.find((y) => y.name === place)
-  if (hit?.city) return hit.city
+/** 从提箱地/堆场名推断城市；可传入堆场列表做精确匹配 */
+export function cityFromPlace(place: string, yards?: { name: string; city: string }[]) {
+  if (yards?.length) {
+    const hit = yards.find((y) => y.name === place)
+    if (hit?.city) return hit.city
+  }
   return place.replace(/(港|中央)?堆场$/, "").trim() || place
 }
 

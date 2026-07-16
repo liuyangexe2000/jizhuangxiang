@@ -13,7 +13,7 @@ import type {
   WorkHoursConfig,
 } from "./types"
 import type { ResourceKey } from "./resources"
-import { nowLocalStr } from "./domain/dispatch-ops"
+import { nowLocalStr } from "./now-local"
 
 import { SETTING_KEYS } from "./settings-keys"
 

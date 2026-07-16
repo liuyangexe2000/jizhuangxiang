@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import type { RoleId, SystemUser } from "./types"
-import { roles } from "./mock-data"
+import { roles } from "./roles"
 
 interface SessionUser {
   uid: string

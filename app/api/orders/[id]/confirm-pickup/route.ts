@@ -93,7 +93,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   }
 
   const yard = order.pickupYard || `${order.pickupCity}堆场`
-  const city = cityFromPlace(yard) || order.pickupCity
+  const city = cityFromPlace(yard, yards as { name: string; city: string }[]) || order.pickupCity
   const inventory = (await list("inventory")) as InventoryRow[]
   const inv = findInventoryRow(inventory, { yard, city })
   if (inv) {
