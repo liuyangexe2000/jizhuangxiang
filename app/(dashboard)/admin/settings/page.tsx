@@ -134,7 +134,9 @@ export default function AdminSettingsPage() {
           <Separator />
           <div className="space-y-3">
             <p className="text-sm font-medium">各角色是否显示无权限菜单（灰显锁定）</p>
-            <p className="text-xs text-muted-foreground">关闭后该角色侧栏直接隐藏无权限项</p>
+            <p className="text-xs text-muted-foreground">
+              关闭后该角色侧栏直接隐藏无权限项。切换后会立即保存；若执行过数据库初始化（pnpm db:init）会恢复为默认「全部开启」。
+            </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {ROLE_IDS.map((rid) => {
                 const name = roleDefs.find((r) => r.id === rid)?.name ?? rid
@@ -145,12 +147,30 @@ export default function AdminSettingsPage() {
                     </span>
                     <Switch
                       checked={form.showUnauthorizedMenus[rid] !== false}
-                      onCheckedChange={(v) =>
-                        setForm({
-                          ...form,
-                          showUnauthorizedMenus: { ...form.showUnauthorizedMenus, [rid]: !!v },
-                        })
-                      }
+                      disabled={saving}
+                      onCheckedChange={(v) => {
+                        const next = { ...form.showUnauthorizedMenus, [rid]: !!v }
+                        setForm({ ...form, showUnauthorizedMenus: next })
+                        void (async () => {
+                          setSaving(true)
+                          try {
+                            const res = await fetch("/api/settings", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                [SETTING_KEYS.showUnauthorizedMenus]: next,
+                              }),
+                            })
+                            const data = await res.json().catch(() => ({}))
+                            if (!res.ok) throw new Error(data.error || "保存失败")
+                            toast.success(`${rid} 菜单策略已保存`)
+                          } catch (e) {
+                            toast.error((e as Error).message)
+                          } finally {
+                            setSaving(false)
+                          }
+                        })()
+                      }}
                     />
                   </label>
                 )

@@ -1018,18 +1018,9 @@ export const l10AdminConfig: ScenarioFn = async ({ fail, pass }) => {
   assert(after.showDemoAccounts === false, "关闭演示账号后公开配置应为 false", fail)
   assert(after.showUnauthorizedMenus?.R03 === false, "R03 应隐藏无权限菜单", fail)
 
-  // 恢复演示开关，避免影响本地手工调试
+  // 仅恢复演示账号开关，勿改动菜单灰显策略（避免冲掉本地手工配置）
   await r00.api("PATCH", "/api/settings", {
     "login.showDemoAccounts": true,
-    "nav.showUnauthorizedMenus": {
-      R00: true,
-      R01: true,
-      R02: true,
-      R03: true,
-      R04: true,
-      R05: true,
-      R06: true,
-    },
   })
 
   const settingsList = await r00.list("settings")
