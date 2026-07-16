@@ -1,0 +1,44 @@
+---
+description: Git 备份由 Agent 全权负责，禁止让用户动手
+alwaysApply: true
+---
+
+# Git 备份责任（用户硬性要求）
+
+## 铁律
+
+- **备份是 Agent 的事，永远不要让用户执行 git / push / 配置命令。**
+- 禁止输出「请你本地运行：`git add` / `git commit` / `git push` / `git config`」这类甩锅步骤。
+- 用户只需正常提需求；需要备份时 Agent **直接做完**并回复仓库状态/链接。
+
+## 何时必须备份
+
+1. **完成一批有意义的功能/修复后**（尤其是多文件改动）→ `commit` + `push`
+2. **任何批量改源码 / 高风险操作之前** → 先确保干净基线已 push，必要时先 commit 当前可工作状态
+3. **用户明确说备份/提交/推送时** → 立即执行
+4. **会话末尾若有未提交的重要改动** → 主动 commit + push，不要等用户提醒
+
+## 本仓库约定
+
+- Remote：`https://github.com/liuyangexe2000/jizhuangxiang.git`
+- 作者（commit 时用 `-c`，勿改全局 git config）：
+  - `user.name=liuyangexe2000`
+  - `user.email=liuyangexe2000@gmail.com`
+- 分支：`main` → `origin/main`
+- **永不提交**：`.env`、`.env*.local`、密钥、`node_modules`、`.next`
+
+## 执行方式（PowerShell）
+
+```powershell
+git add -A
+git status
+git -c user.name="liuyangexe2000" -c user.email="liuyangexe2000@gmail.com" commit -m "消息"
+git push -u origin HEAD
+```
+
+- Windows 下 commit message 用 PowerShell here-string，**不要**用 bash heredoc。
+- push 失败（鉴权等）时：自行重试 / 说明阻塞原因；**仍不要**把「请你去 GitHub 点一下」写成用户的日常义务——仅在 Agent 侧确实无法完成鉴权时才简短说明卡点。
+
+## 与「安全改码」的关系
+
+有 git 备份后才允许批量改动；坏了用 `git checkout -- <file>` 回滚，禁止整页重写当修复。
