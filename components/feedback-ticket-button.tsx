@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { usePathname } from "next/navigation"
 import { toast } from "sonner"
 import { MessageSquarePlus, Upload, X } from "lucide-react"
@@ -39,6 +39,27 @@ function resolvePageTitle(pathname: string): string {
   return pathname
 }
 
+function clipboardImageFile(data: DataTransfer | null): File | null {
+  if (!data) return null
+  const items = data.items
+  if (items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item?.kind === "file" && item.type.startsWith("image/")) {
+        return item.getAsFile()
+      }
+    }
+  }
+  const files = data.files
+  if (files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (file?.type.startsWith("image/")) return file
+    }
+  }
+  return null
+}
+
 export function FeedbackTicketButton() {
   const pathname = usePathname() || "/"
   const { user, roleId, loading: roleLoading } = useRole()
@@ -61,13 +82,7 @@ export function FeedbackTicketButton() {
     [roleId],
   )
 
-  useEffect(() => {
-    if (open) setCreatedAt(nowLocalStr())
-  }, [open])
-
-  if (roleLoading || !enabled || !user) return null
-
-  async function onPickImage(file: File | null) {
+  const onPickImage = useCallback(async (file: File | null) => {
     if (!file) return
     setUploading(true)
     try {
@@ -80,7 +95,29 @@ export function FeedbackTicketButton() {
     } finally {
       setUploading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (open) setCreatedAt(nowLocalStr())
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    function onPaste(e: ClipboardEvent) {
+      const file = clipboardImageFile(e.clipboardData)
+      if (!file) return
+      e.preventDefault()
+      void onPickImage(
+        new File([file], `clipboard_${Date.now()}.png`, {
+          type: file.type || "image/png",
+        }),
+      )
+    }
+    window.addEventListener("paste", onPaste)
+    return () => window.removeEventListener("paste", onPaste)
+  }, [open, onPickImage])
+
+  if (roleLoading || !enabled || !user) return null
 
   async function submit() {
     const text = content.trim()
@@ -187,9 +224,24 @@ export function FeedbackTicketButton() {
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div
+              className="space-y-1.5 rounded-lg border border-dashed p-3"
+              tabIndex={0}
+              onPaste={(e) => {
+                const file = clipboardImageFile(e.clipboardData)
+                if (!file) return
+                e.preventDefault()
+                void onPickImage(
+                  new File([file], `clipboard_${Date.now()}.png`, {
+                    type: file.type || "image/png",
+                  }),
+                )
+              }}
+            >
               <Label>截图上传</Label>
-              <p className="text-xs text-muted-foreground">图片宽度自动压缩至不超过 1024px</p>
+              <p className="text-xs text-muted-foreground">
+                支持选择图片，或直接 Ctrl+V 粘贴剪贴板截图；宽度自动压缩至不超过 1024px
+              </p>
               <div className="flex flex-wrap items-center gap-2">
                 <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-2 text-sm">
                   <Upload className="size-3.5" />
@@ -225,7 +277,6 @@ export function FeedbackTicketButton() {
               )}
             </div>
 
-            {/* 日期字段：自动记录，对用户隐藏 */}
             <input type="hidden" name="createdAt" value={createdAt} readOnly />
           </div>
 
