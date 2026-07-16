@@ -26,6 +26,39 @@ import type { FeedbackTicket, FeedbackTicketType } from "@/lib/types"
 
 const TICKET_TYPES: FeedbackTicketType[] = ["bug", "业务需求", "简易", "体验优化", "其他"]
 
+
+function resolveActiveTabLabels(): string[] {
+  if (typeof document === "undefined") return []
+  const selectors = [
+    'main [data-slot="tabs-trigger"][data-active]',
+    'main [data-slot="tabs-trigger"][data-active=""]',
+    'main [data-slot="tabs-trigger"][aria-selected="true"]',
+    'main [data-slot="tabs-trigger"][data-state="active"]',
+  ]
+  const seen = new Set<Element>()
+  const labels: string[] = []
+  for (const sel of selectors) {
+    document.querySelectorAll(sel).forEach((el) => {
+      if (seen.has(el)) return
+      seen.add(el)
+      const text = (el.textContent || "")
+        .replace(/\s+/g, " ")
+        .replace(/[（(]\d+[）)]/g, "")
+        .trim()
+      if (text && !labels.includes(text)) labels.push(text)
+    })
+  }
+  return labels
+}
+
+function buildPageLocation(pathname: string, pageTitle: string, tabs: string[]) {
+  const tabPart = tabs.length > 0 ? ` · Tab：${tabs.join(" / ")}` : ""
+  return {
+    pageTitle: `${pageTitle}${tabPart}`,
+    pagePath: tabs.length > 0 ? `${pathname}#${encodeURIComponent(tabs.join("/"))}` : pathname,
+  }
+}
+
 function resolvePageTitle(pathname: string): string {
   for (const g of navGroups) {
     for (const item of g.items) {
@@ -74,6 +107,8 @@ export function FeedbackTicketButton() {
   const [screenshotFileName, setScreenshotFileName] = useState("")
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [locationTitle, setLocationTitle] = useState("")
+  const [locationPath, setLocationPath] = useState("")
 
   const pageTitle = useMemo(() => resolvePageTitle(pathname), [pathname])
   const roleName = useMemo(
@@ -97,8 +132,13 @@ export function FeedbackTicketButton() {
   }, [])
 
   useEffect(() => {
-    if (open) setCreatedAt(nowLocalStr())
-  }, [open])
+    if (!open) return
+    setCreatedAt(nowLocalStr())
+    const tabs = resolveActiveTabLabels()
+    const loc = buildPageLocation(pathname, resolvePageTitle(pathname), tabs)
+    setLocationTitle(loc.pageTitle)
+    setLocationPath(loc.pagePath)
+  }, [open, pathname])
 
   useEffect(() => {
     if (!open) return
@@ -137,14 +177,14 @@ export function FeedbackTicketButton() {
         userName: user!.name,
         roleId: roleId!,
         roleName,
-        pagePath: pathname,
-        pageTitle,
+        pagePath: locationPath || pathname,
+        pageTitle: locationTitle || pageTitle,
         screenshotDataUrl: screenshotDataUrl || undefined,
         screenshotFileName: screenshotFileName || undefined,
         createdAt: stamp,
         status: "待处理",
         __auditAction: "新增",
-        __auditDetail: `${ticketNo} · ${type} · ${pageTitle}`,
+        __auditDetail: `${ticketNo} · ${type} · ${locationTitle || pageTitle}`,
       })
       toast.success("工单已提交，感谢反馈")
       setOpen(false)
@@ -204,9 +244,9 @@ export function FeedbackTicketButton() {
                 <Label>所在功能页面</Label>
                 <div
                   className="flex h-8 items-center overflow-x-auto rounded-lg border border-input bg-muted/50 px-2.5 text-sm whitespace-nowrap text-muted-foreground select-none"
-                  title={`${pageTitle} · ${pathname}`}
+                  title={`${locationTitle || pageTitle} · ${locationPath || pathname}`}
                 >
-                  {pageTitle} · {pathname}
+                  {locationTitle || pageTitle} · {locationPath || pathname}
                 </div>
               </div>
             </div>
