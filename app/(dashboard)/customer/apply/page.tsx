@@ -109,14 +109,10 @@ export default function ApplyPage() {
     const pad = (n: number) => String(n).padStart(2, "0")
     const fmt = (d: Date) =>
       `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-    const orderNo = `UB${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${String(
-      now.getTime(),
-    ).slice(-4)}`
     const unit = priceMap[containerType] ?? 3000
     const customer = isProxy ? customerOrg : user?.org || user?.name || "客户"
     try {
-      await create({
-        orderNo,
+      const created = await create({
         customer,
         customerType,
         pickupCity,
@@ -133,10 +129,9 @@ export default function ApplyPage() {
         channel: "订舱后新增",
         remark,
         __auditAction: "新增",
-        __auditDetail: isProxy
-          ? `代客提交用箱申请 ${orderNo}（${customer}）`
-          : `提交用箱申请 ${orderNo}`,
+        __auditDetail: isProxy ? `代客提交用箱申请（${customer}）` : "提交用箱申请",
       })
+      const orderNo = created.orderNo
       await pushNotification(createNotif, {
         type: "任务",
         level: "重要",
@@ -148,7 +143,7 @@ export default function ApplyPage() {
       })
       await revalidateResource("notifications")
       toast.success("申请已提交，等待箱管确认堆场与价格", {
-        description: `${pickupCity} → ${returnCity} · ${containerType} × ${quantity}`,
+        description: `${orderNo} · ${pickupCity} → ${returnCity} · ${containerType} × ${quantity}`,
       })
       setPickupCity("")
       setReturnCity("")

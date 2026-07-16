@@ -3,6 +3,7 @@ import { create, list, update } from "@/lib/repo"
 import { nowLocalStr } from "@/lib/domain/dispatch-ops"
 import type { UseBoxOrder } from "@/lib/types"
 import { DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
+import { resolveUseBoxOrderNo, isValidUseBoxOrderNo } from "@/lib/domain/usebox-order-no"
 
 export type BookingFeedItem = {
   externalId?: string
@@ -70,10 +71,8 @@ export async function syncBookingOrdersFromApi(): Promise<BookingSyncResult> {
   let skipped = 0
 
   for (const item of items) {
-    const orderNo =
-      item.orderNo ||
-      item.externalId ||
-      `UB${new Date().toISOString().slice(0, 10).replace(/-/g, "")}${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+    const requested = isValidUseBoxOrderNo(item.orderNo) ? item.orderNo : undefined
+    const orderNo = resolveUseBoxOrderNo(requested, existingNos)
     if (existingNos.has(orderNo)) {
       skipped += 1
       continue

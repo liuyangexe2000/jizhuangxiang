@@ -7,6 +7,7 @@ import { canAccessResource } from "@/lib/acl"
 import { ensureAclRuntime } from "@/lib/acl-runtime"
 import { hashPassword } from "@/lib/password"
 import { filterRowsByTenant, stampCreatePayload } from "@/lib/tenant"
+import { resolveUseBoxOrderNo } from "@/lib/domain/usebox-order-no"
 
 export const dynamic = "force-dynamic"
 
@@ -74,6 +75,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
   // 门户手工提交（含箱管代客）固定为「订舱后新增」；「订舱勾选」仅由订舱平台同步写入
   if (resource === "orders") {
     stamped.channel = "订舱后新增"
+    const existing = await list("orders")
+    const existingNos = existing.map((o) => String((o as { orderNo?: string }).orderNo ?? ""))
+    stamped.orderNo = resolveUseBoxOrderNo(stamped.orderNo, existingNos)
   }
   const created = await create(resource, stamped)
   if (resource !== "audit") {

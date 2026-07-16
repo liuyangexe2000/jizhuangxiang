@@ -45,6 +45,7 @@ CREATE TABLE `use_box_orders` (
   `returnGateBy` VARCHAR(60) NULL,
   `returnGateAt` VARCHAR(32) NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_orders_orderNo` (`orderNo`),
   KEY `idx_orders_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
