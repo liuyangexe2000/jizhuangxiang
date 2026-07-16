@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { Eye, MessageSquarePlus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Eye, MessageSquarePlus } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useResource, revalidateResource } from "@/lib/api"
+import { ticketScreenshots } from "@/lib/domain/feedback-screenshots"
 import type { FeedbackTicket, FeedbackTicketStatus } from "@/lib/types"
 
 const STATUSES: FeedbackTicketStatus[] = ["待处理", "处理中", "已关闭"]
@@ -32,6 +33,7 @@ const STATUSES: FeedbackTicketStatus[] = ["待处理", "处理中", "已关闭"]
 export default function AdminFeedbackPage() {
   const { data, update, isLoading } = useResource<FeedbackTicket>("feedbackTickets")
   const [detail, setDetail] = useState<FeedbackTicket | null>(null)
+  const [shotIndex, setShotIndex] = useState(0)
 
   const sorted = useMemo(
     () => [...data].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
@@ -39,6 +41,13 @@ export default function AdminFeedbackPage() {
   )
 
   const pending = sorted.filter((t) => t.status === "待处理").length
+  const detailShots = detail ? ticketScreenshots(detail) : []
+  const activeShot = detailShots[Math.min(shotIndex, Math.max(detailShots.length - 1, 0))]
+
+  function openDetail(t: FeedbackTicket) {
+    setDetail(t)
+    setShotIndex(0)
+  }
 
   async function setStatus(id: string, status: FeedbackTicketStatus) {
     try {
@@ -131,7 +140,7 @@ export default function AdminFeedbackPage() {
                       <StatusBadge status={t.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="outline" className="gap-1" onClick={() => setDetail(t)}>
+                      <Button size="sm" variant="outline" className="gap-1" onClick={() => openDetail(t)}>
                         <Eye className="size-3.5" />
                         详情
                       </Button>
@@ -163,13 +172,58 @@ export default function AdminFeedbackPage() {
                 {detail.pagePath}
               </p>
               <div className="rounded-md border bg-muted/30 p-3 whitespace-pre-wrap">{detail.content}</div>
-              {detail.screenshotDataUrl && (
-                <div className="overflow-hidden rounded-md border p-2">
-                  <img
-                    src={detail.screenshotDataUrl}
-                    alt={detail.screenshotFileName || "截图"}
-                    className="max-h-[28rem] max-w-full object-contain"
-                  />
+              {detailShots.length > 0 && (
+                <div className="space-y-2">
+                  <div className="relative flex min-h-[12rem] items-center justify-center overflow-hidden rounded-md border bg-muted/20 p-2">
+                    {detailShots.length > 1 && (
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        className="absolute left-2 z-10"
+                        onClick={() =>
+                          setShotIndex((i) => (i - 1 + detailShots.length) % detailShots.length)
+                        }
+                      >
+                        <ChevronLeft className="size-4" />
+                      </Button>
+                    )}
+                    {activeShot && (
+                      <img
+                        src={activeShot.dataUrl}
+                        alt={activeShot.fileName}
+                        className="max-h-[28rem] max-w-full object-contain"
+                      />
+                    )}
+                    {detailShots.length > 1 && (
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        className="absolute right-2 z-10"
+                        onClick={() => setShotIndex((i) => (i + 1) % detailShots.length)}
+                      >
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto">
+                    {detailShots.map((shot, index) => (
+                      <button
+                        key={`${shot.fileName}-${index}`}
+                        type="button"
+                        className={`h-14 w-20 shrink-0 overflow-hidden rounded border ${
+                          shotIndex === index ? "ring-2 ring-ring" : "opacity-70 hover:opacity-100"
+                        }`}
+                        onClick={() => setShotIndex(index)}
+                      >
+                        <img src={shot.dataUrl} alt="" className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {shotIndex + 1}/{detailShots.length} · {activeShot?.fileName}
+                  </p>
                 </div>
               )}
               <div className="flex flex-wrap gap-2">

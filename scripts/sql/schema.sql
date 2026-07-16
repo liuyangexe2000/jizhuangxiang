@@ -463,6 +463,7 @@ CREATE TABLE `feedback_tickets` (
   `pageTitle` VARCHAR(120) NOT NULL,
   `screenshotDataUrl` LONGTEXT NULL,
   `screenshotFileName` VARCHAR(200) NULL,
+  `screenshots` JSON NULL,
   `createdAt` VARCHAR(32) NOT NULL,
   `status` VARCHAR(20) NOT NULL DEFAULT '待处理',
   PRIMARY KEY (`id`),

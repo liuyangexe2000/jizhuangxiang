@@ -62,7 +62,7 @@ export const RESOURCES = {
   feedbackTickets: {
     table: "feedback_tickets",
     id: "id",
-    json: [],
+    json: ["screenshots"],
     bool: [],
     seed: "feedbackTickets",
     module: "系统管理",

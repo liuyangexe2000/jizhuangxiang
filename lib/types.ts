@@ -538,6 +538,11 @@ export interface ApprovalThresholds {
 export type FeedbackTicketType = "bug" | "业务需求" | "简易" | "体验优化" | "其他"
 export type FeedbackTicketStatus = "待处理" | "处理中" | "已关闭"
 
+export interface FeedbackScreenshot {
+  dataUrl: string
+  fileName: string
+}
+
 export interface FeedbackTicket {
   id: string
   ticketNo: string
@@ -549,8 +554,11 @@ export interface FeedbackTicket {
   roleName: string
   pagePath: string
   pageTitle: string
-  /** 压缩后的截图 data URL，可选 */
+  /** 截图列表，最多 3 张 */
+  screenshots?: FeedbackScreenshot[]
+  /** @deprecated 兼容旧单图字段 */
   screenshotDataUrl?: string
+  /** @deprecated 兼容旧单图字段 */
   screenshotFileName?: string
   /** 提交时间（表单隐藏字段） */
   createdAt: string
