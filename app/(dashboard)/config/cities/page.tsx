@@ -119,10 +119,6 @@ export default function CityDictPage() {
       toast.error(`城市编码「${form.code}」已存在`)
       return
     }
-    if (!form.usableAsPickup && !form.usableAsReturn) {
-      toast.error("至少需勾选可作为提箱城市或还箱城市之一")
-      return
-    }
     void (async () => {
       try {
         if (editing) {
