@@ -538,10 +538,8 @@ function WorkTable(props: {
               {props.rows.map((order) => (
                 <tr key={order.id} className="border-t">
                   <td className="whitespace-nowrap p-3 font-mono text-xs">{order.orderNo}</td>
-                  <td className="max-w-[10rem] whitespace-nowrap p-3" title={order.customer}>{order.customer}</td>
-                  <td className="max-w-[10rem] whitespace-nowrap p-3" title={pickup ? order.pickupYard || "待确认" : order.returnYard || "待确认"}>
-                    {pickup ? order.pickupYard || "待确认" : order.returnYard || "待确认"}
-                  </td>
+                  <td className="whitespace-nowrap p-3">{order.customer}</td>
+                  <td className="whitespace-nowrap p-3">{pickup ? order.pickupYard || "待确认" : order.returnYard || "待确认"}</td>
                   <td className="whitespace-nowrap p-3"><StatusBadge status={order.status} /></td>
                   <td className="whitespace-nowrap p-3 text-xs text-muted-foreground">{order.createdAt}</td>
                   <td className="p-3 text-right">
