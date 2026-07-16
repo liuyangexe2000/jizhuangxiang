@@ -22,7 +22,7 @@ import { useResource, revalidateResource } from "@/lib/api"
 import { useRole } from "@/lib/role-context"
 import { pushNotification } from "@/lib/domain/notify"
 import { CONTAINER_TYPES, DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
-import type { ContainerType, Notification, SystemUser, UseBoxOrder } from "@/lib/types"
+import type { ContainerType, Notification, SystemUser, UseBoxOrder, Yard } from "@/lib/types"
 
 const priceMap: Record<string, number> = { "20GP": 2100, "40GP": 2980, "40HQ": 3280, "45HQ": 3600 }
 
@@ -31,6 +31,7 @@ export default function ApplyPage() {
   const { create } = useResource<UseBoxOrder>("orders")
   const { create: createNotif } = useResource<Notification>("notifications")
   const { data: users } = useResource<SystemUser>("users")
+  const { data: yards } = useResource<Yard>("yards")
   const { user, roleId } = useRole()
   const isProxy = roleId === "R01"
 
@@ -38,6 +39,15 @@ export default function ApplyPage() {
     () => users.filter((u) => u.roleId === "R03" && u.status === "启用"),
     [users],
   )
+
+  /** 有启用且未删除堆场的城市集合 */
+  const citiesWithYard = useMemo(() => {
+    const set = new Set<string>()
+    for (const y of yards) {
+      if (y.enabled && !y.deleted && y.city) set.add(y.city)
+    }
+    return set
+  }, [yards])
 
   const [customerOrg, setCustomerOrg] = useState("")
   const [customerType, setCustomerType] = useState<UseBoxOrder["customerType"]>("班列客户")
@@ -55,6 +65,24 @@ export default function ApplyPage() {
     Number(quantity) > 0 &&
     (!isProxy || !!customerOrg)
 
+  function assertCitiesHaveYards(): boolean {
+    if (pickupCity && !citiesWithYard.has(pickupCity)) {
+      toast.error("该城市没有堆场，不能申请", {
+        description: `提箱城市「${pickupCity}」暂无可用堆场`,
+      })
+      setQuoted(null)
+      return false
+    }
+    if (returnCity && !citiesWithYard.has(returnCity)) {
+      toast.error("该城市没有堆场，不能申请", {
+        description: `还箱城市「${returnCity}」暂无可用堆场`,
+      })
+      setQuoted(null)
+      return false
+    }
+    return true
+  }
+
   function handleQuote() {
     if (!valid) {
       toast.error(
@@ -64,6 +92,7 @@ export default function ApplyPage() {
       )
       return
     }
+    if (!assertCitiesHaveYards()) return
     const unit = priceMap[containerType] ?? 3000
     setQuoted(unit * Number(quantity))
     toast.success("系统已反馈用箱服务价格")
@@ -71,6 +100,7 @@ export default function ApplyPage() {
 
   async function handleSubmit() {
     if (quoted == null) return
+    if (!assertCitiesHaveYards()) return
     if (isProxy && !customerOrg) {
       toast.error("代客申请须选择客户")
       return
