@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CalendarClock, CheckCircle2, FileText, MapPin, Printer, Search, Upload, Wrench } from "lucide-react"
+import { CalendarClock, CheckCircle2, FileText, MapPin, MoreHorizontal, Printer, Search, Upload, Wrench } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { ListPagination } from "@/components/list-pagination"
@@ -10,6 +10,13 @@ import { SortableTableHead } from "@/components/sortable-table-head"
 import { OrderPickupDocument, OrderReturnDocument } from "@/components/order-document"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -277,7 +284,7 @@ export default function DocumentsPage() {
       })
       await Promise.all([revalidateResource("orders"), revalidateResource("inventory")])
       setYardTarget(null)
-      toast.success("BR-16 堆场已更新并联动库存")
+      toast.success("堆场已更新并联动库存")
     } catch (error) {
       toast.error((error as Error).message)
     }
@@ -420,7 +427,7 @@ export default function DocumentsPage() {
       <Dialog open={!!yardTarget} onOpenChange={(open) => !open && setYardTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>变更提还箱堆场（BR-16）</DialogTitle>
+            <DialogTitle>变更提还箱堆场</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Label>提箱堆场</Label>
@@ -530,55 +537,66 @@ function WorkTable(props: {
             <tbody>
               {props.rows.map((order) => (
                 <tr key={order.id} className="border-t">
-                  <td className="p-3 font-mono text-xs">{order.orderNo}</td>
-                  <td className="p-3">{order.customer}</td>
-                  <td className="p-3">{pickup ? order.pickupYard || "待确认" : order.returnYard || "待确认"}</td>
-                  <td className="p-3"><StatusBadge status={order.status} /></td>
-                  <td className="p-3 text-xs text-muted-foreground">{order.createdAt}</td>
-                  <td className="min-w-[420px] p-3 text-right">
-                    <div className="flex flex-wrap justify-end gap-1">
-                      <Button size="sm" variant="outline" onClick={() => props.onBook(order)}>
-                        <CalendarClock className="mr-1 size-3" />
-                        预约
-                      </Button>
-                      {props.isYardAdmin && (
-                        <Button size="sm" variant="outline" onClick={() => props.onYard(order)}>
-                          <MapPin className="mr-1 size-3" />
-                          BR-16
-                        </Button>
-                      )}
-                      <Button size="sm" variant="outline" disabled={pickup && !shouldReleaseDoc(order)} onClick={() => props.onPrint(order)}>
-                        <Printer className="mr-1 size-3" />
-                        打印
-                      </Button>
-                      {pickup && props.onProof && (
-                        <>
-                          <Button size="sm" variant="outline" onClick={() => props.onProof!(order, false)}>
-                            <Upload className="mr-1 size-3" />
-                            随箱资料
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => props.onProof!(order, true)}>
-                            <Wrench className="mr-1 size-3" />
-                            异常
-                          </Button>
-                        </>
-                      )}
-                      {!pickup && props.onReturnProof && (
-                        <Button size="sm" variant="outline" onClick={() => props.onReturnProof!(order)}>
-                          <FileText className="mr-1 size-3" />
-                          还箱证明
-                        </Button>
-                      )}
+                  <td className="whitespace-nowrap p-3 font-mono text-xs">{order.orderNo}</td>
+                  <td className="max-w-[10rem] whitespace-nowrap p-3" title={order.customer}>{order.customer}</td>
+                  <td className="max-w-[10rem] whitespace-nowrap p-3" title={pickup ? order.pickupYard || "待确认" : order.returnYard || "待确认"}>
+                    {pickup ? order.pickupYard || "待确认" : order.returnYard || "待确认"}
+                  </td>
+                  <td className="whitespace-nowrap p-3"><StatusBadge status={order.status} /></td>
+                  <td className="whitespace-nowrap p-3 text-xs text-muted-foreground">{order.createdAt}</td>
+                  <td className="p-3 text-right">
+                    <div className="flex flex-nowrap items-center justify-end gap-1">
                       {props.canExecuteGate && (
                         <Button size="sm" onClick={() => props.onCondition(order, props.phase)}>
                           <CheckCircle2 className="mr-1 size-3" />
                           确认{pickup ? "放箱" : "收箱"}
                         </Button>
                       )}
-                      {props.overdue?.some((o) => o.id === order.id) && (
-                        <span className="px-1 text-xs text-destructive">证明逾期</span>
-                      )}
-                      <span className="text-xs text-muted-foreground">附件 {props.attachmentCount(order)}</span>
+                      <Button size="sm" variant="outline" onClick={() => props.onBook(order)}>
+                        <CalendarClock className="mr-1 size-3" />
+                        预约
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={pickup && !shouldReleaseDoc(order)} onClick={() => props.onPrint(order)}>
+                        <Printer className="mr-1 size-3" />
+                        打印
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={<Button size="sm" variant="outline" className="gap-1 px-2" />}>
+                          更多
+                          <MoreHorizontal className="size-3.5" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-40">
+                          {props.isYardAdmin && (
+                            <DropdownMenuItem onClick={() => props.onYard(order)}>
+                              <MapPin className="size-3.5" />
+                              变更堆场
+                            </DropdownMenuItem>
+                          )}
+                          {pickup && props.onProof && (
+                            <>
+                              <DropdownMenuItem onClick={() => props.onProof!(order, false)}>
+                                <Upload className="size-3.5" />
+                                随箱资料
+                              </DropdownMenuItem>
+                              <DropdownMenuItem variant="destructive" onClick={() => props.onProof!(order, true)}>
+                                <Wrench className="size-3.5" />
+                                异常
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {!pickup && props.onReturnProof && (
+                            <DropdownMenuItem onClick={() => props.onReturnProof!(order)}>
+                              <FileText className="size-3.5" />
+                              还箱证明
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled className="text-muted-foreground">
+                            附件 {props.attachmentCount(order)}
+                            {props.overdue?.some((o) => o.id === order.id) ? " · 证明逾期" : ""}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>
