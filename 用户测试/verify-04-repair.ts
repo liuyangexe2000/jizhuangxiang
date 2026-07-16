@@ -58,7 +58,7 @@ async function main() {
     containerNo: `PEND-${orderNo.slice(-6)}`,
     containerType: "40GP",
     ownership: "自有箱",
-    yard: "西安新筑堆场",
+    yard: "陆港堆场",
     city: "西安",
     damageDesc: "用户测试箱况异常",
     level: "小修",
@@ -114,13 +114,13 @@ async function main() {
     containerNo,
     type: "40GP",
     ownership: "自有箱",
-    currentYard: "西安新筑堆场",
+    currentYard: "陆港堆场",
     currentCity: "西安",
     status: "在场",
     lastGateTime: nowStr(),
     storageDays: 0,
   })
-  const inv = (await r01.list("inventory")).data?.find((r: any) => r.yard === "西安新筑堆场")
+  const inv = (await r01.list("inventory")).data?.find((r: any) => r.yard === "陆港堆场")
   const availBefore = inv?.available ?? 0
 
   const order = await r01.create("repair", {
@@ -128,7 +128,7 @@ async function main() {
     containerNo,
     containerType: "40GP",
     ownership: "自有箱",
-    yard: "西安新筑堆场",
+    yard: "陆港堆场",
     city: "西安",
     damageDesc: "用户测试主动登记",
     level: "中修",
@@ -175,20 +175,20 @@ async function main() {
     containerNo: scrapNo,
     type: "20GP",
     ownership: "自有箱",
-    currentYard: "西安新筑堆场",
+    currentYard: "陆港堆场",
     currentCity: "西安",
     status: "在场",
     lastGateTime: nowStr(),
     storageDays: 0,
   })
-  const inv2 = (await r01.list("inventory")).data?.find((r: any) => r.yard === "西安新筑堆场")
+  const inv2 = (await r01.list("inventory")).data?.find((r: any) => r.yard === "陆港堆场")
   const onSiteBefore = inv2?.onSite ?? 0
   const scrap = await r01.create("repair", {
     repairNo: scrapRepair,
     containerNo: scrapNo,
     containerType: "20GP",
     ownership: "自有箱",
-    yard: "西安新筑堆场",
+    yard: "陆港堆场",
     city: "西安",
     damageDesc: "用户测试报废",
     level: "报废评估",

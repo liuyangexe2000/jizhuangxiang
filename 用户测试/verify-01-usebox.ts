@@ -71,8 +71,8 @@ async function main() {
     status: "已确认",
     confirmedAt: nowStr(),
     confirmedBy: "张伟",
-    pickupYard: "西安新筑堆场",
-    returnYard: "汉堡港堆场",
+    pickupYard: "陆港堆场",
+    returnYard: "汉堡HCS",
     unitPrice: 3200,
     quotedUnitPrice: 3280,
     adminRemark: "优惠 80 元/箱",
@@ -87,7 +87,7 @@ async function main() {
     "UT-UB-01#3",
     !!conf.ok &&
       conf.data?.status === "已确认" &&
-      conf.data?.pickupYard === "西安新筑堆场" &&
+      conf.data?.pickupYard === "陆港堆场" &&
       conf.data?.releaseDocReady === true,
     conf.ok ? "箱管确认：堆场+改价+放行提箱单" : `确认失败 ${conf.status}`,
   )
@@ -110,7 +110,7 @@ async function main() {
     bookingNo: `BK${uid("").slice(0, 8)}`,
     type: "提箱预约",
     containerNos: [`UT${orderNo.slice(-6)}01`],
-    yard: "西安新筑堆场",
+    yard: "陆港堆场",
     city: "西安",
     planTime: workPlanTime(),
     driver: "测试司机",
@@ -208,8 +208,8 @@ async function main() {
     status: "已确认",
     confirmedAt: nowStr(),
     confirmedBy: "张伟",
-    pickupYard: "西安新筑堆场",
-    returnYard: "汉堡港堆场",
+    pickupYard: "陆港堆场",
+    returnYard: "汉堡HCS",
     releaseDocReady: true,
     conditionCheck: "异常",
     conditionNote: "用户测试箱况异常",
@@ -221,7 +221,7 @@ async function main() {
     containerNo: `PEND-${badNo.slice(-6)}`,
     containerType: "40GP",
     ownership: "自有箱",
-    yard: "西安新筑堆场",
+    yard: "陆港堆场",
     city: "西安",
     damageDesc: "用户测试箱况异常",
     level: "小修",

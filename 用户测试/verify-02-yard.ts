@@ -42,7 +42,7 @@ async function main() {
     bookingNo,
     type: "提箱预约",
     containerNos: [`YT${bookingNo.slice(-6)}`],
-    yard: "汉堡港堆场",
+    yard: "汉堡HCS",
     city: "汉堡",
     planTime: workPlanTime(),
     driver: "堆场测试司机",
@@ -102,7 +102,7 @@ async function main() {
     containerNo: gateNo,
     type: "进场",
     time: nowStr(),
-    yard: "杜伊斯堡堆场",
+    yard: "杜堡dit",
     city: "杜伊斯堡",
     source: "代管公司上传",
     mappingStatus: "未映射",
@@ -118,7 +118,7 @@ async function main() {
   mark("UT-YARD-02#2", !!mapped.ok && mapped.data?.mappingStatus === "已映射", "自动匹配→已映射")
 
   const invList = await r04.list("inventory")
-  const inv = (invList.data as any[] | null)?.find((r) => r.yard === "杜伊斯堡堆场")
+  const inv = (invList.data as any[] | null)?.find((r) => r.yard === "杜堡dit")
   mark("UT-YARD-02#3", !!inv?.id, inv?.id ? `可见杜伊斯堡库存 onSite=${inv.onSite}` : "不可见代管库存")
 
   // —— UT-YARD-03 ——
@@ -141,7 +141,7 @@ async function main() {
   const foreign =
     r06bk.ok &&
     Array.isArray(r06bk.data) &&
-    (r06bk.data as any[]).some((b) => b.yard && b.yard !== "汉堡港堆场" && b.yard !== r06.org)
+    (r06bk.data as any[]).some((b) => b.yard && b.yard !== "汉堡HCS" && b.yard !== r06.org)
   mark(
     "UT-YARD-03#2",
     !!r06bk.ok && !foreign,
@@ -158,7 +158,7 @@ async function main() {
     containerNo: outNo,
     type: "出场",
     time: nowStr(),
-    yard: "汉堡港堆场",
+    yard: "汉堡HCS",
     city: "汉堡",
     source: "系统放箱/调运订单",
     relatedOrderNo: "UT-YARD-OUT",

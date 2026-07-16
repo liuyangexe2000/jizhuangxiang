@@ -62,7 +62,7 @@ async function main() {
   await r04.login("agent_de")
   mark("UT-GATE-00", true, "admin/zhangwei/customer_xa/agent_de 登录成功")
 
-  // 确保 yard_ham（R06，汉堡港堆场）已启用
+  // 确保 yard_ham（R06，汉堡HCS）已启用
   const users = await r00.list("users")
   const yardUser = (users.data as any[] | null)?.find((u) => u.account === "yard_ham")
   if (yardUser && yardUser.status !== "启用") {
@@ -93,12 +93,12 @@ async function main() {
   })
   mark("UT-GATE-01#1", !!created.ok, `订单 ${orderNo} 已创建`)
 
-  const conf = await confirmOrder(r01, created.data.id, orderNo, "汉堡港堆场", "杜伊斯堡堆场")
+  const conf = await confirmOrder(r01, created.data.id, orderNo, "汉堡HCS", "杜堡dit")
   mark("UT-GATE-01#2", !!conf.ok && conf.data?.status === "已确认", "箱管确认并分配堆场")
 
   // 模拟「订单处理」确认时的库存预占（与 operations/usebox 页一致）
   const invBefore = await r04.list("inventory")
-  const pickupInv = findInventoryRow(invBefore.data as any[], { yard: "汉堡港堆场", city: "汉堡" })
+  const pickupInv = findInventoryRow(invBefore.data as any[], { yard: "汉堡HCS", city: "汉堡" })
   if (pickupInv) {
     await r04.patch("inventory", inventoryId(pickupInv), applyReserveInventory(pickupInv, 2))
   }
@@ -115,7 +115,7 @@ async function main() {
   mark("UT-GATE-01#4", pickupResBad.status === 403, `R03 确认放箱应 403，实际 ${pickupResBad.status}`)
 
   const invBeforePickup = (await r04.list("inventory")).data as any[]
-  const invPickBefore = findInventoryRow(invBeforePickup, { yard: "汉堡港堆场", city: "汉堡" })!
+  const invPickBefore = findInventoryRow(invBeforePickup, { yard: "汉堡HCS", city: "汉堡" })!
 
   const pickupRes = await r04.api(
     "POST",
@@ -139,7 +139,7 @@ async function main() {
   mark("UT-GATE-01#7", !!pickupGate, pickupGate ? `出场 gate ${pickupGate.containerNo}` : "未生成出场 gate")
 
   const invAfterPickup = (await r04.list("inventory")).data as any[]
-  const invPickAfter = findInventoryRow(invAfterPickup, { yard: "汉堡港堆场", city: "汉堡" })!
+  const invPickAfter = findInventoryRow(invAfterPickup, { yard: "汉堡HCS", city: "汉堡" })!
   mark(
     "UT-GATE-01#8",
     invPickAfter.onSite === invPickBefore.onSite - 2 && invPickAfter.incoming === invPickBefore.incoming + 2,
@@ -147,7 +147,7 @@ async function main() {
   )
 
   const invBeforeReturn = findInventoryRow((await r04.list("inventory")).data as any[], {
-    yard: "杜伊斯堡堆场",
+    yard: "杜堡dit",
     city: "杜伊斯堡",
   })!
   const returnRes = await r04.api(
@@ -166,7 +166,7 @@ async function main() {
   )
 
   const invAfterReturn = findInventoryRow((await r04.list("inventory")).data as any[], {
-    yard: "杜伊斯堡堆场",
+    yard: "杜堡dit",
     city: "杜伊斯堡",
   })!
   mark(
@@ -207,7 +207,7 @@ async function main() {
     returnProofUploaded: false,
     channel: "订舱后新增",
   })
-  await confirmOrder(r01, bad.data.id, badNo, "汉堡港堆场", "杜伊斯堡堆场")
+  await confirmOrder(r01, bad.data.id, badNo, "汉堡HCS", "杜堡dit")
   const abnormalRes = await r04.api(
     "POST",
     `/api/orders/${encodeURIComponent(bad.data.id)}/confirm-pickup`,
@@ -232,7 +232,7 @@ async function main() {
   )
   mark("UT-GATE-02#4", !!hasAlert, hasAlert ? "R01 可见异常通知" : "R01 未见异常通知")
 
-  // —— UT-GATE-03：租户隔离负向（R06 yard_ham 仅覆盖汉堡港堆场） ——
+  // —— UT-GATE-03：租户隔离负向（R06 yard_ham 仅覆盖汉堡HCS） ——
   const foreignNo = `UB${uid("F").slice(0, 9)}`
   const foreign = await r03.create("orders", {
     orderNo: foreignNo,
@@ -251,7 +251,7 @@ async function main() {
     returnProofUploaded: false,
     channel: "订舱后新增",
   })
-  await confirmOrder(r01, foreign.data.id, foreignNo, "杜伊斯堡堆场", "杜伊斯堡堆场")
+  await confirmOrder(r01, foreign.data.id, foreignNo, "杜堡dit", "杜堡dit")
   const r06Denied = await r06.api(
     "POST",
     `/api/orders/${encodeURIComponent(foreign.data.id)}/confirm-pickup`,
@@ -260,7 +260,7 @@ async function main() {
   mark(
     "UT-GATE-03#1",
     r06Denied.status === 403,
-    `R06(汉堡港堆场) 确认杜伊斯堡堆场订单应 403，实际 ${r06Denied.status}`,
+    `R06(汉堡HCS) 确认杜堡dit订单应 403，实际 ${r06Denied.status}`,
   )
 
   const hamNo = `UB${uid("Y").slice(0, 9)}`
@@ -281,7 +281,7 @@ async function main() {
     returnProofUploaded: false,
     channel: "订舱后新增",
   })
-  await confirmOrder(r01, ham.data.id, hamNo, "汉堡港堆场", "汉堡港堆场")
+  await confirmOrder(r01, ham.data.id, hamNo, "汉堡HCS", "汉堡HCS")
   const r06Allowed = await r06.api(
     "POST",
     `/api/orders/${encodeURIComponent(ham.data.id)}/confirm-pickup`,
@@ -290,7 +290,7 @@ async function main() {
   mark(
     "UT-GATE-03#2",
     !!r06Allowed.ok,
-    r06Allowed.ok ? "R06(汉堡港堆场) 确认本堆场订单成功" : `失败 ${r06Allowed.status}`,
+    r06Allowed.ok ? "R06(汉堡HCS) 确认本堆场订单成功" : `失败 ${r06Allowed.status}`,
   )
 
   // —— UT-GATE-04：状态前置校验 ——

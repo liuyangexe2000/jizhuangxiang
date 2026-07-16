@@ -43,7 +43,7 @@ async function main() {
   const created = await r01.create("dispatch", {
     dispatchNo,
     planTime: nowStr(),
-    pickupPlace: "汉堡港堆场",
+    pickupPlace: "汉堡HCS",
     returnScope: "不来梅 / 汉诺威",
     reason: "用户测试 UT-DISP-01",
     unitPrice,
@@ -92,7 +92,7 @@ async function main() {
   mark("UT-DISP-01#4", !!visible, visible ? "R05 可见本承运商调运单" : "R05 不可见")
 
   const invRes = await r05.list("inventory")
-  const inv = (invRes.data as any[] | null)?.find((r) => r.yard === "汉堡港堆场" || r.city === "汉堡")
+  const inv = (invRes.data as any[] | null)?.find((r) => r.yard === "汉堡HCS" || r.city === "汉堡")
   const beforeOnSite = inv?.onSite ?? 0
   await r05.patch("dispatch", id, { pickedCount: qty, status: "提箱中" })
   if (inv?.id) {
@@ -110,7 +110,7 @@ async function main() {
       containerNo: no,
       type: "出场",
       time: nowStr(),
-      yard: "汉堡港堆场",
+      yard: "汉堡HCS",
       city: "汉堡",
       source: "系统放箱/调运订单",
       relatedOrderNo: dispatchNo,
@@ -133,7 +133,7 @@ async function main() {
     applyNo,
     carrier: "波兰联运物流",
     containerNos,
-    returnYard: "华沙中央堆场",
+    returnYard: "华沙pkpcc",
     returnCity: "华沙",
     relatedDispatchNos: [dispatchNo],
     appliedAt: nowStr(),
@@ -146,7 +146,7 @@ async function main() {
     reviewer: "张伟(调运专员)",
   })
   await r01.patch("dispatch", id, { returnedCount: qty, status: "已结束" })
-  const warsaw = (await r01.list("inventory")).data?.find((r: any) => r.yard === "华沙中央堆场")
+  const warsaw = (await r01.list("inventory")).data?.find((r: any) => r.yard === "华沙pkpcc")
   if (warsaw?.id) {
     await r01.patch("inventory", warsaw.id, {
       onSite: warsaw.onSite + qty,
@@ -159,7 +159,7 @@ async function main() {
       containerNo: no,
       type: "进场",
       time: nowStr(),
-      yard: "华沙中央堆场",
+      yard: "华沙pkpcc",
       city: "华沙",
       source: "系统放箱/调运订单",
       relatedOrderNo: dispatchNo,
@@ -193,7 +193,7 @@ async function main() {
   const rej = await r01.create("dispatch", {
     dispatchNo: rejectNo,
     planTime: nowStr(),
-    pickupPlace: "汉堡港堆场",
+    pickupPlace: "汉堡HCS",
     returnScope: "华沙",
     reason: "用户测试驳回",
     unitPrice: 400,

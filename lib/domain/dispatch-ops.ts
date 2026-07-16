@@ -4,6 +4,7 @@
  */
 
 import type { Booking, ContainerMaster, DispatchOrder, GateRecord, InventoryRow } from "../types"
+import { yardsSeed } from "../data/yards.seed"
 
 export function nowLocalStr() {
   const d = new Date()
@@ -11,8 +12,10 @@ export function nowLocalStr() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-/** 从提箱地名称推断城市（「汉堡港堆场」→「汉堡」） */
+/** 从提箱地/堆场名推断城市：优先查真实堆场表，否则回退旧规则 */
 export function cityFromPlace(place: string) {
+  const hit = yardsSeed.find((y) => y.name === place)
+  if (hit?.city) return hit.city
   return place.replace(/(港|中央)?堆场$/, "").trim() || place
 }
 
@@ -24,7 +27,7 @@ export function findInventoryRow(
   if (opts.yard) {
     const byYard = rows.find((r) => r.yard === opts.yard)
     if (byYard) return byYard
-    // 模糊：汉堡堆场 ↔ 汉堡港堆场
+    // 模糊：短名 ↔ 全名（如历史别名）
     const fuzzy = rows.find(
       (r) =>
         r.yard.includes(opts.yard!) ||

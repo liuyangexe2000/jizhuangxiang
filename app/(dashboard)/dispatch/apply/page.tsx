@@ -57,25 +57,25 @@ interface PriceRule {
 }
 
 const PRICE_RULES: Record<string, PriceRule[]> = {
-  汉堡堆场: [
+  汉堡HCS: [
     { id: "ham-1", scope: "不来梅 / 汉诺威", unitPrice: 620, overdue: "¥100/箱/天", suggestTerm: 21, zone: "近距" },
     { id: "ham-2", scope: "杜伊斯堡 / 纽伦堡 / 慕尼黑", unitPrice: 850, overdue: "¥120/箱/天", suggestTerm: 30, zone: "中距" },
     { id: "ham-3", scope: "华沙 / 布达佩斯 / 维也纳", unitPrice: 1180, overdue: "¥150/箱/天", suggestTerm: 45, zone: "远距" },
   ],
-  马拉舍维奇堆场: [
+  马拉ADAMPOL: [
     { id: "mal-1", scope: "华沙 / 罗兹", unitPrice: 480, overdue: "¥100/箱/天", suggestTerm: 18, zone: "近距" },
     { id: "mal-2", scope: "柏林 / 布拉格", unitPrice: 720, overdue: "¥120/箱/天", suggestTerm: 25, zone: "中距" },
     { id: "mal-3", scope: "西安（境内） / 郑州（境内）", unitPrice: 2600, overdue: "¥120/箱/天", suggestTerm: 45, zone: "远距" },
   ],
-  杜伊斯堡堆场: [
+  杜堡dit: [
     { id: "dui-1", scope: "汉堡 / 不来梅", unitPrice: 560, overdue: "¥100/箱/天", suggestTerm: 20, zone: "近距" },
     { id: "dui-2", scope: "纽伦堡 / 慕尼黑 / 维也纳", unitPrice: 920, overdue: "¥130/箱/天", suggestTerm: 32, zone: "中距" },
   ],
-  纽伦堡堆场: [
+  纽伦堡CDN: [
     { id: "nue-1", scope: "慕尼黑 / 维也纳", unitPrice: 500, overdue: "¥100/箱/天", suggestTerm: 18, zone: "近距" },
     { id: "nue-2", scope: "西安（境内）", unitPrice: 2400, overdue: "¥120/箱/天", suggestTerm: 45, zone: "远距" },
   ],
-  布达佩斯堆场: [
+  布达佩斯MCC: [
     { id: "bud-1", scope: "维也纳 / 布拉迪斯拉发", unitPrice: 700, overdue: "¥120/箱/天", suggestTerm: 30, zone: "中距" },
     { id: "bud-2", scope: "华沙 / 罗兹", unitPrice: 980, overdue: "¥140/箱/天", suggestTerm: 38, zone: "远距" },
   ],

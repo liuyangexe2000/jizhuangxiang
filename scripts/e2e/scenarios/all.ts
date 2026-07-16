@@ -49,8 +49,8 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
     status: "已确认",
     confirmedAt,
     confirmedBy: "张伟",
-    pickupYard: "西安新筑堆场",
-    returnYard: "汉堡港堆场",
+    pickupYard: "陆港堆场",
+    returnYard: "汉堡HCS",
     unitPrice: 3000,
     quotedUnitPrice: 3000,
     adminRemark: "E2E 箱管确认",
@@ -142,8 +142,8 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
     createdAt: nowStr(),
     confirmedAt: nowStr(),
     confirmedBy: "张伟",
-    pickupYard: "西安新筑堆场",
-    returnYard: "马拉舍维奇堆场",
+    pickupYard: "陆港堆场",
+    returnYard: "马拉ADAMPOL",
     cancelDeadline: pastDeadline(2),
     releaseDocReady: true,
     stuffingListUploaded: false,
@@ -187,7 +187,7 @@ export const l2M02Dispatch: ScenarioFn = async ({ fail, pass }) => {
   const created = await r01.create("dispatch", {
     dispatchNo,
     planTime: nowStr(),
-    pickupPlace: "汉堡港堆场",
+    pickupPlace: "汉堡HCS",
     returnScope: "不来梅 / 汉诺威",
     reason: "E2E 调运闭环",
     unitPrice,
@@ -250,8 +250,8 @@ export const l2M02Dispatch: ScenarioFn = async ({ fail, pass }) => {
 
   // 提箱：改库存 + gate + dispatch
   const invRes = await r05.list("inventory")
-  const inv = (invRes.data as any[]).find((r) => r.yard === "汉堡港堆场" || r.city === "汉堡")
-  assert(inv?.id, "应找到汉堡港堆场库存行", fail)
+  const inv = (invRes.data as any[]).find((r) => r.yard === "汉堡HCS" || r.city === "汉堡")
+  assert(inv?.id, "应找到汉堡HCS库存行", fail)
   const beforeOnSite = inv.onSite
   const pickDelta = qty
   await expectOk(
@@ -281,7 +281,7 @@ export const l2M02Dispatch: ScenarioFn = async ({ fail, pass }) => {
         containerNo: no,
         type: "出场",
         time: nowStr(),
-        yard: "汉堡港堆场",
+        yard: "汉堡HCS",
         city: "汉堡",
         source: "系统放箱/调运订单",
         relatedOrderNo: dispatchNo,
@@ -300,7 +300,7 @@ export const l2M02Dispatch: ScenarioFn = async ({ fail, pass }) => {
     bookingNo: `BK${uid("").slice(0, 8)}`,
     type: "还箱预约",
     containerNos,
-    yard: "华沙中央堆场",
+    yard: "华沙pkpcc",
     city: "华沙",
     planTime: nowStr(),
     driver: "E2E司机",
@@ -325,7 +325,7 @@ export const l2M02Dispatch: ScenarioFn = async ({ fail, pass }) => {
     applyNo,
     carrier: "波兰联运物流",
     containerNos,
-    returnYard: "华沙中央堆场",
+    returnYard: "华沙pkpcc",
     returnCity: "华沙",
     relatedDispatchNos: [dispatchNo],
     appliedAt: nowStr(),
@@ -351,7 +351,7 @@ export const l2M02Dispatch: ScenarioFn = async ({ fail, pass }) => {
     }),
     fail,
   )
-  const warsaw = (await r01.list("inventory")).data.find((r: any) => r.yard === "华沙中央堆场")
+  const warsaw = (await r01.list("inventory")).data.find((r: any) => r.yard === "华沙pkpcc")
   if (warsaw?.id) {
     await r01.patch("inventory", warsaw.id, {
       onSite: warsaw.onSite + qty,
@@ -364,7 +364,7 @@ export const l2M02Dispatch: ScenarioFn = async ({ fail, pass }) => {
       containerNo: no,
       type: "进场",
       time: nowStr(),
-      yard: "华沙中央堆场",
+      yard: "华沙pkpcc",
       city: "华沙",
       source: "系统放箱/调运订单",
       relatedOrderNo: dispatchNo,
@@ -404,7 +404,7 @@ export const l3M03Inventory: ScenarioFn = async ({ fail, pass }) => {
     containerNo: gateNo,
     type: "进场",
     time: nowStr(),
-    yard: "杜伊斯堡堆场",
+    yard: "杜堡dit",
     city: "杜伊斯堡",
     source: "代管公司上传",
     mappingStatus: "未映射",
@@ -424,15 +424,15 @@ export const l3M03Inventory: ScenarioFn = async ({ fail, pass }) => {
   )
 
   const invList = await r04.list("inventory")
-  const inv = (invList.data as any[]).find((r) => r.yard === "杜伊斯堡堆场")
+  const inv = (invList.data as any[]).find((r) => r.yard === "杜堡dit")
   assert(inv?.id, "DE 代管应可见杜伊斯堡库存", fail)
   const before = inv.onSite
 
   const discs = await r04.list("discrepancy")
-  let row = (discs.data as any[]).find((d) => d.yard === "杜伊斯堡堆场")
+  let row = (discs.data as any[]).find((d) => d.yard === "杜堡dit")
   if (!row) {
     const created = await r04.create("discrepancy", {
-      yard: "杜伊斯堡堆场",
+      yard: "杜堡dit",
       city: "杜伊斯堡",
       systemCount: before,
       agentCount: before + 3,
@@ -495,7 +495,7 @@ export const l4M04BookingNotify: ScenarioFn = async ({ fail, pass }) => {
     bookingNo,
     type: "提箱预约",
     containerNos: ["E2ENOTIFY01"],
-    yard: "汉堡港堆场",
+    yard: "汉堡HCS",
     city: "汉堡",
     planTime: workPlan,
     driver: "Notify",
@@ -634,7 +634,7 @@ export const l6M06Repair: ScenarioFn = async ({ fail, pass }) => {
       containerNo,
       type: "40GP",
       ownership: "自有箱",
-      currentYard: "西安新筑堆场",
+      currentYard: "陆港堆场",
       currentCity: "西安",
       status: "在场",
       lastGateTime: nowStr(),
@@ -643,15 +643,15 @@ export const l6M06Repair: ScenarioFn = async ({ fail, pass }) => {
     fail,
   )
 
-  const inv = (await r01.list("inventory")).data.find((r: any) => r.yard === "西安新筑堆场")
-  assert(inv?.id, "西安新筑库存存在", fail)
+  const inv = (await r01.list("inventory")).data.find((r: any) => r.yard === "陆港堆场")
+  assert(inv?.id, "陆港堆场库存存在", fail)
 
   const order = await r01.create("repair", {
     repairNo,
     containerNo,
     containerType: "40GP",
     ownership: "自有箱",
-    yard: "西安新筑堆场",
+    yard: "陆港堆场",
     city: "西安",
     damageDesc: "E2E 箱门变形",
     level: "中修",
@@ -695,19 +695,19 @@ export const l6M06Repair: ScenarioFn = async ({ fail, pass }) => {
     containerNo: scrapNo,
     type: "20GP",
     ownership: "自有箱",
-    currentYard: "西安新筑堆场",
+    currentYard: "陆港堆场",
     currentCity: "西安",
     status: "在场",
     lastGateTime: nowStr(),
     storageDays: 0,
   })
-  const inv2 = (await r01.list("inventory")).data.find((r: any) => r.yard === "西安新筑堆场")
+  const inv2 = (await r01.list("inventory")).data.find((r: any) => r.yard === "陆港堆场")
   const scrap = await r01.create("repair", {
     repairNo: scrapRepair,
     containerNo: scrapNo,
     containerType: "20GP",
     ownership: "自有箱",
-    yard: "西安新筑堆场",
+    yard: "陆港堆场",
     city: "西安",
     damageDesc: "E2E 报废",
     level: "报废评估",
@@ -860,7 +860,7 @@ export const l9GapFill: ScenarioFn = async ({ fail, pass }) => {
       await r01.create("dispatch", {
         dispatchNo: no,
         planTime: nowStr().slice(0, 10),
-        pickupPlace: "汉堡堆场",
+        pickupPlace: "汉堡HCS",
         returnScope: "华沙 / 罗兹",
         reason: "E2E跨单还箱",
         unitPrice: 500,
@@ -920,7 +920,7 @@ export const l9GapFill: ScenarioFn = async ({ fail, pass }) => {
       bookingNo: `BK${uid("R").slice(0, 7)}`,
       type: "还箱预约",
       containerNos: ["E2ERET01"],
-      yard: "汉堡港堆场",
+      yard: "汉堡HCS",
       city: "汉堡",
       planTime: shortEta,
       driver: "短提前",

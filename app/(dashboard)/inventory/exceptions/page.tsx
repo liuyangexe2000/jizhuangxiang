@@ -41,7 +41,7 @@ import type { ContainerMaster, DispatchOrder, GateRecord, InventoryRow, UseBoxOr
 import { applyPickupInventory, applyReturnInventory, findInventoryRow, nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { AlertTriangle, Plus, Wrench, CheckCircle2, Search } from "lucide-react"
 
-const yards = ["西安新筑堆场", "郑州圃田堆场", "成都青白江堆场", "汉堡港堆场", "杜伊斯堡堆场", "华沙中央堆场"]
+const yards = ["陆港堆场", "箱满多堆场", "成都德成堆场", "汉堡HCS", "杜堡dit", "华沙pkpcc"]
 
 export default function ExceptionsPage() {
   const { data: allRecords, create, update } = useResource<GateRecord>("gate")
