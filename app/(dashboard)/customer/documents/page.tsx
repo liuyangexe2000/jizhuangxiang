@@ -630,7 +630,7 @@ export default function DocumentsPage() {
       </Dialog>
 
       <Dialog open={!!printTarget} onOpenChange={(open) => !open && setPrintTarget(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>单据预览</DialogTitle>
           </DialogHeader>
