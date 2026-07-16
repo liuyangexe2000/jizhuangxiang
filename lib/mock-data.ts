@@ -19,6 +19,7 @@ import type {
   Integration,
   OutboundEvent,
   AttachmentMeta,
+  FeedbackTicket,
   SystemSetting,
 } from "./types"
 import {
@@ -736,6 +737,8 @@ export const outboundEvents: OutboundEvent[] = []
 
 /** 附件元数据（种子为空，运行时写入） */
 export const attachments: AttachmentMeta[] = []
+
+export const feedbackTickets: FeedbackTicket[] = []
 
 /** 系统设置（种子为空；运行时 CODE_DEFAULTS 回退，管理员保存后落库） */
 export const systemSettings: SystemSetting[] = []

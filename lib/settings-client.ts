@@ -12,6 +12,7 @@ export type PublicSettingsClient = {
   billConfirmDays: number
   returnProofOverdueDays: number
   approvalThresholds: ApprovalThresholds
+  feedbackTicketEnabled: boolean
 }
 
 export type RuntimeSettingsClient = PublicSettingsClient & {

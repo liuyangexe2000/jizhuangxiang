@@ -10,4 +10,5 @@ export const SETTING_KEYS = {
   billConfirmDays: "biz.billConfirmDays",
   returnProofOverdueDays: "biz.returnProofOverdueDays",
   approvalThresholds: "biz.approvalThresholds",
+  feedbackTicketEnabled: "ui.feedbackTicketEnabled",
 } as const

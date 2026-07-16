@@ -90,5 +90,9 @@ export const defaultResourceAcl: Record<ResourceKey, Access> = {
     read: roles(["R00", "R01", "R03", "R04", "R05", "R06"]),
     write: roles(["R00", "R01", "R03", "R04", "R05", "R06"]),
   },
+  feedbackTickets: {
+    read: roles(["R00"]),
+    write: ALL,
+  },
   settings: { read: ["R00"], write: ["R00"] },
 }

@@ -24,6 +24,7 @@ type AdminSettingsPayload = {
   billConfirmDays: number
   returnProofOverdueDays: number
   approvalThresholds: ApprovalThresholds
+  feedbackTicketEnabled: boolean
 }
 
 export default function AdminSettingsPage() {
@@ -46,6 +47,7 @@ export default function AdminSettingsPage() {
           billConfirmDays: Number(data.billConfirmDays) || 3,
           returnProofOverdueDays: Number(data.returnProofOverdueDays) || 3,
           approvalThresholds: data.approvalThresholds || { level2Below: 20000, level3Below: 50000 },
+          feedbackTicketEnabled: data.feedbackTicketEnabled !== false,
         })
       } catch (e) {
         toast.error((e as Error).message)
@@ -68,6 +70,7 @@ export default function AdminSettingsPage() {
         [SETTING_KEYS.billConfirmDays]: form.billConfirmDays,
         [SETTING_KEYS.returnProofOverdueDays]: form.returnProofOverdueDays,
         [SETTING_KEYS.approvalThresholds]: form.approvalThresholds,
+        [SETTING_KEYS.feedbackTicketEnabled]: form.feedbackTicketEnabled,
       }
       const res = await fetch("/api/settings", {
         method: "PATCH",
@@ -93,7 +96,7 @@ export default function AdminSettingsPage() {
       <PageHeader
         module="系统管理 · 系统管理员专区"
         title="系统参数"
-        description="登录演示账号开关、各角色无权限菜单显示策略，以及业务时限/审批阈值。"
+        description="登录演示账号开关、右下角工单入口、各角色无权限菜单显示策略，以及业务时限/审批阈值。"
         actions={
           <Button onClick={save} disabled={saving}>
             {saving ? "保存中…" : "保存全部"}
@@ -115,6 +118,17 @@ export default function AdminSettingsPage() {
             <Switch
               checked={form.showDemoAccounts}
               onCheckedChange={(v) => setForm({ ...form, showDemoAccounts: !!v })}
+            />
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">显示右下角软件工单按钮</p>
+              <p className="text-xs text-muted-foreground">开启后各业务页可提交 Bug / 需求反馈工单</p>
+            </div>
+            <Switch
+              checked={form.feedbackTicketEnabled}
+              onCheckedChange={(v) => setForm({ ...form, feedbackTicketEnabled: !!v })}
             />
           </div>
           <Separator />

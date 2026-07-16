@@ -448,6 +448,28 @@ CREATE TABLE `attachments` (
   KEY `idx_attach_ref` (`refType`, `refNo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------- 软件反馈工单 ----------
+DROP TABLE IF EXISTS `feedback_tickets`;
+CREATE TABLE `feedback_tickets` (
+  `id` VARCHAR(32) NOT NULL,
+  `ticketNo` VARCHAR(40) NOT NULL,
+  `type` VARCHAR(40) NOT NULL,
+  `content` TEXT NOT NULL,
+  `account` VARCHAR(80) NOT NULL,
+  `userName` VARCHAR(80) NOT NULL,
+  `roleId` VARCHAR(10) NOT NULL,
+  `roleName` VARCHAR(80) NOT NULL,
+  `pagePath` VARCHAR(200) NOT NULL,
+  `pageTitle` VARCHAR(120) NOT NULL,
+  `screenshotDataUrl` LONGTEXT NULL,
+  `screenshotFileName` VARCHAR(200) NULL,
+  `createdAt` VARCHAR(32) NOT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT '待处理',
+  PRIMARY KEY (`id`),
+  KEY `idx_fb_status` (`status`),
+  KEY `idx_fb_created` (`createdAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------- 系统设置（KV，value 为 JSON） ----------
 DROP TABLE IF EXISTS `system_settings`;
 CREATE TABLE `system_settings` (

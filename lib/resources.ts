@@ -59,6 +59,15 @@ export const RESOURCES = {
     module: "单据附件",
     label: "附件元数据",
   },
+  feedbackTickets: {
+    table: "feedback_tickets",
+    id: "id",
+    json: [],
+    bool: [],
+    seed: "feedbackTickets",
+    module: "系统管理",
+    label: "反馈工单",
+  },
   settings: {
     table: "system_settings",
     id: "key",

@@ -69,6 +69,7 @@ export const CODE_DEFAULTS: Record<string, unknown> = {
   [SETTING_KEYS.billConfirmDays]: 3,
   [SETTING_KEYS.returnProofOverdueDays]: 3,
   [SETTING_KEYS.approvalThresholds]: DEFAULT_APPROVAL_THRESHOLDS,
+  [SETTING_KEYS.feedbackTicketEnabled]: true,
 }
 
 type CacheBag = {
@@ -152,6 +153,7 @@ export type PublicSettings = {
   billConfirmDays: number
   returnProofOverdueDays: number
   approvalThresholds: ApprovalThresholds
+  feedbackTicketEnabled: boolean
 }
 
 export async function getPublicSettings(): Promise<PublicSettings> {
@@ -164,6 +166,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     billConfirmDays,
     returnProofOverdueDays,
     approvalThresholds,
+    feedbackTicketEnabled,
   ] = await Promise.all([
     getSetting<boolean>(SETTING_KEYS.showDemoAccounts, true),
     getSetting<ShowUnauthorizedMenusMap>(
@@ -176,6 +179,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     getSetting<number>(SETTING_KEYS.billConfirmDays, 3),
     getSetting<number>(SETTING_KEYS.returnProofOverdueDays, 3),
     getSetting<ApprovalThresholds>(SETTING_KEYS.approvalThresholds, DEFAULT_APPROVAL_THRESHOLDS),
+    getSetting<boolean>(SETTING_KEYS.feedbackTicketEnabled, true),
   ])
   return {
     showDemoAccounts,
@@ -189,6 +193,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     billConfirmDays,
     returnProofOverdueDays,
     approvalThresholds: { ...DEFAULT_APPROVAL_THRESHOLDS, ...approvalThresholds },
+    feedbackTicketEnabled: !!feedbackTicketEnabled,
   }
 }
 

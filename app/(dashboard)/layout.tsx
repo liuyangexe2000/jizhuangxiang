@@ -4,6 +4,7 @@ import { DictionaryProvider } from "@/lib/dictionary-context"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
 import { PageAccessGuard } from "@/components/page-access-guard"
+import { FeedbackTicketButton } from "@/components/feedback-ticket-button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -23,6 +24,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </div>
             </main>
           </div>
+          <FeedbackTicketButton />
         </div>
       </TooltipProvider>
       </DictionaryProvider>

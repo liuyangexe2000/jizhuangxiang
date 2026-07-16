@@ -532,3 +532,27 @@ export interface ApprovalThresholds {
   level2Below: number
   level3Below: number
 }
+
+// ---------- 软件反馈工单 ----------
+
+export type FeedbackTicketType = "bug" | "业务需求" | "简易" | "体验优化" | "其他"
+export type FeedbackTicketStatus = "待处理" | "处理中" | "已关闭"
+
+export interface FeedbackTicket {
+  id: string
+  ticketNo: string
+  type: FeedbackTicketType
+  content: string
+  account: string
+  userName: string
+  roleId: RoleId
+  roleName: string
+  pagePath: string
+  pageTitle: string
+  /** 压缩后的截图 data URL，可选 */
+  screenshotDataUrl?: string
+  screenshotFileName?: string
+  /** 提交时间（表单隐藏字段） */
+  createdAt: string
+  status: FeedbackTicketStatus
+}

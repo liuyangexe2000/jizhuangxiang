@@ -28,6 +28,7 @@ import {
   Plug,
   Shield,
   Settings,
+  MessageSquarePlus,
   type LucideIcon,
 } from "lucide-react"
 
@@ -129,7 +130,8 @@ export const navGroups: NavGroup[] = [
       { title: "用户与代理", href: "/admin/users", icon: Users, roles: ["R00"], desc: "用户账号管理与临时代理登录" },
       { title: "业务数据台", href: "/admin/data", icon: Database, roles: ["R00"], desc: "全量业务数据增删改查" },
       { title: "角色权限", href: "/admin/permissions", icon: Shield, roles: ["R00"], desc: "菜单与资源权限矩阵" },
-      { title: "系统参数", href: "/admin/settings", icon: Settings, roles: ["R00"], desc: "演示开关、菜单策略与业务参数" },
+      { title: "系统参数", href: "/admin/settings", icon: Settings, roles: ["R00"], desc: "演示开关、工单入口、菜单策略与业务参数" },
+      { title: "反馈工单", href: "/admin/feedback", icon: MessageSquarePlus, roles: ["R00"], desc: "用户提交的 Bug / 需求工单处理" },
       { title: "操作日志审计", href: "/admin/audit", icon: History, roles: ["R00"], desc: "增删改查与代理登录追溯" },
       { title: "集成状态面板", href: "/admin/integrations", icon: Plug, roles: ["R00"], desc: "订舱平台/代管公司同步状态" },
     ],
