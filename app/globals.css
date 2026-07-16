@@ -187,6 +187,10 @@
 
 /* 成品单据打印：仅打印 .print-area 内容，隐藏应用外壳 */
 @media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
   body * {
     visibility: hidden;
   }
@@ -197,11 +201,16 @@
   .print-area {
     position: absolute;
     inset: 0;
-    margin: 0;
-    padding: 24px;
+    margin: 0 auto;
+    padding: 0;
     width: 100%;
-    background: #fff;
-    color: #000;
+    max-width: 186mm;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+  .doc-print-sheet {
+    box-shadow: none !important;
   }
   .no-print {
     display: none !important;

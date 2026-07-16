@@ -198,6 +198,28 @@ export interface DiscrepancyRow {
 
 // ---------- M04 模板与堆场 ----------
 
+export type DocKind = "pickup" | "return" | "other"
+
+/** 提还箱打印布局（存 JSON） */
+export interface DocTemplateLayout {
+  orgLine: string
+  title: string
+  showTemplateName: boolean
+  metaLine: string
+  rows: { cells: { key: string; label: string }[] }[]
+  notice: string
+  showSignature: boolean
+  signatureLabel: string
+  seal: {
+    enabled: boolean
+    imageDataUrl?: string
+    label: string
+    offsetX: number
+    offsetY: number
+    size: number
+  }
+}
+
 export interface DocTemplate {
   id: string
   name: string
@@ -206,6 +228,14 @@ export interface DocTemplate {
   fields: string[]
   updatedAt: string
   enabled: boolean
+  /** 单据类别：提箱 / 还箱 / 其他 */
+  docKind: DocKind
+  /** 内置模板不可直接编辑内容，仅可启用/停用；可「复用」后编辑副本 */
+  builtIn: boolean
+  /** 复用来源模板 id */
+  clonedFrom?: string
+  /** 可视化布局；提还箱打印使用 */
+  layout?: DocTemplateLayout
 }
 
 export type BookingStatus = "待发送" | "已通知" | "已确认" | "超时"

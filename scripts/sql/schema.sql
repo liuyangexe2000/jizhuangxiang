@@ -180,6 +180,10 @@ CREATE TABLE `doc_templates` (
   `fields` JSON NULL,
   `updatedAt` VARCHAR(32) NOT NULL,
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `docKind` VARCHAR(20) NOT NULL DEFAULT 'other',
+  `builtIn` TINYINT(1) NOT NULL DEFAULT 0,
+  `clonedFrom` VARCHAR(32) NULL,
+  `layout` JSON NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

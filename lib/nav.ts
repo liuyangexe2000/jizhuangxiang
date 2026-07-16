@@ -109,7 +109,7 @@ export const navGroups: NavGroup[] = [
     module: "M04",
     label: "堆场作业与模板配置中心",
     items: [
-      { title: "单据模板", href: "/yard/templates", icon: FileText, roles: ["R01", "R04"], desc: "标准化单据模板引擎" },
+      { title: "单据模板", href: "/yard/templates", icon: FileText, roles: ["R00", "R01", "R04"], desc: "标准化单据模板引擎与可视化设计" },
       { title: "预约与通知", href: "/yard/bookings", icon: CalendarClock, roles: ["R01", "R04", "R05", "R06"], desc: "提还箱预约与邮件通知" },
       { title: "堆场维护", href: "/yard/yards", icon: Warehouse, roles: ["R01", "R04", "R06"], desc: "堆场信息动态维护" },
     ],

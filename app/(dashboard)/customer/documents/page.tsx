@@ -69,6 +69,7 @@ export default function DocumentsPage() {
   const [pickupYard, setPickupYard] = useState("")
   const [returnYard, setReturnYard] = useState("")
   const [printTarget, setPrintTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
+  const [printTemplateId, setPrintTemplateId] = useState("")
   const [bookingTarget, setBookingTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [bookingTime, setBookingTime] = useState(toInputTime(nowLocalStr()))
   const [stuffingTarget, setStuffingTarget] = useState<UseBoxOrder | null>(null)
@@ -399,8 +400,24 @@ export default function DocumentsPage() {
     }
   }
 
-  const pickupTemplate = templates.find((t) => t.enabled && (t.code === "RELEASE_ORDER" || t.name.includes("提箱") || t.scene.includes("提箱")))
-  const returnTemplate = templates.find((t) => t.enabled && (t.code === "REDELIVERY_ORDER" || t.name.includes("还箱") || t.scene.includes("还箱")))
+  const pickupTemplates = templates.filter(
+    (t) =>
+      t.enabled &&
+      (t.docKind === "pickup" || t.code?.startsWith("RELEASE_ORDER") || t.name.includes("提箱")),
+  )
+  const returnTemplates = templates.filter(
+    (t) =>
+      t.enabled &&
+      (t.docKind === "return" || t.code?.startsWith("REDELIVERY_ORDER") || t.name.includes("还箱")),
+  )
+  const pickupTemplate = pickupTemplates.find((t) => t.code === "RELEASE_ORDER") || pickupTemplates[0]
+  const returnTemplate = returnTemplates.find((t) => t.code === "REDELIVERY_ORDER") || returnTemplates[0]
+  const activePrintTemplates = printTarget?.phase === "return" ? returnTemplates : pickupTemplates
+  const activePrintTemplate =
+    activePrintTemplates.find((t) => t.id === printTemplateId) ||
+    (printTarget?.phase === "return" ? returnTemplate : pickupTemplate) ||
+    activePrintTemplates[0]
+
   const attachmentCount = (order: UseBoxOrder) => attachments.filter((a) => a.refNo === order.orderNo).length
 
   return (
@@ -443,7 +460,7 @@ export default function DocumentsPage() {
               setBookingTime(toInputTime(nowLocalStr()))
             }}
             onYard={openYardDialog}
-            onPrint={(o) => setPrintTarget({ order: o, phase: "pickup" })}
+            onPrint={(o) => { setPrintTemplateId(pickupTemplate?.id || ""); setPrintTarget({ order: o, phase: "pickup" }); }}
             onStuffing={openStuffingDialog}
             onException={openExceptionDialog}
           />
@@ -463,7 +480,7 @@ export default function DocumentsPage() {
               setBookingTime(toInputTime(nowLocalStr()))
             }}
             onYard={openYardDialog}
-            onPrint={(o) => setPrintTarget({ order: o, phase: "return" })}
+            onPrint={(o) => { setPrintTemplateId(returnTemplate?.id || ""); setPrintTarget({ order: o, phase: "return" }); }}
             onReturnProof={openReturnProofDialog}
             overdue={overdueProofs}
           />
@@ -633,14 +650,37 @@ export default function DocumentsPage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>单据预览</DialogTitle>
+            <DialogDescription className="no-print">
+              提箱单不含用箱价格；可切换已启用模板，打印时带电子章。
+            </DialogDescription>
           </DialogHeader>
+          {activePrintTemplates.length > 1 && (
+            <div className="no-print flex flex-wrap items-center gap-2">
+              <Label className="text-xs text-muted-foreground">打印模板</Label>
+              <select
+                className="flex h-9 min-w-[12rem] rounded-md border bg-background px-2 text-sm"
+                value={activePrintTemplate?.id || ""}
+                onChange={(e) => setPrintTemplateId(e.target.value)}
+              >
+                {activePrintTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.builtIn ? "（内置）" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {printTarget &&
             (printTarget.phase === "pickup" ? (
-              <OrderPickupDocument order={printTarget.order} templateName={pickupTemplate?.name} />
+              <OrderPickupDocument order={printTarget.order} template={activePrintTemplate} />
             ) : (
-              <OrderReturnDocument order={printTarget.order} templateName={returnTemplate?.name} />
+              <OrderReturnDocument order={printTarget.order} template={activePrintTemplate} />
             ))}
-          <DialogFooter>
+          <DialogFooter className="no-print">
+            <Button variant="outline" onClick={() => setPrintTarget(null)}>
+              关闭
+            </Button>
             <Button onClick={() => window.print()}>
               <Printer className="mr-1 size-4" />
               打印

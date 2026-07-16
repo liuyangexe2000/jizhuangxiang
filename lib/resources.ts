@@ -29,7 +29,7 @@ export const RESOURCES = {
   gate: { table: "gate_records", id: "id", json: [], bool: [], seed: "gateRecords", module: "M03 进出场", label: "进出场记录" },
   containers: { table: "container_masters", id: "containerNo", json: [], bool: [], seed: "containerMasters", module: "M03 库存管理", label: "集装箱主档" },
   discrepancy: { table: "discrepancy_rows", id: "id", json: [], bool: [], seed: "discrepancyRows", module: "M03 差异核对", label: "库存差异" },
-  templates: { table: "doc_templates", id: "id", json: ["fields"], bool: ["enabled"], seed: "docTemplates", module: "M04 模板配置", label: "单据模板" },
+  templates: { table: "doc_templates", id: "id", json: ["fields", "layout"], bool: ["enabled", "builtIn"], seed: "docTemplates", module: "M04 模板配置", label: "单据模板" },
   bookings: { table: "bookings", id: "id", json: ["containerNos"], bool: ["notifyByEmail", "withinWorkHours"], seed: "bookings", module: "M04 预约与通知", label: "堆场预约" },
   yards: { table: "yards", id: "id", json: [], bool: ["hasSeal", "enabled", "deleted"], seed: "yards", module: "M04 堆场管理", label: "堆场" },
   cities: { table: "city_dict", id: "id", json: [], bool: ["usableAsPickup", "usableAsReturn", "enabled"], seed: "cityDict", module: "基础配置", label: "城市字典" },
