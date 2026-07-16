@@ -133,12 +133,18 @@ export function FeedbackTicketButton() {
     setUploading(true)
     try {
       const next: FeedbackScreenshot[] = []
+      let resizedCount = 0
       for (const file of batch) {
-        const resized = await resizeImageToDataUrl(file, 1024)
+        const resized = await resizeImageToDataUrl(file, 1440)
+        if (resized.resized) resizedCount += 1
         next.push({ dataUrl: resized.dataUrl, fileName: resized.fileName })
       }
       setScreenshots((prev) => [...prev, ...next].slice(0, FEEDBACK_SCREENSHOT_MAX))
-      toast.success(`已添加 ${next.length} 张截图（宽≤1024px）`)
+      if (resizedCount > 0) {
+        toast.success(`已添加 ${next.length} 张（其中 ${resizedCount} 张已按宽 1440px 等比压缩）`)
+      } else {
+        toast.success(`已添加 ${next.length} 张截图（未超过 1440px，保持原图）`)
+      }
     } catch (e) {
       toast.error((e as Error).message)
     } finally {
@@ -339,7 +345,7 @@ export function FeedbackTicketButton() {
             >
               <Label>截图上传（最多 {FEEDBACK_SCREENSHOT_MAX} 张）</Label>
               <p className="text-xs text-muted-foreground">
-                支持选择或 Ctrl+V 粘贴；缩略图横排，点击可看大图轮播；宽度自动压缩至不超过 1024px
+                支持选择或 Ctrl+V 粘贴；缩略图横排，点击可看大图轮播；宽度超过 1440px 时等比压缩，否则保持原图
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <label
