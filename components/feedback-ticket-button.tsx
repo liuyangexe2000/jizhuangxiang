@@ -185,16 +185,22 @@ export function FeedbackTicketButton() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>操作账号</Label>
-                <Input value={`${user.name}（${user.account}）`} readOnly />
+                <div className="flex h-8 items-center rounded-lg border border-input bg-muted/50 px-2.5 text-sm text-muted-foreground select-none">
+                  {user.name}（{user.account}）
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>角色</Label>
-                <Input value={`${roleName}（${roleId}）`} readOnly />
+                <div className="flex h-8 items-center rounded-lg border border-input bg-muted/50 px-2.5 text-sm text-muted-foreground select-none">
+                  {roleName}（{roleId}）
+                </div>
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>所在功能页面</Label>
-              <Input value={`${pageTitle} · ${pathname}`} readOnly />
+              <div className="flex min-h-8 items-center rounded-lg border border-input bg-muted/50 px-2.5 py-1.5 text-sm text-muted-foreground select-none">
+                {pageTitle} · {pathname}
+              </div>
             </div>
 
             <div className="space-y-1.5">
