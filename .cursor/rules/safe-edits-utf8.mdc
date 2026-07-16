@@ -1,0 +1,30 @@
+---
+description: 禁止破坏性改写与编码损坏；列表改动必须增量安全
+alwaysApply: true
+---
+
+# 安全改码红线（血泪教训）
+
+## 绝对禁止
+
+1. **禁止用 PowerShell `Set-Content` / `Out-File`（默认编码）批量改 `.ts`/`.tsx`/`.md` 等源码**  
+   Windows 下会把 UTF-8 中文写成 `?`，整页语法与业务一并报废。
+2. **禁止为「修一个小功能」整文件重写**（尤其是已有大量业务逻辑的页面）。  
+   分页 / 筛选 / 排序等横切能力：只加 hook + 改表头渲染 + 底部分页，**不动业务函数与对话框**。
+3. **禁止用「先破坏再重写」当修复手段**。编码损坏后应：`git checkout -- <file>` 或从备份恢复，而不是凭记忆重写。
+
+## 正确做法
+
+- 改文件只用 Cursor 的 **StrReplace / Write 单文件定点编辑**，或 **Node `fs.writeFileSync(..., 'utf8')`**（脚本源码用 `\uXXXX` 时再解码写入）。
+- 跨多文件的机械替换：用 Node/`tsx` 脚本读写 UTF-8，**先 dry-run 打印差异再写盘**；写前确认仓库已有 git 提交可回滚。
+- 任何批量改动前：先 `git status`，确保当前改动可提交或可丢弃；**无 git 时禁止批量改源码**。
+
+## 列表页（分页 / 筛选 / 排序）
+
+- 复用 `useListQuery`、`SortableTableHead`、`ListPagination`。
+- 流程：`filtered = useMemo(...)` → `list = useListQuery({ data: filtered, ... })` → 表头可排序 → `list.rows` → 底部分页。
+- **禁止**为接列表控件而重写整页业务逻辑。
+
+## 自检
+
+改完含中文的页面后，应用 `Grep` 确认关键中文文案仍在（如「待确认」「提箱」），并跑 `npx tsc --noEmit`。

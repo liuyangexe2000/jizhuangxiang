@@ -1,0 +1,37 @@
+# v0 sandbox internal files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.v0-trash/
+.vercel/
+
+# Environment / secrets — 切勿提交
+.env
+.env*.local
+!.env.example
+
+# Dependencies & build
+node_modules/
+.next/
+out/
+dist/
+build/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Logs & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE (可选本地忽略；规则文件 .cursor/rules 应纳入版本库)
+.idea/
+*.swp
+*.swo
+
+# Temp scripts
+scripts/_tmp-*
+scripts/_write-*
