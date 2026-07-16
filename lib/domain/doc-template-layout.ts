@@ -1,9 +1,23 @@
 /**
- * 提还箱单据模板布局：字段目录、默认布局、取值与默认电子章。
+ * 单据模板布局：字段目录、默认布局、取值与默认电子章。
  */
-import type { UseBoxOrder } from "@/lib/types"
+import type { DocKind, UseBoxOrder } from "@/lib/types"
 
-export type DocKind = "pickup" | "return" | "other"
+export type { DocKind }
+
+export const DOC_KIND_OPTIONS: { kind: DocKind; label: string; codeHint: string; scene: string }[] = [
+  { kind: "pickup", label: "提箱单", codeHint: "RELEASE_", scene: "提箱作业打印" },
+  { kind: "return", label: "还箱单", codeHint: "REDELIVERY_", scene: "还箱作业打印" },
+  { kind: "dispatch_approval", label: "调运审批表", codeHint: "DISPATCH_APPROVAL_", scene: "调运审批通过后生成" },
+  { kind: "business_entrust", label: "用箱业务委托书", codeHint: "BUSINESS_ENTRUST_", scene: "调运任务下发时生成" },
+  { kind: "overdue_bill", label: "超期费账单", codeHint: "OVERDUE_BILL_", scene: "超期费核算后生成" },
+  { kind: "dispatch_bill", label: "调运费账单", codeHint: "DISPATCH_BILL_", scene: "调运费核算后生成" },
+  { kind: "other", label: "其他", codeHint: "DOC_", scene: "自定义打印模板" },
+]
+
+export function kindLabel(kind: DocKind | undefined): string {
+  return DOC_KIND_OPTIONS.find((o) => o.kind === kind)?.label ?? "其他"
+}
 
 export type DocFieldKey =
   | "orderNo"
@@ -32,24 +46,24 @@ export interface DocFieldDef {
 }
 
 export const DOC_FIELD_CATALOG: DocFieldDef[] = [
-  { key: "orderNo", label: "订单号", kinds: ["pickup", "return"] },
-  { key: "createdAt", label: "创建时间", kinds: ["pickup", "return"] },
-  { key: "confirmedAt", label: "确认时间", kinds: ["pickup", "return"] },
-  { key: "customer", label: "客户", kinds: ["pickup", "return"] },
-  { key: "customerType", label: "客户类型", kinds: ["pickup", "return"] },
-  { key: "pickupCity", label: "提箱城市", kinds: ["pickup", "return"] },
-  { key: "returnCity", label: "还箱城市", kinds: ["pickup", "return"] },
-  { key: "pickupYard", label: "提箱堆场", kinds: ["pickup", "return"] },
-  { key: "returnYard", label: "还箱堆场", kinds: ["pickup", "return"] },
-  { key: "containerType", label: "箱型", kinds: ["pickup", "return"] },
-  { key: "quantity", label: "数量", kinds: ["pickup", "return"] },
-  { key: "adminRemark", label: "箱管备注", kinds: ["pickup", "return"] },
-  { key: "confirmedBy", label: "确认人", kinds: ["pickup", "return"] },
-  { key: "conditionNote", label: "箱况备注", kinds: ["pickup", "return"] },
-  { key: "pickupGateAt", label: "放箱时间", kinds: ["pickup"] },
-  { key: "returnGateAt", label: "收箱时间", kinds: ["return"] },
-  { key: "pickupBooking", label: "预约提箱时间", kinds: ["pickup"] },
-  { key: "returnBooking", label: "预约还箱时间", kinds: ["return"] },
+  { key: "orderNo", label: "订单号", kinds: ["pickup", "return", "other"] },
+  { key: "createdAt", label: "创建时间", kinds: ["pickup", "return", "other"] },
+  { key: "confirmedAt", label: "确认时间", kinds: ["pickup", "return", "other"] },
+  { key: "customer", label: "客户", kinds: ["pickup", "return", "dispatch_approval", "business_entrust", "other"] },
+  { key: "customerType", label: "客户类型", kinds: ["pickup", "return", "other"] },
+  { key: "pickupCity", label: "提箱城市", kinds: ["pickup", "return", "dispatch_approval", "other"] },
+  { key: "returnCity", label: "还箱城市", kinds: ["pickup", "return", "dispatch_approval", "other"] },
+  { key: "pickupYard", label: "提箱堆场", kinds: ["pickup", "return", "other"] },
+  { key: "returnYard", label: "还箱堆场", kinds: ["pickup", "return", "other"] },
+  { key: "containerType", label: "箱型", kinds: ["pickup", "return", "overdue_bill", "dispatch_bill", "other"] },
+  { key: "quantity", label: "数量", kinds: ["pickup", "return", "dispatch_approval", "dispatch_bill", "other"] },
+  { key: "adminRemark", label: "备注", kinds: ["pickup", "return", "dispatch_approval", "business_entrust", "overdue_bill", "dispatch_bill", "other"] },
+  { key: "confirmedBy", label: "确认人", kinds: ["pickup", "return", "dispatch_approval", "other"] },
+  { key: "conditionNote", label: "箱况备注", kinds: ["pickup", "return", "other"] },
+  { key: "pickupGateAt", label: "放箱时间", kinds: ["pickup", "other"] },
+  { key: "returnGateAt", label: "收箱时间", kinds: ["return", "other"] },
+  { key: "pickupBooking", label: "预约提箱时间", kinds: ["pickup", "other"] },
+  { key: "returnBooking", label: "预约还箱时间", kinds: ["return", "other"] },
 ]
 
 export interface DocLayoutCell {
@@ -290,10 +304,79 @@ export function defaultReturnOpsLayout(): DocTemplateLayout {
   }
 }
 
+export function layoutFromFieldLabels(
+  title: string,
+  labels: string[],
+  notice = "本单据由系统模板生成，请核对后签章。",
+): DocTemplateLayout {
+  const rows: DocLayoutRow[] = []
+  for (let i = 0; i < labels.length; i += 2) {
+    const left = labels[i]
+    const right = labels[i + 1]
+    if (right) {
+      rows.push({
+        cells: [
+          { key: "adminRemark", label: left },
+          { key: "adminRemark", label: right },
+        ],
+      })
+    } else {
+      rows.push({ cells: [{ key: "adminRemark", label: left }] })
+    }
+  }
+  if (rows.length === 0) {
+    rows.push({ cells: [{ key: "adminRemark", label: "内容" }] })
+  }
+  return {
+    orgLine: "中欧班列平台公司 · 集装箱管理部",
+    title,
+    showTemplateName: true,
+    metaLine: "单据编号：{{orderNo}}  |  生成时间：{{createdAt}}",
+    rows,
+    notice,
+    showSignature: true,
+    signatureLabel: "签章确认",
+    seal: defaultSealConfig({ label: "箱管部" }),
+  }
+}
+
+export function defaultFieldsForKind(kind: DocKind): string[] {
+  switch (kind) {
+    case "pickup":
+      return fieldsFromLayout(defaultPickupLayout())
+    case "return":
+      return fieldsFromLayout(defaultReturnLayout())
+    case "dispatch_approval":
+      return [
+        "计划调运时间",
+        "调运线路",
+        "调运原因",
+        "调运单价",
+        "用箱期",
+        "超期费",
+        "调运数量",
+        "承运商",
+        "调运总价",
+        "经办部门/人",
+        "多级审批签字栏",
+      ]
+    case "business_entrust":
+      return ["委托方信息", "承运商信息", "调运任务详情", "双方盖章签字栏"]
+    case "overdue_bill":
+      return ["箱号", "超期天数", "超期费标准", "超期费金额"]
+    case "dispatch_bill":
+      return ["调运线路", "调运数量", "调运单价", "调运总价"]
+    default:
+      return ["标题字段", "内容字段", "备注"]
+  }
+}
+
 export function layoutForKind(kind: DocKind): DocTemplateLayout {
   if (kind === "return") return defaultReturnLayout()
   if (kind === "pickup") return defaultPickupLayout()
-  return defaultPickupLayout()
+  const opt = DOC_KIND_OPTIONS.find((o) => o.kind === kind)
+  const title = opt?.label ?? "单据"
+  return layoutFromFieldLabels(title, defaultFieldsForKind(kind))
 }
 
 export function resolveDocField(

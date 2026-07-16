@@ -198,7 +198,14 @@ export interface DiscrepancyRow {
 
 // ---------- M04 模板与堆场 ----------
 
-export type DocKind = "pickup" | "return" | "other"
+export type DocKind =
+  | "pickup"
+  | "return"
+  | "dispatch_approval"
+  | "business_entrust"
+  | "overdue_bill"
+  | "dispatch_bill"
+  | "other"
 
 /** 提还箱打印布局（存 JSON） */
 export interface DocTemplateLayout {

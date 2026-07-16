@@ -22,16 +22,10 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useResource, revalidateResource } from "@/lib/api"
-import { fieldsFromLayout, layoutForKind } from "@/lib/domain/doc-template-layout"
+import { DOC_KIND_OPTIONS, fieldsFromLayout, kindLabel, layoutForKind } from "@/lib/domain/doc-template-layout"
 import { nowLocalStr } from "@/lib/now-local"
 import { useRole } from "@/lib/role-context"
 import type { DocKind, DocTemplate } from "@/lib/types"
-
-function kindLabel(kind: DocKind | undefined) {
-  if (kind === "pickup") return "提箱单"
-  if (kind === "return") return "还箱单"
-  return "其他"
-}
 
 export default function TemplatesPage() {
   const { roleId } = useRole()
@@ -121,11 +115,12 @@ export default function TemplatesPage() {
     try {
       const layout = layoutForKind(newKind)
       layout.title = name.replace(/[（(].*$/, "").trim() || layout.title
+      const kindOpt = DOC_KIND_OPTIONS.find((o) => o.kind === newKind)
       await create({
         id: `t_${Date.now().toString(36)}`,
         name,
         code,
-        scene: newScene.trim() || "自定义打印模板",
+        scene: newScene.trim() || kindOpt?.scene || "自定义打印模板",
         fields: fieldsFromLayout(layout),
         updatedAt: nowLocalStr().slice(0, 10),
         enabled: false,
@@ -151,7 +146,7 @@ export default function TemplatesPage() {
     <div className="space-y-6">
       <PageHeader
         title="单据模板引擎"
-        description="提箱单 / 还箱单支持多套内置模板与可视化设计；内置模板不可直接改版，可复用后编辑。打印不含用箱价格。"
+        description="支持提箱单、还箱单、调运审批表、委托书、账单等单据类型；内置模板不可直接改版，可复用后编辑。提箱单打印不含用箱价格。"
         actions={
           isSysAdmin ? (
             <Button className="gap-1.5" onClick={() => setCreateOpen(true)}>
@@ -236,8 +231,7 @@ export default function TemplatesPage() {
                     <ListTree className="size-3.5" />
                     字段
                   </Button>
-                  {(t.docKind === "pickup" || t.docKind === "return") && (
-                    <>
+                  <>
                       {isSysAdmin && !t.builtIn ? (
                         <Button variant="outline" size="sm" className="gap-1.5 bg-transparent" nativeButton={false} render={<Link href={`/yard/templates/${t.id}/design`} />}>
                           <Pencil className="size-3.5" />
@@ -262,11 +256,10 @@ export default function TemplatesPage() {
                         </Button>
                       )}
                     </>
-                  )}
                   <Switch checked={t.enabled} onCheckedChange={() => toggle(t.id)} />
                 </div>
               </div>
-              {t.builtIn && isSysAdmin && (t.docKind === "pickup" || t.docKind === "return") && (
+              {t.builtIn && isSysAdmin && (
                 <p className="text-[11px] text-muted-foreground">内置模板内容锁定；请「复用」后编辑副本。</p>
               )}
             </CardContent>
@@ -294,7 +287,7 @@ export default function TemplatesPage() {
       </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FilePlus2 className="size-4" />
@@ -313,19 +306,20 @@ export default function TemplatesPage() {
             </div>
             <div className="space-y-1.5">
               <Label>类型</Label>
-              <div className="flex gap-2">
-                {([
-                  ["pickup", "提箱单"],
-                  ["return", "还箱单"],
-                ] as const).map(([k, label]) => (
+              <div className="flex flex-wrap gap-2">
+                {DOC_KIND_OPTIONS.map((opt) => (
                   <Button
-                    key={k}
+                    key={opt.kind}
                     type="button"
                     size="sm"
-                    variant={newKind === k ? "default" : "outline"}
-                    onClick={() => setNewKind(k)}
+                    variant={newKind === opt.kind ? "default" : "outline"}
+                    onClick={() => {
+                      setNewKind(opt.kind)
+                      setNewScene(opt.scene)
+                      if (!newCode.trim()) setNewCode(opt.codeHint)
+                    }}
                   >
-                    {label}
+                    {opt.label}
                   </Button>
                 ))}
               </div>

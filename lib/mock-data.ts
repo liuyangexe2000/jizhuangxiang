@@ -29,6 +29,7 @@ import {
   defaultReturnOpsLayout,
   defaultReturnSimpleLayout,
   fieldsFromLayout,
+  layoutForKind,
 } from "./domain/doc-template-layout"
 
 export { roles } from "./roles"
@@ -463,8 +464,9 @@ export const docTemplates: DocTemplate[] = [
     fields: ["计划调运时间", "调运线路", "调运原因", "调运单价", "用箱期", "超期费", "调运数量", "承运商", "调运总价", "经办部门/人", "多级审批签字栏"],
     updatedAt: "2026-05-20",
     enabled: true,
-    docKind: "other",
+    docKind: "dispatch_approval",
     builtIn: true,
+    layout: layoutForKind("dispatch_approval"),
   },
   {
     id: "t2",
@@ -474,8 +476,9 @@ export const docTemplates: DocTemplate[] = [
     fields: ["委托方信息", "承运商信息", "调运任务详情", "双方盖章签字栏"],
     updatedAt: "2026-05-20",
     enabled: true,
-    docKind: "other",
+    docKind: "business_entrust",
     builtIn: true,
+    layout: layoutForKind("business_entrust"),
   },
   {
     id: "t3",
@@ -557,8 +560,9 @@ export const docTemplates: DocTemplate[] = [
     fields: ["箱号", "超期天数", "超期费标准", "超期费金额"],
     updatedAt: "2026-06-10",
     enabled: true,
-    docKind: "other",
+    docKind: "overdue_bill",
     builtIn: true,
+    layout: layoutForKind("overdue_bill"),
   },
   {
     id: "t6",
@@ -568,8 +572,9 @@ export const docTemplates: DocTemplate[] = [
     fields: ["调运线路", "调运数量", "调运单价", "调运总价"],
     updatedAt: "2026-06-10",
     enabled: true,
-    docKind: "other",
+    docKind: "dispatch_bill",
     builtIn: true,
+    layout: layoutForKind("dispatch_bill"),
   },
 ]
 

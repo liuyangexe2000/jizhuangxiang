@@ -19,6 +19,7 @@ import {
   builtInSealDataUrl,
   defaultSealConfig,
   fieldsFromLayout,
+  kindLabel,
   layoutForKind,
   type DocFieldKey,
   type DocTemplateLayout,
@@ -70,17 +71,17 @@ export default function TemplateDesignPage() {
     if (!template) return
     setName(template.name)
     setScene(template.scene)
-    const kind = template.docKind === "return" ? "return" : "pickup"
     setLayout(
       template.layout
         ? (structuredClone(template.layout) as DocTemplateLayout)
-        : layoutForKind(kind),
+        : layoutForKind(template.docKind || "other"),
     )
   }, [template])
 
   const catalog = useMemo(() => {
-    const kind = template?.docKind === "return" ? "return" : "pickup"
-    return DOC_FIELD_CATALOG.filter((f) => f.kinds.includes(kind))
+    const kind = template?.docKind || "other"
+    const matched = DOC_FIELD_CATALOG.filter((f) => f.kinds.includes(kind))
+    return matched.length > 0 ? matched : DOC_FIELD_CATALOG.filter((f) => f.kinds.includes("other"))
   }, [template?.docKind])
 
   if (!template) {
@@ -224,7 +225,7 @@ export default function TemplateDesignPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">基本信息</CardTitle>
               <CardDescription>
-                {template.code} · {template.docKind === "return" ? "还箱单" : "提箱单"}
+                {template.code} · {kindLabel(template.docKind)}
                 {template.builtIn ? " · 内置锁定" : ""}
               </CardDescription>
             </CardHeader>
