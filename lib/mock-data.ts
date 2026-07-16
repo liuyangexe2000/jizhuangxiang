@@ -10,7 +10,6 @@ import type {
   DiscrepancyRow,
   DocTemplate,
   Booking,
-  Yard,
   SystemUser,
   Supplier,
   SupplyPlan,
@@ -608,14 +607,8 @@ export const bookings: Booking[] = [
   },
 ]
 
-export const yards: Yard[] = [
-  { id: "y1", name: "西安新筑堆场", region: "境内", city: "西安", agent: "陆港代管", address: "西安市灞桥区新筑街道", phone: "029-8888 0001", email: "xinzhu@xaport.net", capacity: 500, current: 320, enabled: true },
-  { id: "y2", name: "郑州圃田堆场", region: "境内", city: "郑州", agent: "郑州代管", address: "郑州市管城区圃田站", phone: "0371-6666 0002", email: "putian@zzport.net", capacity: 300, current: 180, enabled: true },
-  { id: "y3", name: "成都青白江堆场", region: "境内", city: "成都", agent: "蓉欧代管", address: "成都市青白江区大弯街道", phone: "028-8888 0003", email: "qbj@cdport.net", capacity: 400, current: 240, enabled: true },
-  { id: "y4", name: "汉堡港堆场", region: "境外", city: "汉堡", agent: "DE 代管公司", address: "Hamburg Hafen, Terminal 3", phone: "+49 40 3000 001", email: "hamburg@euyard.de", capacity: 200, current: 96, enabled: true },
-  { id: "y5", name: "杜伊斯堡堆场", region: "境外", city: "杜伊斯堡", agent: "DE 代管公司", address: "Duisburg DIT Terminal", phone: "+49 203 4000 002", email: "duisburg@euyard.de", capacity: 250, current: 130, enabled: true },
-  { id: "y6", name: "马拉舍维奇堆场", region: "境外", city: "马拉舍维奇", agent: "PL 代管公司", address: "Małaszewicze Terminal", phone: "+48 83 5000 003", email: "mal@plyard.pl", capacity: 180, current: 78, enabled: false },
-]
+/** 堆场：源自 old sql/base_container_factory.sql（见 scripts/import-base-container-factory.ts） */
+export { yardsSeed as yards } from "./data/yards.seed"
 
 // 基础数据字典：提箱/还箱城市（可维护）
 /** 提/还箱城市字典：源自 old sql/base_region.sql（见 scripts/import-base-region-cities.ts） */

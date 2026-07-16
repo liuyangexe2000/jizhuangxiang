@@ -73,7 +73,11 @@ export default function YardsPage() {
       (y) =>
         y.name.toLowerCase().includes(kw) ||
         y.city.toLowerCase().includes(kw) ||
-        y.agent.toLowerCase().includes(kw),
+        y.agent.toLowerCase().includes(kw) ||
+        y.factoryCode.toLowerCase().includes(kw) ||
+        y.factoryNumber.toLowerCase().includes(kw) ||
+        String(y.legacyId).includes(kw) ||
+        y.contactUser.toLowerCase().includes(kw),
     )
   }, [rows, keyword])
 
@@ -146,7 +150,7 @@ export default function YardsPage() {
     <div className="space-y-6">
       <PageHeader
         title="堆场信息维护"
-        description="M04-F03 境内外堆场动态维护 — 联系方式、容量、代管公司与启用状态；在场量取自库存台账"
+        description="M04-F03 境内外堆场动态维护 — 含老系统原 id（legacyId）便于跨系统匹配；联系方式、容量、代管公司与启用状态"
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -163,7 +167,7 @@ export default function YardsPage() {
             <CardDescription>共 {rows.length} 个境内外堆场 · 在场量 = 库存 onSite 汇总</CardDescription>
           </div>
           <Input
-            placeholder="搜索堆场 / 城市 / 代管公司"
+            placeholder="搜索堆场 / 原id / 编码 / 城市 / 代管"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             className="sm:max-w-xs"
@@ -174,6 +178,8 @@ export default function YardsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <SortableTableHead label="原ID" columnKey="legacyId" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                  <SortableTableHead label="编码" columnKey="factoryCode" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="堆场名称" columnKey="name" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="区域/城市" columnKey="location" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="代管公司" columnKey="agent" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
@@ -188,26 +194,34 @@ export default function YardsPage() {
                   const pct = Math.round((onSite / (y.capacity || 1)) * 100)
                   return (
                     <TableRow key={y.id}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{y.legacyId}</TableCell>
+                      <TableCell>
+                        <div className="font-mono text-sm">{y.factoryCode || "—"}</div>
+                        <div className="text-xs text-muted-foreground">{y.factoryNumber}</div>
+                      </TableCell>
                       <TableCell>
                         <div className="font-medium">{y.name}</div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="size-3" />
-                          {y.address}
+                          <MapPin className="size-3 shrink-0" />
+                          <span className="truncate max-w-[220px]">{y.address}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{y.region}</Badge>
-                        <span className="ml-2 text-sm">{y.city}</span>
+                        <span className="ml-2 text-sm">{y.city || "—"}</span>
                       </TableCell>
-                      <TableCell className="text-sm">{y.agent}</TableCell>
+                      <TableCell className="text-sm">{y.agent || "—"}</TableCell>
                       <TableCell>
+                        {y.contactUser ? (
+                          <div className="text-xs">{y.contactUser}</div>
+                        ) : null}
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Phone className="size-3" />
-                          {y.phone}
+                          {y.phone || "—"}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Mail className="size-3" />
-                          {y.email}
+                          {y.email || "—"}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -242,7 +256,7 @@ export default function YardsPage() {
                 })}
                 {list.total === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                       未找到匹配的堆场
                     </TableCell>
                   </TableRow>
@@ -262,12 +276,22 @@ export default function YardsPage() {
       </Card>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>编辑堆场</DialogTitle>
-            <DialogDescription>修改名称、容量与联系信息。在场量由库存台账汇总，不可手改。</DialogDescription>
+            <DialogDescription>
+              修改名称、容量与联系信息。原 id / 编码仅作跨系统匹配记录，不可改。在场量由库存汇总。
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
+            {editing && (
+              <div className="grid grid-cols-2 gap-3 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                <div>原系统 id：<span className="font-mono text-foreground">{editing.legacyId}</span></div>
+                <div>编码：<span className="font-mono text-foreground">{editing.factoryCode || "—"}</span></div>
+                <div>编号：<span className="font-mono text-foreground">{editing.factoryNumber || "—"}</span></div>
+                <div>uuid：<span className="font-mono text-foreground truncate">{editing.factoryId || "—"}</span></div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="yard-name">堆场名称</Label>
               <Input

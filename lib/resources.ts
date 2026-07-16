@@ -31,7 +31,7 @@ export const RESOURCES = {
   discrepancy: { table: "discrepancy_rows", id: "id", json: [], bool: [], seed: "discrepancyRows", module: "M03 差异核对", label: "库存差异" },
   templates: { table: "doc_templates", id: "id", json: ["fields"], bool: ["enabled"], seed: "docTemplates", module: "M04 模板配置", label: "单据模板" },
   bookings: { table: "bookings", id: "id", json: ["containerNos"], bool: ["notifyByEmail", "withinWorkHours"], seed: "bookings", module: "M04 预约与通知", label: "堆场预约" },
-  yards: { table: "yards", id: "id", json: [], bool: ["enabled"], seed: "yards", module: "M04 堆场管理", label: "堆场" },
+  yards: { table: "yards", id: "id", json: [], bool: ["hasSeal", "enabled", "deleted"], seed: "yards", module: "M04 堆场管理", label: "堆场" },
   cities: { table: "city_dict", id: "id", json: [], bool: ["usableAsPickup", "usableAsReturn", "enabled"], seed: "cityDict", module: "基础配置", label: "城市字典" },
   users: { table: "users", id: "id", json: [], bool: [], seed: "systemUsers", module: "系统管理", label: "用户" },
   suppliers: { table: "suppliers", id: "id", json: [], bool: ["enabled"], seed: "suppliers", module: "M05 供应计划", label: "供应商" },

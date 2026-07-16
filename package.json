@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "db:init": "tsx scripts/init-db.ts",
     "db:import-cities": "tsx scripts/import-base-region-cities.ts",
+    "db:import-yards": "tsx scripts/import-base-container-factory.ts",
     "check:acl": "tsx scripts/check-acl.ts",
     "test:e2e": "tsx scripts/e2e/run.ts",
     "test:ut01": "tsx 用户测试/verify-01-usebox.ts",
