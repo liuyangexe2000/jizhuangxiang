@@ -172,7 +172,7 @@ export function FeedbackTicketButton() {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>提交软件工单</DialogTitle>
             <DialogDescription>
@@ -181,24 +181,33 @@ export function FeedbackTicketButton() {
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>操作账号</Label>
-                <div className="flex h-8 items-center rounded-lg border border-input bg-muted/50 px-2.5 text-sm text-muted-foreground select-none">
+                <div
+                  className="flex h-8 items-center overflow-x-auto rounded-lg border border-input bg-muted/50 px-2.5 text-sm whitespace-nowrap text-muted-foreground select-none"
+                  title={`${user.name}（${user.account}）`}
+                >
                   {user.name}（{user.account}）
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label>角色</Label>
-                <div className="flex h-8 items-center rounded-lg border border-input bg-muted/50 px-2.5 text-sm text-muted-foreground select-none">
+                <div
+                  className="flex h-8 items-center overflow-x-auto rounded-lg border border-input bg-muted/50 px-2.5 text-sm whitespace-nowrap text-muted-foreground select-none"
+                  title={`${roleName}（${roleId}）`}
+                >
                   {roleName}（{roleId}）
                 </div>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>所在功能页面</Label>
-              <div className="flex min-h-8 items-center rounded-lg border border-input bg-muted/50 px-2.5 py-1.5 text-sm text-muted-foreground select-none">
-                {pageTitle} · {pathname}
+              <div className="space-y-1.5">
+                <Label>所在功能页面</Label>
+                <div
+                  className="flex h-8 items-center overflow-x-auto rounded-lg border border-input bg-muted/50 px-2.5 text-sm whitespace-nowrap text-muted-foreground select-none"
+                  title={`${pageTitle} · ${pathname}`}
+                >
+                  {pageTitle} · {pathname}
+                </div>
               </div>
             </div>
 
