@@ -71,6 +71,15 @@ export default function DocumentsPage() {
   const [printTarget, setPrintTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [bookingTarget, setBookingTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [bookingTime, setBookingTime] = useState(toInputTime(nowLocalStr()))
+  const [stuffingTarget, setStuffingTarget] = useState<UseBoxOrder | null>(null)
+  const [stuffingFileName, setStuffingFileName] = useState("")
+  const [stuffingNote, setStuffingNote] = useState("")
+  const [exceptionTarget, setExceptionTarget] = useState<UseBoxOrder | null>(null)
+  const [exceptionNote, setExceptionNote] = useState("")
+  const [exceptionLevel, setExceptionLevel] = useState<"小修" | "中修" | "大修">("小修")
+  const [returnProofTarget, setReturnProofTarget] = useState<UseBoxOrder | null>(null)
+  const [returnProofFileName, setReturnProofFileName] = useState("")
+  const [submittingProof, setSubmittingProof] = useState(false)
 
   const overdueProofs = useMemo(
     () => returnProofOverdueList(orders, settings?.returnProofOverdueDays ?? 3),
@@ -123,86 +132,140 @@ export default function DocumentsPage() {
     setConditionNote("")
   }
 
-  async function markStuffingAfterCondition(order: UseBoxOrder, failed: boolean) {
-    try {
-      if (failed) {
-        await updateOrder(order.id, {
-          conditionCheck: "异常",
-          conditionNote: conditionNote || "提箱箱况异常",
-          __auditAction: "修改",
-          __auditDetail: order.orderNo + " 箱况异常",
-        })
-        await createRepair({
-          repairNo: "RP" + Date.now().toString().slice(-8),
-          containerNo: "PEND-" + order.orderNo.slice(-6),
-          containerType: order.containerType,
-          ownership: "自有箱",
-          yard: order.pickupYard || order.pickupCity + "堆场",
-          city: order.pickupCity,
-          damageDesc: conditionNote || "提箱箱况异常",
-          level: "小修",
-          vendor: "待指派",
-          estCost: 0,
-          reportedBy: "现场确认",
-          reportedAt: nowLocalStr(),
-          status: "待报修",
-          __auditAction: "新增",
-          __auditDetail: order.orderNo + " 箱况异常挂修",
-        })
-        await pushNotification(createNotification, {
-          type: "系统",
-          level: "紧急",
-          title: "提箱箱况异常 · " + order.orderNo,
-          desc: "现场反馈箱况异常，请跟进。",
-          module: "M01 提还箱作业",
-          href: "/repair/orders",
-          roles: ["R01", "R04"],
-        })
-        toast.warning("已记录箱况异常并创建修箱工单")
-      } else {
-        await updateOrder(order.id, {
-          conditionCheck: "通过",
-          conditionNote: conditionNote || undefined,
-          stuffingListUploaded: true,
-          __auditAction: "修改",
-          __auditDetail: order.orderNo + " 随箱资料已上传",
-        })
-        await createAttachment({
-          refType: "stuffing_list",
-          refNo: order.orderNo,
-          fileName: "stuffing_" + order.orderNo + ".pdf",
-          mime: "application/pdf",
-          size: 0,
-          uploadedBy: "当前用户",
-          uploadedAt: nowLocalStr(),
-          __auditAction: "新增",
-          __auditDetail: order.orderNo + " stuffing list",
-        })
-        toast.success("随箱资料已登记，请等待现场确认放箱")
-      }
-      await Promise.all([
-        revalidateResource("orders"),
-        revalidateResource("repair"),
-        revalidateResource("notifications"),
-        revalidateResource("attachments"),
-      ])
-    } catch (error) {
-      toast.error((error as Error).message)
-    }
+  function openStuffingDialog(order: UseBoxOrder) {
+    setStuffingTarget(order)
+    setStuffingFileName("stuffing_" + order.orderNo + ".pdf")
+    setStuffingNote("")
   }
 
-  async function markReturnProof(order: UseBoxOrder) {
+  function openExceptionDialog(order: UseBoxOrder) {
+    setExceptionTarget(order)
+    setExceptionNote("")
+    setExceptionLevel("小修")
+  }
+
+  function openReturnProofDialog(order: UseBoxOrder) {
+    setReturnProofTarget(order)
+    setReturnProofFileName("return_proof_" + order.orderNo + ".pdf")
+  }
+
+  async function submitStuffing() {
+    if (!stuffingTarget) return
+    const fileName = stuffingFileName.trim()
+    if (!fileName) {
+      toast.error("请填写随箱资料文件名")
+      return
+    }
+    setSubmittingProof(true)
     try {
+      const order = stuffingTarget
+      await updateOrder(order.id, {
+        conditionCheck: "通过",
+        conditionNote: stuffingNote.trim() || undefined,
+        stuffingListUploaded: true,
+        __auditAction: "修改",
+        __auditDetail: order.orderNo + " 随箱资料已上传",
+      })
       await createAttachment({
-        refType: "return_proof",
+        refType: "stuffing_list",
         refNo: order.orderNo,
-        fileName: "return_proof_" + order.orderNo + ".pdf",
-        mime: "application/pdf",
+        fileName,
+        mime: fileName.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream",
         size: 0,
         uploadedBy: "当前用户",
         uploadedAt: nowLocalStr(),
         __auditAction: "新增",
-        __auditDetail: order.orderNo + " 还箱证明",
+        __auditDetail: order.orderNo + " stuffing list · " + fileName,
+      })
+      await Promise.all([
+        revalidateResource("orders"),
+        revalidateResource("attachments"),
+      ])
+      toast.success("随箱资料已登记，请等待现场确认放箱")
+      setStuffingTarget(null)
+    } catch (error) {
+      toast.error((error as Error).message)
+    } finally {
+      setSubmittingProof(false)
+    }
+  }
+
+  async function submitException() {
+    if (!exceptionTarget) return
+    const note = exceptionNote.trim()
+    if (!note) {
+      toast.error("请填写箱况异常说明")
+      return
+    }
+    setSubmittingProof(true)
+    try {
+      const order = exceptionTarget
+      await updateOrder(order.id, {
+        conditionCheck: "异常",
+        conditionNote: note,
+        __auditAction: "修改",
+        __auditDetail: order.orderNo + " 箱况异常",
+      })
+      await createRepair({
+        repairNo: "RP" + Date.now().toString().slice(-8),
+        containerNo: "PEND-" + order.orderNo.slice(-6),
+        containerType: order.containerType,
+        ownership: "自有箱",
+        yard: order.pickupYard || order.pickupCity + "堆场",
+        city: order.pickupCity,
+        damageDesc: note,
+        level: exceptionLevel,
+        vendor: "待指派",
+        estCost: 0,
+        reportedBy: "现场确认",
+        reportedAt: nowLocalStr(),
+        status: "待报修",
+        __auditAction: "新增",
+        __auditDetail: order.orderNo + " 箱况异常挂修",
+      })
+      await pushNotification(createNotification, {
+        type: "系统",
+        level: "紧急",
+        title: "提箱箱况异常 · " + order.orderNo,
+        desc: note,
+        module: "M01 提还箱作业",
+        href: "/repair/orders",
+        roles: ["R01", "R04"],
+      })
+      await Promise.all([
+        revalidateResource("orders"),
+        revalidateResource("repair"),
+        revalidateResource("notifications"),
+      ])
+      toast.warning("已记录箱况异常并创建修箱工单")
+      setExceptionTarget(null)
+    } catch (error) {
+      toast.error((error as Error).message)
+    } finally {
+      setSubmittingProof(false)
+    }
+  }
+
+  async function submitReturnProof() {
+    if (!returnProofTarget) return
+    const fileName = returnProofFileName.trim()
+    if (!fileName) {
+      toast.error("请填写还箱证明文件名")
+      return
+    }
+    setSubmittingProof(true)
+    try {
+      const order = returnProofTarget
+      await createAttachment({
+        refType: "return_proof",
+        refNo: order.orderNo,
+        fileName,
+        mime: fileName.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream",
+        size: 0,
+        uploadedBy: "当前用户",
+        uploadedAt: nowLocalStr(),
+        __auditAction: "新增",
+        __auditDetail: order.orderNo + " 还箱证明 · " + fileName,
       })
       await updateOrder(order.id, {
         returnProofUploaded: true,
@@ -211,8 +274,11 @@ export default function DocumentsPage() {
       })
       await Promise.all([revalidateResource("attachments"), revalidateResource("orders")])
       toast.success("还箱证明已登记，请等待现场确认收箱")
+      setReturnProofTarget(null)
     } catch (error) {
       toast.error((error as Error).message)
+    } finally {
+      setSubmittingProof(false)
     }
   }
 
@@ -378,7 +444,8 @@ export default function DocumentsPage() {
             }}
             onYard={openYardDialog}
             onPrint={(o) => setPrintTarget({ order: o, phase: "pickup" })}
-            onProof={markStuffingAfterCondition}
+            onStuffing={openStuffingDialog}
+            onException={openExceptionDialog}
           />
         </TabsContent>
         <TabsContent value="return">
@@ -397,7 +464,7 @@ export default function DocumentsPage() {
             }}
             onYard={openYardDialog}
             onPrint={(o) => setPrintTarget({ order: o, phase: "return" })}
-            onReturnProof={markReturnProof}
+            onReturnProof={openReturnProofDialog}
             overdue={overdueProofs}
           />
         </TabsContent>
@@ -438,6 +505,112 @@ export default function DocumentsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setYardTarget(null)}>取消</Button>
             <Button onClick={saveOrderYard}>保存变更</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!stuffingTarget} onOpenChange={(open) => !open && setStuffingTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>上传随箱资料</DialogTitle>
+            <DialogDescription>
+              订单 {stuffingTarget?.orderNo} · 请登记 stuffing list 文件信息后再提交。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>文件名 *</Label>
+              <Input
+                value={stuffingFileName}
+                onChange={(e) => setStuffingFileName(e.target.value)}
+                placeholder="例如 stuffing_UB202607160001.pdf"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>备注</Label>
+              <Textarea
+                value={stuffingNote}
+                onChange={(e) => setStuffingNote(e.target.value)}
+                placeholder="可选：箱况简述、箱号清单说明等"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStuffingTarget(null)}>取消</Button>
+            <Button onClick={submitStuffing} disabled={submittingProof}>
+              {submittingProof ? "提交中…" : "确认上传"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!exceptionTarget} onOpenChange={(open) => !open && setExceptionTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>登记箱况异常</DialogTitle>
+            <DialogDescription>
+              订单 {exceptionTarget?.orderNo} · 须填写异常说明，系统将创建修箱工单并通知相关角色。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>异常说明 *</Label>
+              <Textarea
+                value={exceptionNote}
+                onChange={(e) => setExceptionNote(e.target.value)}
+                placeholder="请描述箱损位置、程度、现场情况等"
+                rows={4}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>预估维修等级</Label>
+              <div className="flex gap-2">
+                {(["小修", "中修", "大修"] as const).map((level) => (
+                  <Button
+                    key={level}
+                    type="button"
+                    size="sm"
+                    variant={exceptionLevel === level ? "default" : "outline"}
+                    onClick={() => setExceptionLevel(level)}
+                  >
+                    {level}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExceptionTarget(null)}>取消</Button>
+            <Button variant="destructive" onClick={submitException} disabled={submittingProof}>
+              {submittingProof ? "提交中…" : "确认登记异常"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!returnProofTarget} onOpenChange={(open) => !open && setReturnProofTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>上传还箱证明</DialogTitle>
+            <DialogDescription>
+              订单 {returnProofTarget?.orderNo} · 请登记还箱证明文件后再提交。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>文件名 *</Label>
+              <Input
+                value={returnProofFileName}
+                onChange={(e) => setReturnProofFileName(e.target.value)}
+                placeholder="例如 return_proof_UB202607160001.pdf"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReturnProofTarget(null)}>取消</Button>
+            <Button onClick={submitReturnProof} disabled={submittingProof}>
+              {submittingProof ? "提交中…" : "确认上传"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -512,7 +685,8 @@ function WorkTable(props: {
   onBook: (o: UseBoxOrder) => void
   onYard: (o: UseBoxOrder) => void
   onPrint: (o: UseBoxOrder) => void
-  onProof?: (o: UseBoxOrder, failed: boolean) => void
+  onStuffing?: (o: UseBoxOrder) => void
+  onException?: (o: UseBoxOrder) => void
   onReturnProof?: (o: UseBoxOrder) => void
 }) {
   const pickup = props.phase === "pickup"
@@ -570,17 +744,17 @@ function WorkTable(props: {
                               变更堆场
                             </DropdownMenuItem>
                           )}
-                          {pickup && props.onProof && (
-                            <>
-                              <DropdownMenuItem onClick={() => props.onProof!(order, false)}>
-                                <Upload className="size-3.5" />
-                                随箱资料
-                              </DropdownMenuItem>
-                              <DropdownMenuItem variant="destructive" onClick={() => props.onProof!(order, true)}>
-                                <Wrench className="size-3.5" />
-                                异常
-                              </DropdownMenuItem>
-                            </>
+                          {pickup && props.onStuffing && (
+                            <DropdownMenuItem onClick={() => props.onStuffing!(order)}>
+                              <Upload className="size-3.5" />
+                              随箱资料
+                            </DropdownMenuItem>
+                          )}
+                          {pickup && props.onException && (
+                            <DropdownMenuItem variant="destructive" onClick={() => props.onException!(order)}>
+                              <Wrench className="size-3.5" />
+                              异常
+                            </DropdownMenuItem>
                           )}
                           {!pickup && props.onReturnProof && (
                             <DropdownMenuItem onClick={() => props.onReturnProof!(order)}>
