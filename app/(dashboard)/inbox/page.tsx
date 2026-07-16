@@ -7,9 +7,11 @@ import { useResource } from "@/lib/api"
 import type { Notification, NotificationType } from "@/lib/types"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
+import { ListPagination } from "@/components/list-pagination"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useListQuery } from "@/lib/list-query"
 import {
   Bell,
   CheckCheck,
@@ -64,12 +66,22 @@ export default function InboxPage() {
     let list = visible
     if (filter === "待办") list = list.filter((n) => n.actionable && !n.read)
     else if (filter !== "全部") list = list.filter((n) => n.type === filter)
-    // 未读优先，其次按时间倒序
-    return [...list].sort((a, b) => {
-      if (a.read !== b.read) return a.read ? 1 : -1
-      return a.createdAt < b.createdAt ? 1 : -1
-    })
+    return list
   }, [visible, filter])
+
+  const list = useListQuery({
+    data: filtered,
+    defaultSortKey: "inboxOrder",
+    defaultSortDir: "asc",
+    getSortValue: (n, key) => {
+      if (key === "inboxOrder") {
+        const t = Date.parse(String(n.createdAt).replace(/-/g, "/")) || 0
+        // 未读优先，同组内时间倒序
+        return (n.read ? 2e15 : 0) + (2e15 - t)
+      }
+      return (n as unknown as Record<string, unknown>)[key]
+    },
+  })
 
   const todoCount = visible.filter((n) => n.actionable && !n.read).length
   const unreadCount = visible.filter((n) => !n.read).length
@@ -132,70 +144,80 @@ export default function InboxPage() {
         ))}
       </div>
 
-      <div className="space-y-3">
-        {filtered.length === 0 && (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-muted-foreground">
-            <InboxIcon className="size-10" />
-            <p className="text-sm">暂无匹配的通知</p>
-          </div>
-        )}
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="space-y-3 p-3 sm:p-4">
+          {list.total === 0 && (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-muted-foreground">
+              <InboxIcon className="size-10" />
+              <p className="text-sm">暂无匹配的通知</p>
+            </div>
+          )}
 
-        {filtered.map((n) => {
-          const meta = TYPE_META[n.type]
-          const Icon = meta.icon
-          return (
-            <div
-              key={n.id}
-              className={cn(
-                "flex items-start gap-4 rounded-lg border border-border bg-card p-4 transition-colors",
-                !n.read && "border-l-4 border-l-primary",
-              )}
-            >
-              <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", meta.tone)}>
-                <Icon className="size-5" />
-              </div>
-
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className={cn("text-sm", !n.read ? "font-semibold text-foreground" : "text-foreground")}>
-                    {n.title}
-                  </p>
-                  <Badge variant="outline" className={cn("h-5 px-1.5 text-xs", LEVEL_TONE[n.level])}>
-                    {n.level}
-                  </Badge>
-                  {!n.read && <span className="size-2 rounded-full bg-primary" aria-label="未读" />}
+          {list.rows.map((n) => {
+            const meta = TYPE_META[n.type]
+            const Icon = meta.icon
+            return (
+              <div
+                key={n.id}
+                className={cn(
+                  "flex items-start gap-4 rounded-lg border border-border bg-card p-4 transition-colors",
+                  !n.read && "border-l-4 border-l-primary",
+                )}
+              >
+                <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", meta.tone)}>
+                  <Icon className="size-5" />
                 </div>
-                <p className="text-sm text-muted-foreground">{n.desc}</p>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span>{n.module}</span>
-                  <span>·</span>
-                  <span>{n.createdAt}</span>
-                  {n.dueAt && (
-                    <>
-                      <span>·</span>
-                      <span className="flex items-center gap-1 text-destructive">
-                        <Clock3 className="size-3" />
-                        处理时限 {n.dueAt}
-                      </span>
-                    </>
+
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={cn("text-sm", !n.read ? "font-semibold text-foreground" : "text-foreground")}>
+                      {n.title}
+                    </p>
+                    <Badge variant="outline" className={cn("h-5 px-1.5 text-xs", LEVEL_TONE[n.level])}>
+                      {n.level}
+                    </Badge>
+                    {!n.read && <span className="size-2 rounded-full bg-primary" aria-label="未读" />}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{n.desc}</p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span>{n.module}</span>
+                    <span>·</span>
+                    <span>{n.createdAt}</span>
+                    {n.dueAt && (
+                      <>
+                        <span>·</span>
+                        <span className="flex items-center gap-1 text-destructive">
+                          <Clock3 className="size-3" />
+                          处理时限 {n.dueAt}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <Button size="sm" nativeButton={false} render={<Link href={n.href} />} className="gap-1" onClick={() => markRead(n.id)}>
+                    {n.actionable ? "去处理" : "查看"}
+                    <ArrowRight className="size-3.5" />
+                  </Button>
+                  {!n.read && (
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => markRead(n.id)}>
+                      标记已读
+                    </Button>
                   )}
                 </div>
               </div>
-
-              <div className="flex shrink-0 flex-col items-end gap-2">
-                <Button size="sm" nativeButton={false} render={<Link href={n.href} />} className="gap-1" onClick={() => markRead(n.id)}>
-                  {n.actionable ? "去处理" : "查看"}
-                  <ArrowRight className="size-3.5" />
-                </Button>
-                {!n.read && (
-                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => markRead(n.id)}>
-                    标记已读
-                  </Button>
-                )}
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
+        <ListPagination
+          page={list.page}
+          pageSize={list.pageSize}
+          total={list.total}
+          totalPages={list.totalPages}
+          onPageChange={list.setPage}
+          onPageSizeChange={list.setPageSize}
+        />
       </div>
     </div>
   )
