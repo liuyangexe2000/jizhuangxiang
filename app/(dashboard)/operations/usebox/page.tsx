@@ -117,7 +117,7 @@ export default function OperationsUseboxPage() {
       toast.error("请选择提箱、还箱堆场并输入有效成交单价")
       return
     }
-    const inv = findInventoryRow(inventory, { yard: pickupYard, city: cityFromPlace(pickupYard) || confirming.pickupCity })
+    const inv = findInventoryRow(inventory, { yard: pickupYard, city: cityFromPlace(pickupYard, yards) || confirming.pickupCity })
     if (!inv || inv.available < confirming.quantity) {
       toast.error("提箱堆场可用库存不足，无法预占")
       return
