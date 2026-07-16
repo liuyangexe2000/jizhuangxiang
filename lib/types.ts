@@ -232,16 +232,49 @@ export interface Booking {
 
 export interface Yard {
   id: string
+  /** 老系统 base_container_factory.id，仅作匹配记录，非本表主键 */
+  legacyId: number
+  /** 老系统堆场 uuid */
+  factoryId: string
+  factoryNumber: string
+  factoryCode: string
   name: string
-  region: string
+  region: string // 境内 | 境外
   city: string
+  /** 老系统 region_id（base_region.id） */
+  regionId: number | null
   agent: string
+  proxyCompanyId: string
   address: string
   phone: string
+  contactUser: string
   email: string
+  creditCode: string
+  currencyId: number | null
+  dailyExpenses: number | null
+  freeDuration: number | null
+  boardingFee: number | null
+  alightingFee: number | null
+  secondaryRemovalFee: number | null
+  /** 是否有电子章（源表 has_seal：0 有 / 1 没有） */
+  hasSeal: boolean
   capacity: number
   current: number
   enabled: boolean
+  deleted: boolean
+  version: number | null
+  /** 提箱单备注 */
+  remark: string
+  /** 还箱指令 */
+  receiveRemark: string
+  /** 还箱单备注 */
+  remarkReturnOrder: string
+  createBy: string
+  createName: string
+  createTime: string
+  updateBy: string
+  updateName: string
+  updateTime: string
 }
 
 // ---------- 集装箱供应计划（采购/租赁） ----------
