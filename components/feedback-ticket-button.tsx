@@ -55,7 +55,7 @@ function buildPageLocation(pathname: string, pageTitle: string, tabs: string[]) 
   const tabPart = tabs.length > 0 ? ` · Tab：${tabs.join(" / ")}` : ""
   return {
     pageTitle: `${pageTitle}${tabPart}`,
-    pagePath: tabs.length > 0 ? `${pathname}#${encodeURIComponent(tabs.join("/"))}` : pathname,
+    pagePath: pathname,
   }
 }
 
@@ -289,9 +289,9 @@ export function FeedbackTicketButton() {
                 <Label>所在功能页面</Label>
                 <div
                   className="flex h-8 items-center overflow-x-auto rounded-lg border border-input bg-muted/50 px-2.5 text-sm whitespace-nowrap text-muted-foreground select-none"
-                  title={`${locationTitle || pageTitle} · ${locationPath || pathname}`}
+                  title={locationTitle || pageTitle}
                 >
-                  {locationTitle || pageTitle} · {locationPath || pathname}
+                  {locationTitle || pageTitle}
                 </div>
               </div>
             </div>
