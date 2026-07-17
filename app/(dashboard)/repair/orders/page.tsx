@@ -144,6 +144,24 @@ export default function RepairOrdersPage() {
     return attachments.filter((item) => item.refType === "repair_photo" && item.refNo === detailTarget.repairNo)
   }, [attachments, detailTarget])
 
+  const enabledYards = useMemo(
+    () => yards.filter((item) => item.enabled && !item.deleted),
+    [yards],
+  )
+
+  const cityOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const yard of enabledYards) {
+      if (yard.city) set.add(yard.city)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "zh"))
+  }, [enabledYards])
+
+  const yardsInCity = useMemo(
+    () => (form.city ? enabledYards.filter((yard) => yard.city === form.city) : []),
+    [enabledYards, form.city],
+  )
+
   async function refresh() {
     await Promise.all([
       revalidateResource("repair"),
@@ -262,8 +280,8 @@ export default function RepairOrdersPage() {
   }
 
   async function handleCreate() {
-    if (!form.containerNo.trim() || !form.yard || !form.damageDesc.trim()) {
-      toast.error("请填写箱号、堆场和损坏描述")
+    if (!form.containerNo.trim() || !form.city || !form.yard || !form.damageDesc.trim()) {
+      toast.error("请填写箱号、城市、堆场和损坏描述")
       return
     }
     const sequence = String(orders.filter((item) => item.repairNo.startsWith("RP2026")).length + 1).padStart(4, "0")
@@ -655,33 +673,46 @@ export default function RepairOrdersPage() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="堆场">
+            <Field label="城市">
               <Select
-                value={form.yard}
+                value={form.city}
                 onValueChange={(value) =>
                   setForm({
                     ...form,
-                    yard: value ?? "",
-                    city: yards.find((item) => item.name === (value ?? ""))?.city ?? form.city,
+                    city: value ?? "",
+                    yard: "",
                   })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择堆场" />
+                  <SelectValue placeholder="先选择城市" />
                 </SelectTrigger>
                 <SelectContent>
-                  {yards
-                    .filter((item) => item.enabled)
-                    .map((yard) => (
-                      <SelectItem key={yard.id} value={yard.name}>
-                        {yard.name}
-                      </SelectItem>
-                    ))}
+                  {cityOptions.map((city) => (
+                    <SelectItem key={city} value={city}>
+                      {city}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="城市">
-              <Input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} />
+            <Field label="堆场">
+              <Select
+                value={form.yard}
+                disabled={!form.city}
+                onValueChange={(value) => setForm({ ...form, yard: value ?? "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={form.city ? "选择该城市堆场" : "请先选择城市"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {yardsInCity.map((yard) => (
+                    <SelectItem key={yard.id} value={yard.name}>
+                      {yard.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="维修等级">
               <Select
