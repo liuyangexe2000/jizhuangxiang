@@ -66,6 +66,8 @@ export interface UseBoxOrder {
   /** 现场确认收箱人/时间（R04/R06） */
   returnGateBy?: string
   returnGateAt?: string
+  /** 放箱时选定的真实箱号（数量应等于 quantity） */
+  containerNos?: string[]
 }
 
 export type BillType = "用箱账单" | "超期费账单" | "箱损费账单" | "用箱变更费账单" | "调运费账单"

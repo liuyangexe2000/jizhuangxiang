@@ -82,16 +82,17 @@ export function applyReleaseReserveInventory(row: InventoryRow, qty: number): Pa
   }
 }
 
-/** 用箱订单现场确认放箱/收箱生成的进出场记录（用箱订单无独立箱号台账，按订单聚合） */
+/** 用箱订单现场确认放箱/收箱生成的进出场记录 */
 export function buildUseBoxGate(
   o: { orderNo: string; quantity: number },
   type: GateRecord["type"],
   yard: string,
   city: string,
   ownership: GateRecord["ownership"] = "自有箱",
+  containerNo?: string,
 ): Omit<GateRecord, "id"> {
   return {
-    containerNo: `USEBOX${o.orderNo.slice(-6)}x${o.quantity}`,
+    containerNo: containerNo || `USEBOX${o.orderNo.slice(-6)}x${o.quantity}`,
     type,
     time: nowLocalStr(),
     yard,
@@ -101,6 +102,20 @@ export function buildUseBoxGate(
     mappingStatus: "已映射",
     ownership,
   }
+}
+
+/** 提箱堆场可用真实箱（在场、箱型匹配） */
+export function listAvailableUseboxContainers(
+  containers: ContainerMaster[],
+  opts: { yard: string; city: string; containerType: string },
+): ContainerMaster[] {
+  return containers.filter(
+    (c) =>
+      !c.deleted &&
+      c.status === "在场" &&
+      c.type === opts.containerType &&
+      (c.currentYard === opts.yard || c.currentCity === opts.city),
+  )
 }
 
 export function buildPickupGate(

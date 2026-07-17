@@ -68,6 +68,9 @@ export function getContainerLifecycle(input: ContainerLifecycleInput): Container
   for (const g of gate) {
     if (g.relatedOrderNo) relatedNos.add(g.relatedOrderNo)
   }
+  for (const o of input.orders) {
+    if (o.containerNos?.some((n) => n === containerNo)) relatedNos.add(o.orderNo)
+  }
   for (const r of returns) {
     for (const d of r.relatedDispatchNos) relatedNos.add(d)
   }

@@ -48,6 +48,10 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
   }
+  if (resource === "orders") {
+    const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
+    await ensureOrdersContainerNosColumn()
+  }
   const item = await get(resource, decodeURIComponent(id))
   if (!item) return NextResponse.json({ error: "not found" }, { status: 404 })
   const ctx = await tenantContext(resource)
@@ -68,6 +72,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
+  }
+  if (resource === "orders") {
+    const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
+    await ensureOrdersContainerNosColumn()
   }
   const existing = await get(resource, decodeURIComponent(id))
   if (!existing) return NextResponse.json({ error: "not found" }, { status: 404 })

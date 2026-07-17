@@ -9,9 +9,12 @@ import {
   cityFromPlace,
   findInventoryRow,
   inventoryId,
+  listAvailableUseboxContainers,
   nowLocalStr,
+  patchContainerOnPickup,
 } from "@/lib/domain/dispatch-ops"
-import type { InventoryRow, UseBoxOrder } from "@/lib/types"
+import { ensureOrdersContainerNosColumn } from "@/lib/ensure-orders-schema"
+import type { ContainerMaster, InventoryRow, UseBoxOrder } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -20,6 +23,24 @@ function clientIp(req: NextRequest) {
 }
 
 type Ctx = { params: Promise<{ id: string }> }
+
+function parseContainerNos(body: unknown, expectQty: number): string[] | { error: string } {
+  const raw = (body as { containerNos?: unknown })?.containerNos
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return { error: `请选择 ${expectQty} 个真实箱号后再确认放箱` }
+  }
+  const nos = Array.from(
+    new Set(
+      raw
+        .map((x) => (typeof x === "string" ? x.trim().toUpperCase() : ""))
+        .filter(Boolean),
+    ),
+  )
+  if (nos.length !== expectQty) {
+    return { error: `须恰好选择 ${expectQty} 个箱号（当前 ${nos.length} 个）` }
+  }
+  return nos
+}
 
 /** 现场角色（堆场/代管）确认放箱：验箱 + 出场Gate + 库存联动，驱动订单->提箱中；异常则挂修箱不改状态 */
 export async function POST(req: NextRequest, { params }: Ctx) {
@@ -40,6 +61,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (order.status !== "已确认") {
     return NextResponse.json({ error: "订单须处于「已确认」状态才能确认放箱" }, { status: 400 })
   }
+
+  await ensureOrdersContainerNosColumn()
 
   const body = await req.json().catch(() => ({}))
   const conditionCheck: "通过" | "异常" = body?.conditionCheck === "异常" ? "异常" : "通过"
@@ -92,15 +115,44 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ ok: true, conditionCheck, orderStatus: order.status })
   }
 
+  const parsed = parseContainerNos(body, order.quantity)
+  if ("error" in parsed) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 })
+  }
+  const containerNos = parsed
+
   const yard = order.pickupYard || `${order.pickupCity}堆场`
   const city = cityFromPlace(yard, yards as { name: string; city: string }[]) || order.pickupCity
+  const containers = (await list("containers")) as ContainerMaster[]
+  const available = listAvailableUseboxContainers(containers, {
+    yard,
+    city,
+    containerType: order.containerType,
+  })
+  const availSet = new Set(available.map((c) => c.containerNo.toUpperCase()))
+  for (const no of containerNos) {
+    if (!availSet.has(no)) {
+      return NextResponse.json(
+        { error: `箱号 ${no} 不可用：须为提箱堆场「${yard}」在场且箱型 ${order.containerType}` },
+        { status: 400 },
+      )
+    }
+  }
+
   const inventory = (await list("inventory")) as InventoryRow[]
   const inv = findInventoryRow(inventory, { yard, city })
   if (inv) {
     await update("inventory", inventoryId(inv), applyPickupInventory(inv, order.quantity))
   }
 
-  await create("gate", buildUseBoxGate(order, "出场", yard, city))
+  for (const no of containerNos) {
+    const master = containers.find((c) => c.containerNo.toUpperCase() === no)!
+    await create(
+      "gate",
+      buildUseBoxGate(order, "出场", yard, city, master.ownership || "自有箱", master.containerNo),
+    )
+    await update("containers", master.containerNo, patchContainerOnPickup(master, order.orderNo))
+  }
 
   await update("orders", order.id, {
     status: "提箱中",
@@ -108,6 +160,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     conditionNote,
     pickupGateBy: actedBy,
     pickupGateAt: actedAt,
+    containerNos: containerNos.map(
+      (no) => containers.find((c) => c.containerNo.toUpperCase() === no)!.containerNo,
+    ),
   })
 
   await create("notifications", {
@@ -115,7 +170,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     type: "任务",
     level: "普通",
     title: `已确认放箱 · ${order.orderNo}`,
-    desc: `${yard} · ${actedBy} 确认放箱，订单进入提箱中。`,
+    desc: `${yard} · ${actedBy} 确认放箱（${containerNos.join("、")}），订单进入提箱中。`,
     module: "M01 提还箱作业",
     href: "/customer/documents",
     roles: ["R01", "R03"],
@@ -129,9 +184,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     action: "修改",
     module: "M01 提还箱作业",
     target: order.orderNo,
-    detail: `现场确认放箱（${yard}），库存联动出场`,
+    detail: `现场确认放箱（${yard}），箱号 ${containerNos.join(",")}，库存联动出场`,
     ip: clientIp(req),
   })
 
-  return NextResponse.json({ ok: true, conditionCheck, actedBy, actedAt })
+  return NextResponse.json({ ok: true, conditionCheck, actedBy, actedAt, containerNos })
 }

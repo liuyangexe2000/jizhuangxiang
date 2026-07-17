@@ -29,17 +29,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useResource, revalidateResource } from "@/lib/api"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { useRole } from "@/lib/role-context"
 import { usePublicSettings } from "@/lib/settings-client"
 import { buildOrderBooking, returnProofOverdueList, shouldReleaseDoc } from "@/lib/domain/order-ops"
 import { isWithinWorkHours } from "@/lib/domain/booking-ops"
-import { cityFromPlace, findInventoryRow, inventoryId, nowLocalStr, relocateIncoming, relocateReserved } from "@/lib/domain/dispatch-ops"
+import {
+  cityFromPlace,
+  findInventoryRow,
+  inventoryId,
+  listAvailableUseboxContainers,
+  nowLocalStr,
+  relocateIncoming,
+  relocateReserved,
+} from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
 import { printPrintArea } from "@/lib/print-document"
 import { DOC_UPLOAD_ACCEPT, validateDocUploadFile } from "@/lib/doc-upload"
-import type { AttachmentMeta, Booking, DocTemplate, InventoryRow, Notification, RepairOrder, UseBoxOrder, Yard } from "@/lib/types"
+import type {
+  AttachmentMeta,
+  Booking,
+  ContainerMaster,
+  DocTemplate,
+  InventoryRow,
+  Notification,
+  RepairOrder,
+  UseBoxOrder,
+  Yard,
+} from "@/lib/types"
 
 type Phase = "pickup" | "return"
 const pickupStates = ["已确认", "提箱中", "已提箱", "还箱中", "已完成"]
@@ -69,12 +88,14 @@ export default function DocumentsPage() {
   const { data: attachments } = useResource<AttachmentMeta>("attachments")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
   const { data: yards } = useResource<Yard>("yards")
+  const { data: containers } = useResource<ContainerMaster>("containers")
   const { create: createRepair } = useResource<RepairOrder>("repair")
 
   const [keyword, setKeyword] = useState("")
   const [conditionTarget, setConditionTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [conditionCheck, setConditionCheck] = useState<"通过" | "异常">("通过")
   const [conditionNote, setConditionNote] = useState("")
+  const [selectedContainerNos, setSelectedContainerNos] = useState<string[]>([])
   const [yardTarget, setYardTarget] = useState<UseBoxOrder | null>(null)
   const [pickupYard, setPickupYard] = useState("")
   const [returnYard, setReturnYard] = useState("")
@@ -164,6 +185,40 @@ export default function DocumentsPage() {
     setConditionTarget({ order, phase })
     setConditionCheck("通过")
     setConditionNote("")
+    if (phase === "pickup") {
+      const yard = order.pickupYard || `${order.pickupCity}堆场`
+      const city = cityFromPlace(yard, yards) || order.pickupCity
+      const pool = listAvailableUseboxContainers(containers, {
+        yard,
+        city,
+        containerType: order.containerType,
+      })
+      setSelectedContainerNos(pool.slice(0, order.quantity).map((c) => c.containerNo))
+    } else {
+      setSelectedContainerNos(order.containerNos || [])
+    }
+  }
+
+  const pickupCandidateContainers = useMemo(() => {
+    if (!conditionTarget || conditionTarget.phase !== "pickup") return []
+    const order = conditionTarget.order
+    const yard = order.pickupYard || `${order.pickupCity}堆场`
+    const city = cityFromPlace(yard, yards) || order.pickupCity
+    return listAvailableUseboxContainers(containers, {
+      yard,
+      city,
+      containerType: order.containerType,
+    })
+  }, [conditionTarget, containers, yards])
+
+  function togglePickupContainer(no: string) {
+    if (!conditionTarget) return
+    const qty = conditionTarget.order.quantity
+    setSelectedContainerNos((prev) => {
+      if (prev.includes(no)) return prev.filter((x) => x !== no)
+      if (prev.length >= qty) return prev
+      return [...prev, no]
+    })
   }
 
   function openStuffingDialog(order: UseBoxOrder) {
@@ -333,6 +388,12 @@ export default function DocumentsPage() {
   async function submitGateConfirm() {
     if (!conditionTarget) return
     const { order, phase } = conditionTarget
+    if (phase === "pickup" && conditionCheck === "通过") {
+      if (selectedContainerNos.length !== order.quantity) {
+        toast.error(`请选择恰好 ${order.quantity} 个真实箱号`)
+        return
+      }
+    }
     try {
       const path = phase === "pickup" ? "confirm-pickup" : "confirm-return"
       const response = await fetch(
@@ -340,7 +401,13 @@ export default function DocumentsPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conditionCheck, conditionNote: conditionNote || undefined }),
+          body: JSON.stringify({
+            conditionCheck,
+            conditionNote: conditionNote || undefined,
+            ...(phase === "pickup" && conditionCheck === "通过"
+              ? { containerNos: selectedContainerNos }
+              : {}),
+          }),
         },
       )
       const data = await response.json().catch(() => ({}))
@@ -351,6 +418,8 @@ export default function DocumentsPage() {
         revalidateResource("gate"),
         revalidateResource("repair"),
         revalidateResource("notifications"),
+        revalidateResource("containers"),
+        revalidateResource("bills"),
       ])
       toast.success(phase === "pickup" ? "已确认放箱" : "已确认收箱")
       setConditionTarget(null)
@@ -574,6 +643,39 @@ export default function DocumentsPage() {
               <Button variant={conditionCheck === "通过" ? "default" : "outline"} onClick={() => setConditionCheck("通过")}>通过</Button>
               <Button variant={conditionCheck === "异常" ? "destructive" : "outline"} onClick={() => setConditionCheck("异常")}>异常</Button>
             </div>
+            {conditionTarget?.phase === "pickup" && conditionCheck === "通过" && (
+              <div className="space-y-2">
+                <Label>
+                  选择放箱箱号（须选 {conditionTarget.order.quantity} 个，已选 {selectedContainerNos.length}）
+                </Label>
+                {pickupCandidateContainers.length === 0 ? (
+                  <p className="text-sm text-destructive">
+                    提箱堆场「{conditionTarget.order.pickupYard || `${conditionTarget.order.pickupCity}堆场`}」暂无在场的{" "}
+                    {conditionTarget.order.containerType} 可用箱，请先补库存主档后再放箱。
+                  </p>
+                ) : (
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-2">
+                    {pickupCandidateContainers.map((c) => (
+                      <label key={c.containerNo} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={selectedContainerNos.includes(c.containerNo)}
+                          onCheckedChange={() => togglePickupContainer(c.containerNo)}
+                        />
+                        <span className="font-mono text-xs">{c.containerNo}</span>
+                        <span className="text-muted-foreground">
+                          {c.currentYard} · {c.ownership}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {conditionTarget?.phase === "return" && (conditionTarget.order.containerNos?.length ?? 0) > 0 && (
+              <p className="text-xs text-muted-foreground">
+                还箱箱号：{conditionTarget.order.containerNos!.join("、")}
+              </p>
+            )}
             <Textarea value={conditionNote} onChange={(e) => setConditionNote(e.target.value)} placeholder="箱况备注（可选）" />
           </div>
           <DialogFooter>

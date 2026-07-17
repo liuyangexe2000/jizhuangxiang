@@ -49,6 +49,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ res
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
   }
+  if (resource === "orders") {
+    const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
+    await ensureOrdersContainerNosColumn()
+  }
   const data = await list(resource)
   const ctx = await tenantContext(resource)
   const filtered = filterRowsByTenant(resource, data, session, ctx)
@@ -66,6 +70,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
   }
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
+  }
+  if (resource === "orders") {
+    const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
+    await ensureOrdersContainerNosColumn()
   }
   const cfg = RESOURCES[resource]
   const body = await req.json()

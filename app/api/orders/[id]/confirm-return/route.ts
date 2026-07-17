@@ -10,12 +10,13 @@ import {
   findInventoryRow,
   inventoryId,
   nowLocalStr,
+  patchContainerOnReturn,
 } from "@/lib/domain/dispatch-ops"
 import { buildDamageFeeBill, buildOverdueFeeBill } from "@/lib/domain/order-ops"
 import { getSetting } from "@/lib/settings"
 import { SETTING_KEYS } from "@/lib/settings-keys"
 import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
-import type { Bill, InventoryRow, UseBoxOrder } from "@/lib/types"
+import type { Bill, ContainerMaster, InventoryRow, UseBoxOrder } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     })
     await create("repair", {
       repairNo: `RP${Date.now().toString().slice(-8)}`,
-      containerNo: `PEND-${order.orderNo.slice(-6)}`,
+      containerNo: order.containerNos?.[0] || `PEND-${order.orderNo.slice(-6)}`,
       containerType: order.containerType,
       ownership: "自有箱",
       yard: order.returnYard || `${order.returnCity}堆场`,
@@ -146,7 +147,22 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     await update("inventory", inventoryId(inv), applyReturnInventory(inv, order.quantity))
   }
 
-  await create("gate", buildUseBoxGate(order, "进场", yard, city))
+  const containers = (await list("containers")) as ContainerMaster[]
+  const returnNos =
+    order.containerNos && order.containerNos.length > 0
+      ? order.containerNos
+      : [`USEBOX${order.orderNo.slice(-6)}x${order.quantity}`]
+
+  for (const no of returnNos) {
+    const master = containers.find((c) => c.containerNo === no)
+    await create(
+      "gate",
+      buildUseBoxGate(order, "进场", yard, city, master?.ownership || "自有箱", no),
+    )
+    if (master) {
+      await update("containers", master.containerNo, patchContainerOnReturn(master, yard, city))
+    }
+  }
 
   await update("orders", order.id, {
     status: "已完成",

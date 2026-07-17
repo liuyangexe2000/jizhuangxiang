@@ -3,7 +3,7 @@
  * 运行：pnpm test:ut01
  * 前置：pnpm dev 已启动
  */
-import { Client, BASE_URL, nowStr, uid, pastDeadline } from "../scripts/e2e/harness"
+import { Client, BASE_URL, nowStr, uid, pastDeadline, ensureOnSiteContainers } from "../scripts/e2e/harness"
 import { writeFileSync, mkdirSync } from "node:fs"
 
 type Row = { id: string; ok: boolean; note: string }
@@ -149,10 +149,17 @@ async function main() {
   })
 
   // 阶段B：现场（堆场/代管）确认放箱，驱动 提箱中 + 出场 gate + 库存联动
+  const pickupNos = await ensureOnSiteContainers(r01, {
+    count: 1,
+    yard: "陆港堆场",
+    city: "西安",
+    type: "40HQ",
+    prefix: "UB",
+  })
   const pickupConfirm = await r01.api(
     "POST",
     `/api/orders/${encodeURIComponent(created.data.id)}/confirm-pickup`,
-    { conditionCheck: "通过" },
+    { conditionCheck: "通过", containerNos: pickupNos },
   )
   mark(
     "UT-UB-01#7c",

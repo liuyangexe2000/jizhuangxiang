@@ -135,3 +135,38 @@ export async function expectOk(
     fail(`${label} 失败 HTTP ${res.status}: ${JSON.stringify(res.data)?.slice(0, 200)}`)
   }
 }
+
+/** 确保提箱堆场有足够在场真实箱；不足则创建测试箱 */
+export async function ensureOnSiteContainers(
+  client: Client,
+  opts: { count: number; yard: string; city: string; type: string; prefix?: string },
+): Promise<string[]> {
+  const list = await client.list("containers")
+  const existing = ((list.data as any[]) || []).filter(
+    (c) =>
+      !c.deleted &&
+      c.status === "在场" &&
+      c.type === opts.type &&
+      (c.currentYard === opts.yard || c.currentCity === opts.city),
+  )
+  const nos: string[] = existing.slice(0, opts.count).map((c) => String(c.containerNo))
+  let i = 0
+  while (nos.length < opts.count) {
+    const no = `${opts.prefix || "UTCN"}${uid("").slice(0, 7)}${i++}`.toUpperCase().slice(0, 11)
+    const created = await client.create("containers", {
+      containerNo: no,
+      type: opts.type,
+      ownership: "自有箱",
+      currentCity: opts.city,
+      currentYard: opts.yard,
+      status: "在场",
+      lastGateTime: nowStr(),
+      storageDays: 0,
+    })
+    if (!created.ok) {
+      throw new Error(`创建测试箱失败 HTTP ${created.status}: ${JSON.stringify(created.data)}`)
+    }
+    nos.push(no)
+  }
+  return nos
+}

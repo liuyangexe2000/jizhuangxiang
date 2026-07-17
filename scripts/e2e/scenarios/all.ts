@@ -6,6 +6,7 @@ import {
   pastDeadline,
   uid,
   BASE_URL,
+  ensureOnSiteContainers,
   type ScenarioFn,
 } from "../harness"
 
@@ -91,10 +92,17 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
   const blockedAdvance = await r03.patch("orders", created.data.id, { status: "提箱中" })
   assert(blockedAdvance.status === 403, `客户直改执行态应 403，实际 ${blockedAdvance.status}`, fail)
 
+  const pickupNos = await ensureOnSiteContainers(r01, {
+    count: 2,
+    yard: "陆港堆场",
+    city: "西安",
+    type: "40HQ",
+    prefix: "E2E",
+  })
   const pickupConfirm = await r01.api(
     "POST",
     `/api/orders/${encodeURIComponent(created.data.id)}/confirm-pickup`,
-    { conditionCheck: "通过" },
+    { conditionCheck: "通过", containerNos: pickupNos },
   )
   await expectOk("现场（R01代）确认放箱", pickupConfirm, fail)
 

@@ -3,7 +3,7 @@
  * 运行：pnpm test:ut05
  * 前置：pnpm dev 已启动
  */
-import { Client, BASE_URL, nowStr, uid } from "../scripts/e2e/harness"
+import { Client, BASE_URL, nowStr, uid, ensureOnSiteContainers } from "../scripts/e2e/harness"
 import { applyReserveInventory, findInventoryRow, inventoryId } from "../lib/domain/dispatch-ops"
 import { writeFileSync, mkdirSync } from "node:fs"
 
@@ -117,10 +117,17 @@ async function main() {
   const invBeforePickup = (await r04.list("inventory")).data as any[]
   const invPickBefore = findInventoryRow(invBeforePickup, { yard: "汉堡HCS", city: "汉堡" })!
 
+  const pickupNos = await ensureOnSiteContainers(r01, {
+    count: 2,
+    yard: "汉堡HCS",
+    city: "汉堡",
+    type: "40GP",
+    prefix: "G1",
+  })
   const pickupRes = await r04.api(
     "POST",
     `/api/orders/${encodeURIComponent(created.data.id)}/confirm-pickup`,
-    { conditionCheck: "通过" },
+    { conditionCheck: "通过", containerNos: pickupNos },
   )
   mark("UT-GATE-01#5", !!pickupRes.ok && pickupRes.data?.ok === true, pickupRes.ok ? "R04 现场确认放箱成功" : `失败 ${pickupRes.status}`)
 
@@ -282,10 +289,17 @@ async function main() {
     channel: "订舱后新增",
   })
   await confirmOrder(r01, ham.data.id, hamNo, "汉堡HCS", "汉堡HCS")
+  const hamNos = await ensureOnSiteContainers(r01, {
+    count: 1,
+    yard: "汉堡HCS",
+    city: "汉堡",
+    type: "40GP",
+    prefix: "G3",
+  })
   const r06Allowed = await r06.api(
     "POST",
     `/api/orders/${encodeURIComponent(ham.data.id)}/confirm-pickup`,
-    { conditionCheck: "通过" },
+    { conditionCheck: "通过", containerNos: hamNos },
   )
   mark(
     "UT-GATE-03#2",
