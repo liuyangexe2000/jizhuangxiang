@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Send, Route, CalendarClock, Layers, Info, MapPin } from "lucide-react"
+import { CitySearchSelect } from "@/components/city-search-select"
 import { useResource } from "@/lib/api"
+import { useDictionary } from "@/lib/dictionary-context"
 import { useRole } from "@/lib/role-context"
 import { usePublicSettings } from "@/lib/settings-client"
 import type {
@@ -29,6 +31,7 @@ import type {
   Carrier,
   DispatchApprovalLevel,
   SystemUser,
+  Yard,
 } from "@/lib/types"
 import { solidTone } from "@/lib/ui-tone"
 
@@ -66,10 +69,13 @@ export default function DispatchApplyPage() {
   const { data: carrierRows } = useResource<Carrier>("carriers")
   const { data: approvalChain } = useResource<DispatchApprovalLevel>("dispatchApprovalChain")
   const { data: users } = useResource<SystemUser>("users")
+  const { data: yards } = useResource<Yard>("yards")
+  const { pickupCities } = useDictionary()
   const { user } = useRole()
   const { settings } = usePublicSettings()
   const [form, setForm] = useState({
     planTime: "",
+    pickupCity: "",
     pickupPlace: "",
     ruleId: "",
     reason: "境外空箱返调平衡",
@@ -83,9 +89,13 @@ export default function DispatchApplyPage() {
     () => priceRules.filter((r) => r.enabled !== false),
     [priceRules],
   )
-  const pickupPlaces = useMemo(
-    () => Array.from(new Set(enabledRules.map((r) => r.pickupPlace))),
-    [enabledRules],
+  const enabledYards = useMemo(
+    () => yards.filter((y) => y.enabled && !y.deleted),
+    [yards],
+  )
+  const yardsInCity = useMemo(
+    () => (form.pickupCity ? enabledYards.filter((y) => y.city === form.pickupCity) : []),
+    [enabledYards, form.pickupCity],
   )
   const carriers = useMemo(
     () => carrierRows.filter((c) => c.enabled !== false).map((c) => c.name),
@@ -107,7 +117,11 @@ export default function DispatchApplyPage() {
     setForm((f) => ({ ...f, [k]: v }))
   }
 
-  function onPickupChange(v: string | null) {
+  function onPickupCityChange(city: string) {
+    setForm((f) => ({ ...f, pickupCity: city, pickupPlace: "", ruleId: "" }))
+  }
+
+  function onPickupYardChange(v: string | null) {
     setForm((f) => ({ ...f, pickupPlace: v ?? "", ruleId: "" }))
   }
 
@@ -122,9 +136,13 @@ export default function DispatchApplyPage() {
   }
 
   async function submit(mode: "draft" | "submit") {
-    const required = [form.planTime, form.pickupPlace, form.ruleId, form.quantity, form.carrier]
+    const required = [form.planTime, form.pickupCity, form.pickupPlace, form.ruleId, form.quantity, form.carrier]
     if (mode === "submit" && required.some((v) => !v)) {
-      toast.error("请完整填写必填项（含还箱范围方案）后再提交审批")
+      toast.error("请完整填写必填项（含城市、提箱堆场与还箱范围方案）后再提交审批")
+      return
+    }
+    if (mode === "submit" && form.pickupPlace && rules.length === 0) {
+      toast.error("该提箱堆场暂无启用价目方案，请先在调运价目中配置")
       return
     }
     const d = new Date()
@@ -165,6 +183,7 @@ export default function DispatchApplyPage() {
       )
       setForm({
         planTime: "",
+        pickupCity: "",
         pickupPlace: "",
         ruleId: "",
         reason: "境外空箱返调平衡",
@@ -209,11 +228,29 @@ export default function DispatchApplyPage() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="提箱地 *">
-                <Select value={form.pickupPlace} onValueChange={onPickupChange}>
-                  <SelectTrigger><SelectValue placeholder="选择提箱地" /></SelectTrigger>
+              <Field label="提箱城市 *">
+                <CitySearchSelect
+                  value={form.pickupCity}
+                  onValueChange={onPickupCityChange}
+                  cities={pickupCities}
+                  placeholder="选择城市"
+                />
+              </Field>
+              <Field label="提箱堆场 *">
+                <Select
+                  value={form.pickupPlace}
+                  disabled={!form.pickupCity}
+                  onValueChange={onPickupYardChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={form.pickupCity ? "选择该城市堆场" : "请先选择城市"} />
+                  </SelectTrigger>
                   <SelectContent>
-                    {pickupPlaces.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    {yardsInCity.map((y) => (
+                      <SelectItem key={y.id} value={y.name}>
+                        {y.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>
@@ -232,11 +269,11 @@ export default function DispatchApplyPage() {
               </Label>
               {!form.pickupPlace ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-                  请先选择提箱地，系统将列出对应的还箱范围与单价方案
+                  请先选择提箱城市与堆场，系统将列出对应的还箱范围与单价方案
                 </p>
               ) : rules.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-                  该提箱地暂无启用价目方案，请联系管理员在调运价目中配置
+                  该提箱堆场暂无启用价目方案，请联系管理员在调运价目中配置
                 </p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -306,7 +343,8 @@ export default function DispatchApplyPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <Row label="提箱地" value={form.pickupPlace || "—"} />
+              <Row label="提箱城市" value={form.pickupCity || "—"} />
+              <Row label="提箱堆场" value={form.pickupPlace || "—"} />
               <Row label="还箱范围" value={selectedRule?.scope ?? "—"} />
               <Row label="调运数量" value={`${form.quantity || 0} 箱`} />
               <Row label="联动单价" value={selectedRule ? `¥${unitPrice.toLocaleString()}` : "待选方案"} />
