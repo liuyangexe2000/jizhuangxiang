@@ -19,7 +19,7 @@ import { navGroups } from "@/lib/nav"
 import { RESOURCES, type ResourceKey } from "@/lib/resources"
 import { SETTING_KEYS } from "@/lib/settings-keys"
 import type { RoleId } from "@/lib/types"
-import { roles as roleDefs } from "@/lib/mock-data"
+import { roles as roleDefs } from "@/lib/roles"
 
 const ROLE_IDS: RoleId[] = ["R00", "R01", "R02", "R03", "R04", "R05", "R06"]
 

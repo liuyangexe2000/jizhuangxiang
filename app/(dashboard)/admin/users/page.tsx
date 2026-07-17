@@ -37,7 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { roles } from "@/lib/mock-data"
+import { roles } from "@/lib/roles"
 import { useResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
 import { useRole } from "@/lib/role-context"

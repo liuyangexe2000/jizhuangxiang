@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useCallback, useState } from "react"
+import { Suspense, useCallback, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Container,
@@ -26,23 +26,22 @@ import {
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { roles, systemUsers } from "@/lib/mock-data"
 import { usePublicSettings } from "@/lib/settings-client"
-import type { RoleId, SystemUser } from "@/lib/types"
+import type { RoleId } from "@/lib/types"
 
-/** 与种子密码一致，仅供登录页演示快捷入口 */
+/** 与种子密码一致，仅供登录页演示快捷入口提示（账号列表从库读取） */
 const DEMO_PASSWORD = "Passw0rd!"
 
-const DEMO_ACCOUNTS = systemUsers.map((u) => {
-  const role = roles.find((r) => r.id === u.roleId)
-  return {
-    ...u,
-    roleName: role?.name ?? u.roleId,
-    roleType: role?.type ?? "",
-  }
-})
-
-type DemoAccount = (typeof DEMO_ACCOUNTS)[number]
+type DemoAccount = {
+  id: string
+  account: string
+  name: string
+  roleId: RoleId
+  org: string
+  status: "启用" | "停用"
+  roleName: string
+  roleType: string
+}
 
 function roleTone(roleId: RoleId) {
   const map: Record<RoleId, string> = {
@@ -130,13 +129,17 @@ function DemoAccountDrawer({
   onOpenChange,
   loading,
   loggingAccount,
+  accounts,
+  accountsLoading,
   onPick,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   loading: boolean
   loggingAccount: string | null
-  onPick: (user: SystemUser) => void
+  accounts: DemoAccount[]
+  accountsLoading: boolean
+  onPick: (user: DemoAccount) => void
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -169,58 +172,67 @@ function DemoAccountDrawer({
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-3 py-3">
-          <ul className="space-y-2">
-            {DEMO_ACCOUNTS.map((u: DemoAccount) => {
-              const disabled = u.status === "停用" || loading
-              const isLogging = loggingAccount === u.account
-              return (
-                <li key={u.id}>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => onPick(u)}
-                    className={cn(
-                      "group flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3 text-left transition-[background-color,border-color,box-shadow,transform]",
-                      u.status === "停用"
-                        ? "cursor-not-allowed opacity-50"
-                        : "hover:border-[#1a4f8c]/30 hover:bg-white hover:shadow-sm active:scale-[0.99]",
-                      isLogging && "border-[#1a4f8c]/40 bg-white ring-2 ring-[#1a4f8c]/15",
-                    )}
-                  >
-                    <span
+          {accountsLoading ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-400">
+              <Loader2 className="size-4 animate-spin" />
+              加载账号…
+            </div>
+          ) : accounts.length === 0 ? (
+            <p className="px-2 py-8 text-center text-sm text-slate-400">暂无可用演示账号</p>
+          ) : (
+            <ul className="space-y-2">
+              {accounts.map((u) => {
+                const disabled = u.status === "停用" || loading
+                const isLogging = loggingAccount === u.account
+                return (
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => onPick(u)}
                       className={cn(
-                        "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold tracking-wide",
-                        roleTone(u.roleId),
+                        "group flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3 text-left transition-[background-color,border-color,box-shadow,transform]",
+                        u.status === "停用"
+                          ? "cursor-not-allowed opacity-50"
+                          : "hover:border-[#1a4f8c]/30 hover:bg-white hover:shadow-sm active:scale-[0.99]",
+                        isLogging && "border-[#1a4f8c]/40 bg-white ring-2 ring-[#1a4f8c]/15",
                       )}
                     >
-                      {u.roleId}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span className="truncate text-sm font-semibold text-slate-900">{u.name}</span>
-                        {u.status === "停用" && (
-                          <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-slate-500">
-                            停用
-                          </Badge>
+                      <span
+                        className={cn(
+                          "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold tracking-wide",
+                          roleTone(u.roleId),
                         )}
+                      >
+                        {u.roleId}
                       </span>
-                      <span className="mt-0.5 block truncate text-xs text-slate-500">{u.roleName}</span>
-                      <span className="mt-1 block font-mono text-[11px] text-slate-400">
-                        {u.account}
-                        <span className="mx-1 text-slate-300">·</span>
-                        {u.org}
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate text-sm font-semibold text-slate-900">{u.name}</span>
+                          {u.status === "停用" && (
+                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-slate-500">
+                              停用
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-slate-500">{u.roleName}</span>
+                        <span className="mt-1 block font-mono text-[11px] text-slate-400">
+                          {u.account}
+                          <span className="mx-1 text-slate-300">·</span>
+                          {u.org}
+                        </span>
                       </span>
-                    </span>
-                    {isLogging ? (
-                      <Loader2 className="mt-2 size-4 shrink-0 animate-spin text-[#1a4f8c]" />
-                    ) : (
-                      <ChevronRight className="mt-2 size-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#1a4f8c]" />
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+                      {isLogging ? (
+                        <Loader2 className="mt-2 size-4 shrink-0 animate-spin text-[#1a4f8c]" />
+                      ) : (
+                        <ChevronRight className="mt-2 size-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#1a4f8c]" />
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
 
         <div className="border-t border-slate-100 px-5 py-3 text-[11px] leading-relaxed text-slate-400">
@@ -242,6 +254,32 @@ function LoginWorkbench() {
   const [loggingAccount, setLoggingAccount] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([])
+  const [demoAccountsLoading, setDemoAccountsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!showDemo || !drawerOpen) return
+    let cancelled = false
+    setDemoAccountsLoading(true)
+    void fetch("/api/auth/demo-accounts", { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) {
+          if (!cancelled) setDemoAccounts([])
+          return
+        }
+        const data = (await res.json()) as DemoAccount[]
+        if (!cancelled) setDemoAccounts(Array.isArray(data) ? data : [])
+      })
+      .catch(() => {
+        if (!cancelled) setDemoAccounts([])
+      })
+      .finally(() => {
+        if (!cancelled) setDemoAccountsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showDemo, drawerOpen])
 
   const loginWith = useCallback(
     async (acc: string, pwd: string) => {
@@ -280,7 +318,7 @@ function LoginWorkbench() {
     void loginWith(account, password)
   }
 
-  function onPickDemo(user: SystemUser) {
+  function onPickDemo(user: DemoAccount) {
     if (user.status === "停用") return
     void loginWith(user.account, DEMO_PASSWORD)
   }
@@ -321,6 +359,8 @@ function LoginWorkbench() {
             onOpenChange={setDrawerOpen}
             loading={loading}
             loggingAccount={loggingAccount}
+            accounts={demoAccounts}
+            accountsLoading={demoAccountsLoading}
             onPick={onPickDemo}
           />
         </>

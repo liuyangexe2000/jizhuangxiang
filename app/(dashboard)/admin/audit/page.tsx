@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { roles } from "@/lib/mock-data"
+import { roles } from "@/lib/roles"
 import { useResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
 import type { AuditAction, AuditLog } from "@/lib/types"

@@ -58,13 +58,20 @@ export function filterRowsByTenant(
       return rows
     case "gate":
     case "discrepancy":
-    case "containers":
     case "bookings":
       if (role === "R04") {
         return rows.filter((r) => yardBelongsToAgent(yards, str(r.yard), org))
       }
       if (role === "R06") {
         return rows.filter((r) => str(r.yard) === org || str(r.name) === org)
+      }
+      return rows
+    case "containers":
+      if (role === "R04") {
+        return rows.filter((r) => yardBelongsToAgent(yards, str(r.currentYard), org))
+      }
+      if (role === "R06") {
+        return rows.filter((r) => str(r.currentYard) === org)
       }
       return rows
     case "users":

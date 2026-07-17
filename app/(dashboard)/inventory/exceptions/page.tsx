@@ -37,11 +37,9 @@ import {
 } from "@/components/ui/dialog"
 import { useResource, revalidateResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
-import type { ContainerMaster, DispatchOrder, GateRecord, InventoryRow, UseBoxOrder } from "@/lib/types"
+import type { ContainerMaster, DispatchOrder, GateRecord, InventoryRow, UseBoxOrder, Yard } from "@/lib/types"
 import { applyPickupInventory, applyReturnInventory, findInventoryRow, nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { AlertTriangle, Plus, Wrench, CheckCircle2, Search } from "lucide-react"
-
-const yards = ["陆港堆场", "箱满多堆场", "成都德成堆场", "汉堡HCS", "杜堡dit", "华沙pkpcc"]
 
 export default function ExceptionsPage() {
   const { data: allRecords, create, update } = useResource<GateRecord>("gate")
@@ -49,9 +47,21 @@ export default function ExceptionsPage() {
   const { data: containers, update: updateContainer } = useResource<ContainerMaster>("containers")
   const { data: dispatches } = useResource<DispatchOrder>("dispatch")
   const { data: orders } = useResource<UseBoxOrder>("orders")
+  const { data: yardRows } = useResource<Yard>("yards")
+  const yards = useMemo(
+    () =>
+      yardRows
+        .filter((y) => y.enabled !== false && y.deleted !== true)
+        .map((y) => y.name)
+        .sort((a, b) => a.localeCompare(b, "zh")),
+    [yardRows],
+  )
   const [keyword, setKeyword] = useState("")
   const [addOpen, setAddOpen] = useState(false)
-  const [form, setForm] = useState({ containerNo: "", type: "进场", yard: yards[0] })
+  const [form, setForm] = useState({ containerNo: "", type: "进场", yard: "" })
+
+  const defaultYard = yards[0] ?? ""
+  const formYard = form.yard || defaultYard
 
   const pool = useMemo(
     () => allRecords.filter((r) => r.mappingStatus !== "已映射"),
@@ -147,13 +157,18 @@ export default function ExceptionsPage() {
       toast.error("请填写箱号")
       return
     }
-    const city = form.yard.replace(/(港|中央)?堆场$/, "").slice(0, 10) || form.yard.slice(0, 2)
+    const yard = formYard
+    if (!yard) {
+      toast.error("暂无可用堆场，请先在堆场管理中维护")
+      return
+    }
+    const city = yard.replace(/(港|中央)?堆场$/, "").slice(0, 10) || yard.slice(0, 2)
     try {
       await create({
         containerNo: form.containerNo.toUpperCase(),
         type: form.type as "进场" | "出场",
         time: nowLocalStr(),
-        yard: form.yard,
+        yard,
         city,
         source: "手工补录异常",
         mappingStatus: "未映射",
@@ -163,7 +178,7 @@ export default function ExceptionsPage() {
       })
       toast.success("手工补录成功，已加入异常排查池待映射")
       setAddOpen(false)
-      setForm({ containerNo: "", type: "进场", yard: yards[0] })
+      setForm({ containerNo: "", type: "进场", yard: yards[0] ?? "" })
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -203,7 +218,7 @@ export default function ExceptionsPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>堆场</Label>
-                    <Select value={form.yard} onValueChange={(v) => setForm((f) => ({ ...f, yard: v ?? yards[0] }))}>
+                    <Select value={formYard} onValueChange={(v) => setForm((f) => ({ ...f, yard: v ?? defaultYard }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {yards.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}

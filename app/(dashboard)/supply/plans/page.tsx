@@ -41,6 +41,7 @@ import { CitySearchSelect } from "@/components/city-search-select"
 import { useResource, revalidateResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
 import { useDictionary } from "@/lib/dictionary-context"
+import { useRole } from "@/lib/role-context"
 import { CONTAINER_TYPES, DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
 import type { SupplyPlan, SupplyPlanType, SupplyPlanStatus, SupplyContract, Supplier, ContainerType } from "@/lib/types"
 
@@ -64,6 +65,7 @@ const emptyFormBase: Omit<FormState, "demandCity"> = {
 }
 
 export default function SupplyPlansPage() {
+  const { user, role } = useRole()
   const { cities, pickupCities } = useDictionary()
   const defaultCity = pickupCities[0]?.name ?? cities.find((c) => c.enabled)?.name ?? "西安"
 
@@ -132,7 +134,7 @@ export default function SupplyPlansPage() {
         expectArrival: form.expectArrival,
         reason: form.reason,
         status: "草稿",
-        createdBy: "张伟(集装箱管理部)",
+        createdBy: user ? `${user.name}(${role.name})` : "系统",
         createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
         __auditAction: "新增",
         __auditDetail: `创建${form.type}计划 ${planNo}`,

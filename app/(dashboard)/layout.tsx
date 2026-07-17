@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
 import { PageAccessGuard } from "@/components/page-access-guard"
 import { FeedbackTicketButton } from "@/components/feedback-ticket-button"
+import { NavigationLoading } from "@/components/navigation-loading"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -25,6 +26,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </main>
           </div>
           <FeedbackTicketButton />
+          <NavigationLoading />
         </div>
       </TooltipProvider>
       </DictionaryProvider>

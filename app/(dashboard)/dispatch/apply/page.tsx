@@ -21,69 +21,40 @@ import { Send, Route, CalendarClock, Layers, Info, MapPin } from "lucide-react"
 import { useResource } from "@/lib/api"
 import { useRole } from "@/lib/role-context"
 import { usePublicSettings } from "@/lib/settings-client"
-import type { ApprovalThresholds, DispatchOrder, ApprovalStep } from "@/lib/types"
+import type {
+  ApprovalThresholds,
+  DispatchOrder,
+  ApprovalStep,
+  DispatchPriceRule,
+  Carrier,
+  DispatchApprovalLevel,
+  SystemUser,
+} from "@/lib/types"
 import { solidTone } from "@/lib/ui-tone"
 
-const carriers = ["中远海运欧洲承运", "波兰联运物流", "德铁货运代理", "中欧陆桥物流"]
-
-// BR-09：按调运总价生成审批链
-function buildApprovals(total: number, thresholds?: ApprovalThresholds): ApprovalStep[] {
-  // 说明书五级：业务部门负责人、财务部门、副总、常务副总、总经理
-  const chain: { level: number; role: string; approver: string }[] = [
-    { level: 1, role: "业务部门负责人", approver: "张伟" },
-    { level: 2, role: "财务部门", approver: "王芳" },
-    { level: 3, role: "副总", approver: "李强" },
-    { level: 4, role: "常务副总", approver: "赵敏" },
-    { level: 5, role: "总经理", approver: "孙涛" },
-  ]
+// BR-09：按调运总价生成审批链（审批人从库内配置 + 用户表解析）
+function buildApprovals(
+  total: number,
+  chain: DispatchApprovalLevel[],
+  users: SystemUser[],
+  thresholds?: ApprovalThresholds,
+): ApprovalStep[] {
   const t2 = thresholds?.level2Below ?? 20000
   const t3 = thresholds?.level3Below ?? 50000
   const need = total < t2 ? 2 : total < t3 ? 3 : 5
-  return chain.slice(0, need).map((c, i) => ({
-    ...c,
-    status: i === 0 ? "待审批" : "未开始",
-  }))
+  const sorted = [...chain].sort((a, b) => a.level - b.level).slice(0, need)
+  return sorted.map((c, i) => {
+    const u = users.find((x) => x.account === c.account && x.status === "启用")
+    return {
+      level: c.level,
+      role: c.roleTitle,
+      approver: u?.name ?? c.account,
+      status: i === 0 ? "待审批" : "未开始",
+    }
+  })
 }
 
-// BR-11 / M02-F01：调运单价随还箱范围联动配置。
-// 每个提箱地对应若干"还箱范围方案"，不同范围对应不同单价与超期费标准。
-interface PriceRule {
-  id: string
-  scope: string // 还箱范围（多点）
-  unitPrice: number // 承运单价(¥/箱)
-  overdue: string // 超期费标准
-  suggestTerm: number // 建议用箱期(天)
-  zone: "近距" | "中距" | "远距"
-}
-
-const PRICE_RULES: Record<string, PriceRule[]> = {
-  汉堡HCS: [
-    { id: "ham-1", scope: "不来梅 / 汉诺威", unitPrice: 620, overdue: "¥100/箱/天", suggestTerm: 21, zone: "近距" },
-    { id: "ham-2", scope: "杜伊斯堡 / 纽伦堡 / 慕尼黑", unitPrice: 850, overdue: "¥120/箱/天", suggestTerm: 30, zone: "中距" },
-    { id: "ham-3", scope: "华沙 / 布达佩斯 / 维也纳", unitPrice: 1180, overdue: "¥150/箱/天", suggestTerm: 45, zone: "远距" },
-  ],
-  马拉ADAMPOL: [
-    { id: "mal-1", scope: "华沙 / 罗兹", unitPrice: 480, overdue: "¥100/箱/天", suggestTerm: 18, zone: "近距" },
-    { id: "mal-2", scope: "柏林 / 布拉格", unitPrice: 720, overdue: "¥120/箱/天", suggestTerm: 25, zone: "中距" },
-    { id: "mal-3", scope: "西安（境内） / 郑州（境内）", unitPrice: 2600, overdue: "¥120/箱/天", suggestTerm: 45, zone: "远距" },
-  ],
-  杜堡dit: [
-    { id: "dui-1", scope: "汉堡 / 不来梅", unitPrice: 560, overdue: "¥100/箱/天", suggestTerm: 20, zone: "近距" },
-    { id: "dui-2", scope: "纽伦堡 / 慕尼黑 / 维也纳", unitPrice: 920, overdue: "¥130/箱/天", suggestTerm: 32, zone: "中距" },
-  ],
-  纽伦堡CDN: [
-    { id: "nue-1", scope: "慕尼黑 / 维也纳", unitPrice: 500, overdue: "¥100/箱/天", suggestTerm: 18, zone: "近距" },
-    { id: "nue-2", scope: "西安（境内）", unitPrice: 2400, overdue: "¥120/箱/天", suggestTerm: 45, zone: "远距" },
-  ],
-  布达佩斯MCC: [
-    { id: "bud-1", scope: "维也纳 / 布拉迪斯拉发", unitPrice: 700, overdue: "¥120/箱/天", suggestTerm: 30, zone: "中距" },
-    { id: "bud-2", scope: "华沙 / 罗兹", unitPrice: 980, overdue: "¥140/箱/天", suggestTerm: 38, zone: "远距" },
-  ],
-}
-
-const PICKUP_PLACES = Object.keys(PRICE_RULES)
-
-const zoneTone: Record<PriceRule["zone"], string> = {
+const zoneTone: Record<DispatchPriceRule["zone"], string> = {
   近距: solidTone.success,
   中距: solidTone.primary,
   远距: solidTone.warning,
@@ -91,6 +62,10 @@ const zoneTone: Record<PriceRule["zone"], string> = {
 
 export default function DispatchApplyPage() {
   const { create } = useResource<DispatchOrder>("dispatch")
+  const { data: priceRules } = useResource<DispatchPriceRule>("dispatchPriceRules")
+  const { data: carrierRows } = useResource<Carrier>("carriers")
+  const { data: approvalChain } = useResource<DispatchApprovalLevel>("dispatchApprovalChain")
+  const { data: users } = useResource<SystemUser>("users")
   const { user } = useRole()
   const { settings } = usePublicSettings()
   const [form, setForm] = useState({
@@ -104,13 +79,28 @@ export default function DispatchApplyPage() {
     remark: "",
   })
 
-  const rules = form.pickupPlace ? PRICE_RULES[form.pickupPlace] ?? [] : []
+  const enabledRules = useMemo(
+    () => priceRules.filter((r) => r.enabled !== false),
+    [priceRules],
+  )
+  const pickupPlaces = useMemo(
+    () => Array.from(new Set(enabledRules.map((r) => r.pickupPlace))),
+    [enabledRules],
+  )
+  const carriers = useMemo(
+    () => carrierRows.filter((c) => c.enabled !== false).map((c) => c.name),
+    [carrierRows],
+  )
+
+  const rules = form.pickupPlace
+    ? enabledRules.filter((r) => r.pickupPlace === form.pickupPlace)
+    : []
   const selectedRule = useMemo(
     () => rules.find((r) => r.id === form.ruleId) ?? null,
     [rules, form.ruleId],
   )
 
-  const unitPrice = selectedRule?.unitPrice ?? 0
+  const unitPrice = Number(selectedRule?.unitPrice ?? 0)
   const total = Number(form.quantity || 0) * unitPrice
 
   function set<K extends keyof typeof form>(k: K, v: string) {
@@ -118,13 +108,12 @@ export default function DispatchApplyPage() {
   }
 
   function onPickupChange(v: string | null) {
-    // 切换提箱地后清空已选方案，需重新联动
     setForm((f) => ({ ...f, pickupPlace: v ?? "", ruleId: "" }))
   }
 
   function onRuleChange(v: string | null) {
     if (!v) return
-    const rule = (PRICE_RULES[form.pickupPlace] ?? []).find((r) => r.id === v)
+    const rule = rules.find((r) => r.id === v)
     setForm((f) => ({
       ...f,
       ruleId: v,
@@ -160,7 +149,10 @@ export default function DispatchApplyPage() {
         status,
         createdBy: user?.name ?? "调运专员",
         createdAt: nowStr,
-        approvals: mode === "submit" ? buildApprovals(total, settings?.approvalThresholds) : [],
+        approvals:
+          mode === "submit"
+            ? buildApprovals(total, approvalChain, users, settings?.approvalThresholds)
+            : [],
         pickedCount: 0,
         returnedCount: 0,
         __auditAction: "新增",
@@ -221,7 +213,7 @@ export default function DispatchApplyPage() {
                 <Select value={form.pickupPlace} onValueChange={onPickupChange}>
                   <SelectTrigger><SelectValue placeholder="选择提箱地" /></SelectTrigger>
                   <SelectContent>
-                    {PICKUP_PLACES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    {pickupPlaces.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Field>
@@ -232,7 +224,6 @@ export default function DispatchApplyPage() {
 
             <Separator />
 
-            {/* BR-11 还箱范围方案联动 */}
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5 text-sm">
                 <MapPin className="size-4 text-primary" />
@@ -242,6 +233,10 @@ export default function DispatchApplyPage() {
               {!form.pickupPlace ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
                   请先选择提箱地，系统将列出对应的还箱范围与单价方案
+                </p>
+              ) : rules.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
+                  该提箱地暂无启用价目方案，请联系管理员在调运价目中配置
                 </p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -258,7 +253,10 @@ export default function DispatchApplyPage() {
                       >
                         <div className="flex items-center justify-between">
                           <Badge className={zoneTone[r.zone]}>{r.zone}</Badge>
-                          <span className="text-sm font-semibold text-primary">¥{r.unitPrice.toLocaleString()}<span className="text-xs font-normal text-muted-foreground">/箱</span></span>
+                          <span className="text-sm font-semibold text-primary">
+                            ¥{r.unitPrice.toLocaleString()}
+                            <span className="text-xs font-normal text-muted-foreground">/箱</span>
+                          </span>
                         </div>
                         <p className="text-sm font-medium leading-snug text-foreground">{r.scope}</p>
                         <p className="text-xs text-muted-foreground">超期 {r.overdue} · 建议 {r.suggestTerm} 天</p>

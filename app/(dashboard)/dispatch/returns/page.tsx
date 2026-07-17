@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useResource, revalidateResource } from "@/lib/api"
+import { useRole } from "@/lib/role-context"
 import type { ContainerMaster, DispatchOrder, GateRecord, InventoryRow, ReturnApplication } from "@/lib/types"
 import {
   applyReturnInventory,
@@ -29,6 +30,7 @@ import {
 import { PackageCheck, Clock, XCircle, CheckCircle2, Container, Link2 } from "lucide-react"
 
 export default function ReturnsPage() {
+  const { user, role } = useRole()
   const { data: apps, update } = useResource<ReturnApplication>("returns")
   const { data: orders, update: updateDispatch } = useResource<DispatchOrder>("dispatch")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
@@ -50,7 +52,7 @@ export default function ReturnsPage() {
     try {
       await update(reviewing.id, {
         status: kind,
-        reviewer: "张伟(调运专员)",
+        reviewer: user ? `${user.name}(${role.name})` : "系统",
         rejectReason: kind === "已驳回" ? reason : undefined,
         __auditAction: "审批",
         __auditDetail: `${kind}还箱申请 ${reviewing.applyNo}`,

@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { SETTING_KEYS } from "@/lib/settings-keys"
 import type { ApprovalThresholds, RoleId, WorkHoursConfig } from "@/lib/types"
-import { roles as roleDefs } from "@/lib/mock-data"
+import { roles as roleDefs } from "@/lib/roles"
 
 const ROLE_IDS: RoleId[] = ["R00", "R01", "R02", "R03", "R04", "R05", "R06"]
 
