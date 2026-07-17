@@ -1,6 +1,7 @@
 /**
- * 由 scripts/import-base-region-cities.ts 从 old sql/base_region.sql 生成
- * 请勿手工大段编辑；需更新时重新跑导入脚本。
+ * 由 scripts/import-base-region-cities.ts 从 old sql/base_region.sql 生成；
+ * 启用状态由 scripts/sync-cities-by-yards.ts 按堆场回写（有堆场城市才启用可提/可还）。
+ * 请勿手工大段编辑城市列表；启用状态请跑 pnpm db:sync-cities-by-yards。
  */
 import type { CityDictItem } from "../types"
 
@@ -12,9 +13,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "北京市",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 1
   },
   {
@@ -36,9 +37,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 3
   },
   {
@@ -48,9 +49,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 4
   },
   {
@@ -60,9 +61,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 5
   },
   {
@@ -72,9 +73,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 6
   },
   {
@@ -84,9 +85,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 7
   },
   {
@@ -96,9 +97,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 8
   },
   {
@@ -108,9 +109,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 9
   },
   {
@@ -120,9 +121,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 10
   },
   {
@@ -132,9 +133,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 11
   },
   {
@@ -144,9 +145,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 12
   },
   {
@@ -156,9 +157,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 13
   },
   {
@@ -168,9 +169,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 14
   },
   {
@@ -180,9 +181,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 15
   },
   {
@@ -192,9 +193,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 16
   },
   {
@@ -204,9 +205,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 17
   },
   {
@@ -216,9 +217,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 18
   },
   {
@@ -228,9 +229,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 19
   },
   {
@@ -240,9 +241,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 20
   },
   {
@@ -252,9 +253,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 21
   },
   {
@@ -264,9 +265,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 22
   },
   {
@@ -276,9 +277,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 23
   },
   {
@@ -288,9 +289,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 24
   },
   {
@@ -300,9 +301,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 25
   },
   {
@@ -312,9 +313,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 26
   },
   {
@@ -324,9 +325,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 27
   },
   {
@@ -336,9 +337,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 28
   },
   {
@@ -348,9 +349,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 29
   },
   {
@@ -360,9 +361,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 30
   },
   {
@@ -372,9 +373,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 31
   },
   {
@@ -384,9 +385,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 32
   },
   {
@@ -396,9 +397,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 33
   },
   {
@@ -408,9 +409,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 34
   },
   {
@@ -420,9 +421,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 35
   },
   {
@@ -432,9 +433,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "内蒙古自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 36
   },
   {
@@ -468,9 +469,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 39
   },
   {
@@ -480,9 +481,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 40
   },
   {
@@ -492,9 +493,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 41
   },
   {
@@ -504,9 +505,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 42
   },
   {
@@ -516,9 +517,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 43
   },
   {
@@ -528,9 +529,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 44
   },
   {
@@ -540,9 +541,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 45
   },
   {
@@ -552,9 +553,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 46
   },
   {
@@ -564,9 +565,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 47
   },
   {
@@ -576,9 +577,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 48
   },
   {
@@ -588,9 +589,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 49
   },
   {
@@ -600,9 +601,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "辽宁省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 50
   },
   {
@@ -612,9 +613,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 51
   },
   {
@@ -624,9 +625,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 52
   },
   {
@@ -636,9 +637,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 53
   },
   {
@@ -648,9 +649,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 54
   },
   {
@@ -660,9 +661,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 55
   },
   {
@@ -672,9 +673,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 56
   },
   {
@@ -684,9 +685,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 57
   },
   {
@@ -696,9 +697,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 58
   },
   {
@@ -708,9 +709,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "吉林省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 59
   },
   {
@@ -720,9 +721,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 60
   },
   {
@@ -732,9 +733,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 61
   },
   {
@@ -744,9 +745,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 62
   },
   {
@@ -756,9 +757,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 63
   },
   {
@@ -768,9 +769,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 64
   },
   {
@@ -780,9 +781,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 65
   },
   {
@@ -792,9 +793,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 66
   },
   {
@@ -804,9 +805,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 67
   },
   {
@@ -816,9 +817,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 68
   },
   {
@@ -828,9 +829,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 69
   },
   {
@@ -840,9 +841,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 70
   },
   {
@@ -852,9 +853,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 71
   },
   {
@@ -864,9 +865,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "黑龙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 72
   },
   {
@@ -888,9 +889,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 74
   },
   {
@@ -900,9 +901,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 75
   },
   {
@@ -912,9 +913,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 76
   },
   {
@@ -924,9 +925,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 77
   },
   {
@@ -936,9 +937,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 78
   },
   {
@@ -948,9 +949,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 79
   },
   {
@@ -960,9 +961,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 80
   },
   {
@@ -972,9 +973,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 81
   },
   {
@@ -984,9 +985,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 82
   },
   {
@@ -996,9 +997,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 83
   },
   {
@@ -1008,9 +1009,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 84
   },
   {
@@ -1020,9 +1021,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 85
   },
   {
@@ -1032,9 +1033,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 86
   },
   {
@@ -1044,9 +1045,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 87
   },
   {
@@ -1068,9 +1069,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 89
   },
   {
@@ -1080,9 +1081,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 90
   },
   {
@@ -1092,9 +1093,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 91
   },
   {
@@ -1104,9 +1105,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 92
   },
   {
@@ -1116,9 +1117,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 93
   },
   {
@@ -1128,9 +1129,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 94
   },
   {
@@ -1140,9 +1141,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 95
   },
   {
@@ -1152,9 +1153,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 96
   },
   {
@@ -1164,9 +1165,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "浙江省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 97
   },
   {
@@ -1176,9 +1177,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 98
   },
   {
@@ -1188,9 +1189,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 99
   },
   {
@@ -1200,9 +1201,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 100
   },
   {
@@ -1212,9 +1213,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 101
   },
   {
@@ -1224,9 +1225,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 102
   },
   {
@@ -1236,9 +1237,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 103
   },
   {
@@ -1248,9 +1249,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 104
   },
   {
@@ -1260,9 +1261,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 105
   },
   {
@@ -1272,9 +1273,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 106
   },
   {
@@ -1284,9 +1285,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 107
   },
   {
@@ -1296,9 +1297,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 108
   },
   {
@@ -1308,9 +1309,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 109
   },
   {
@@ -1320,9 +1321,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 110
   },
   {
@@ -1332,9 +1333,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 111
   },
   {
@@ -1344,9 +1345,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 112
   },
   {
@@ -1356,9 +1357,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "安徽省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 113
   },
   {
@@ -1368,9 +1369,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "福建省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 114
   },
   {
@@ -1392,9 +1393,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "福建省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 116
   },
   {
@@ -1404,9 +1405,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "福建省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 117
   },
   {
@@ -1416,9 +1417,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "福建省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 118
   },
   {
@@ -1428,9 +1429,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "福建省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 119
   },
   {
@@ -1440,9 +1441,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "福建省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 120
   },
   {
@@ -1452,9 +1453,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "福建省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 121
   },
   {
@@ -1464,9 +1465,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "福建省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 122
   },
   {
@@ -1476,9 +1477,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 123
   },
   {
@@ -1488,9 +1489,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 124
   },
   {
@@ -1500,9 +1501,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 125
   },
   {
@@ -1512,9 +1513,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 126
   },
   {
@@ -1524,9 +1525,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 127
   },
   {
@@ -1536,9 +1537,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 128
   },
   {
@@ -1548,9 +1549,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 129
   },
   {
@@ -1560,9 +1561,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 130
   },
   {
@@ -1572,9 +1573,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 131
   },
   {
@@ -1584,9 +1585,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 132
   },
   {
@@ -1596,9 +1597,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 133
   },
   {
@@ -1608,9 +1609,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 134
   },
   {
@@ -1632,9 +1633,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 136
   },
   {
@@ -1644,9 +1645,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 137
   },
   {
@@ -1656,9 +1657,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 138
   },
   {
@@ -1668,9 +1669,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 139
   },
   {
@@ -1680,9 +1681,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 140
   },
   {
@@ -1692,9 +1693,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 141
   },
   {
@@ -1704,9 +1705,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 142
   },
   {
@@ -1716,9 +1717,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 143
   },
   {
@@ -1728,9 +1729,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 144
   },
   {
@@ -1740,9 +1741,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 145
   },
   {
@@ -1752,9 +1753,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 146
   },
   {
@@ -1764,9 +1765,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 147
   },
   {
@@ -1776,9 +1777,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 148
   },
   {
@@ -1788,9 +1789,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "山东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 149
   },
   {
@@ -1800,9 +1801,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 150
   },
   {
@@ -1812,9 +1813,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 151
   },
   {
@@ -1824,9 +1825,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 152
   },
   {
@@ -1836,9 +1837,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 153
   },
   {
@@ -1848,9 +1849,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 154
   },
   {
@@ -1860,9 +1861,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 155
   },
   {
@@ -1872,9 +1873,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 156
   },
   {
@@ -1884,9 +1885,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 157
   },
   {
@@ -1896,9 +1897,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 158
   },
   {
@@ -1908,9 +1909,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 159
   },
   {
@@ -1920,9 +1921,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 160
   },
   {
@@ -1932,9 +1933,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 161
   },
   {
@@ -1944,9 +1945,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 162
   },
   {
@@ -1956,9 +1957,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 163
   },
   {
@@ -1968,9 +1969,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 164
   },
   {
@@ -1980,9 +1981,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 165
   },
   {
@@ -1992,9 +1993,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "河南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 166
   },
   {
@@ -2016,9 +2017,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 168
   },
   {
@@ -2028,9 +2029,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 169
   },
   {
@@ -2040,9 +2041,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 170
   },
   {
@@ -2052,9 +2053,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 171
   },
   {
@@ -2064,9 +2065,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 172
   },
   {
@@ -2076,9 +2077,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 173
   },
   {
@@ -2088,9 +2089,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 174
   },
   {
@@ -2100,9 +2101,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 175
   },
   {
@@ -2112,9 +2113,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 176
   },
   {
@@ -2124,9 +2125,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 177
   },
   {
@@ -2136,9 +2137,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 178
   },
   {
@@ -2148,9 +2149,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖北省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 179
   },
   {
@@ -2172,9 +2173,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 181
   },
   {
@@ -2184,9 +2185,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 182
   },
   {
@@ -2196,9 +2197,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 183
   },
   {
@@ -2208,9 +2209,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 184
   },
   {
@@ -2220,9 +2221,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 185
   },
   {
@@ -2232,9 +2233,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 186
   },
   {
@@ -2244,9 +2245,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 187
   },
   {
@@ -2256,9 +2257,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 188
   },
   {
@@ -2268,9 +2269,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 189
   },
   {
@@ -2280,9 +2281,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 190
   },
   {
@@ -2292,9 +2293,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 191
   },
   {
@@ -2304,9 +2305,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 192
   },
   {
@@ -2316,9 +2317,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "湖南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 193
   },
   {
@@ -2340,9 +2341,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 195
   },
   {
@@ -2364,9 +2365,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 197
   },
   {
@@ -2376,9 +2377,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 198
   },
   {
@@ -2388,9 +2389,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 199
   },
   {
@@ -2400,9 +2401,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 200
   },
   {
@@ -2412,9 +2413,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 201
   },
   {
@@ -2424,9 +2425,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 202
   },
   {
@@ -2436,9 +2437,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 203
   },
   {
@@ -2448,9 +2449,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 204
   },
   {
@@ -2460,9 +2461,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 205
   },
   {
@@ -2472,9 +2473,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 206
   },
   {
@@ -2484,9 +2485,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 207
   },
   {
@@ -2496,9 +2497,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 208
   },
   {
@@ -2508,9 +2509,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 209
   },
   {
@@ -2520,9 +2521,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 210
   },
   {
@@ -2532,9 +2533,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 211
   },
   {
@@ -2544,9 +2545,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 212
   },
   {
@@ -2556,9 +2557,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 213
   },
   {
@@ -2568,9 +2569,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广东省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 214
   },
   {
@@ -2580,9 +2581,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 215
   },
   {
@@ -2592,9 +2593,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 216
   },
   {
@@ -2604,9 +2605,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 217
   },
   {
@@ -2616,9 +2617,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 218
   },
   {
@@ -2628,9 +2629,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 219
   },
   {
@@ -2640,9 +2641,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 220
   },
   {
@@ -2652,9 +2653,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 221
   },
   {
@@ -2664,9 +2665,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 222
   },
   {
@@ -2676,9 +2677,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 223
   },
   {
@@ -2688,9 +2689,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 224
   },
   {
@@ -2700,9 +2701,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 225
   },
   {
@@ -2712,9 +2713,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 226
   },
   {
@@ -2724,9 +2725,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 227
   },
   {
@@ -2736,9 +2737,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "广西壮族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 228
   },
   {
@@ -2748,9 +2749,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "海南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 229
   },
   {
@@ -2760,9 +2761,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "海南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 230
   },
   {
@@ -2772,9 +2773,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "海南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 231
   },
   {
@@ -2784,9 +2785,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "海南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 232
   },
   {
@@ -2796,9 +2797,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "重庆市",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 233
   },
   {
@@ -2820,9 +2821,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 235
   },
   {
@@ -2832,9 +2833,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 236
   },
   {
@@ -2844,9 +2845,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 237
   },
   {
@@ -2856,9 +2857,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 238
   },
   {
@@ -2868,9 +2869,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 239
   },
   {
@@ -2880,9 +2881,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 240
   },
   {
@@ -2892,9 +2893,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 241
   },
   {
@@ -2904,9 +2905,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 242
   },
   {
@@ -2916,9 +2917,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 243
   },
   {
@@ -2928,9 +2929,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 244
   },
   {
@@ -2940,9 +2941,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 245
   },
   {
@@ -2952,9 +2953,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 246
   },
   {
@@ -2964,9 +2965,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 247
   },
   {
@@ -2976,9 +2977,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 248
   },
   {
@@ -2988,9 +2989,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 249
   },
   {
@@ -3000,9 +3001,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 250
   },
   {
@@ -3012,9 +3013,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 251
   },
   {
@@ -3024,9 +3025,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 252
   },
   {
@@ -3036,9 +3037,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 253
   },
   {
@@ -3048,9 +3049,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "四川省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 254
   },
   {
@@ -3060,9 +3061,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 255
   },
   {
@@ -3072,9 +3073,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 256
   },
   {
@@ -3084,9 +3085,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 257
   },
   {
@@ -3096,9 +3097,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 258
   },
   {
@@ -3108,9 +3109,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 259
   },
   {
@@ -3120,9 +3121,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 260
   },
   {
@@ -3132,9 +3133,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 261
   },
   {
@@ -3144,9 +3145,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 262
   },
   {
@@ -3156,9 +3157,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "贵州省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 263
   },
   {
@@ -3168,9 +3169,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 264
   },
   {
@@ -3180,9 +3181,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 265
   },
   {
@@ -3192,9 +3193,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 266
   },
   {
@@ -3204,9 +3205,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 267
   },
   {
@@ -3216,9 +3217,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 268
   },
   {
@@ -3228,9 +3229,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 269
   },
   {
@@ -3240,9 +3241,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 270
   },
   {
@@ -3252,9 +3253,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 271
   },
   {
@@ -3264,9 +3265,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 272
   },
   {
@@ -3276,9 +3277,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 273
   },
   {
@@ -3288,9 +3289,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 274
   },
   {
@@ -3300,9 +3301,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 275
   },
   {
@@ -3312,9 +3313,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 276
   },
   {
@@ -3324,9 +3325,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 277
   },
   {
@@ -3336,9 +3337,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 278
   },
   {
@@ -3348,9 +3349,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "云南省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 279
   },
   {
@@ -3360,9 +3361,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "西藏自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 280
   },
   {
@@ -3372,9 +3373,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "西藏自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 281
   },
   {
@@ -3384,9 +3385,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "西藏自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 282
   },
   {
@@ -3396,9 +3397,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "西藏自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 283
   },
   {
@@ -3408,9 +3409,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "西藏自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 284
   },
   {
@@ -3420,9 +3421,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "西藏自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 285
   },
   {
@@ -3432,9 +3433,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "西藏自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 286
   },
   {
@@ -3456,9 +3457,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 288
   },
   {
@@ -3468,9 +3469,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 289
   },
   {
@@ -3480,9 +3481,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 290
   },
   {
@@ -3492,9 +3493,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 291
   },
   {
@@ -3504,9 +3505,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 292
   },
   {
@@ -3516,9 +3517,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 293
   },
   {
@@ -3528,9 +3529,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 294
   },
   {
@@ -3540,9 +3541,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 295
   },
   {
@@ -3552,9 +3553,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "陕西省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 296
   },
   {
@@ -3564,9 +3565,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 297
   },
   {
@@ -3576,9 +3577,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 298
   },
   {
@@ -3588,9 +3589,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 299
   },
   {
@@ -3600,9 +3601,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 300
   },
   {
@@ -3612,9 +3613,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 301
   },
   {
@@ -3624,9 +3625,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 302
   },
   {
@@ -3636,9 +3637,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 303
   },
   {
@@ -3648,9 +3649,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 304
   },
   {
@@ -3660,9 +3661,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 305
   },
   {
@@ -3672,9 +3673,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 306
   },
   {
@@ -3684,9 +3685,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 307
   },
   {
@@ -3696,9 +3697,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 308
   },
   {
@@ -3708,9 +3709,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 309
   },
   {
@@ -3720,9 +3721,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "甘肃省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 310
   },
   {
@@ -3732,9 +3733,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "青海省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 311
   },
   {
@@ -3744,9 +3745,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "青海省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 312
   },
   {
@@ -3756,9 +3757,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "青海省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 313
   },
   {
@@ -3768,9 +3769,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "青海省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 314
   },
   {
@@ -3780,9 +3781,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "青海省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 315
   },
   {
@@ -3792,9 +3793,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "青海省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 316
   },
   {
@@ -3804,9 +3805,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "青海省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 317
   },
   {
@@ -3816,9 +3817,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "青海省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 318
   },
   {
@@ -3828,9 +3829,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "宁夏回族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 319
   },
   {
@@ -3840,9 +3841,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "宁夏回族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 320
   },
   {
@@ -3852,9 +3853,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "宁夏回族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 321
   },
   {
@@ -3864,9 +3865,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "宁夏回族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 322
   },
   {
@@ -3876,9 +3877,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "宁夏回族自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 323
   },
   {
@@ -3888,9 +3889,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 324
   },
   {
@@ -3900,9 +3901,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 325
   },
   {
@@ -3912,9 +3913,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 326
   },
   {
@@ -3924,9 +3925,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 327
   },
   {
@@ -3936,9 +3937,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 328
   },
   {
@@ -3948,9 +3949,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 329
   },
   {
@@ -3960,9 +3961,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 330
   },
   {
@@ -3972,9 +3973,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 331
   },
   {
@@ -3984,9 +3985,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 332
   },
   {
@@ -3996,9 +3997,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 333
   },
   {
@@ -4008,9 +4009,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 334
   },
   {
@@ -4020,9 +4021,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 335
   },
   {
@@ -4032,9 +4033,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 336
   },
   {
@@ -4044,9 +4045,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 337
   },
   {
@@ -4056,9 +4057,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 338
   },
   {
@@ -4068,9 +4069,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 339
   },
   {
@@ -4080,9 +4081,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 340
   },
   {
@@ -4092,9 +4093,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 341
   },
   {
@@ -4104,9 +4105,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 342
   },
   {
@@ -4116,9 +4117,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 343
   },
   {
@@ -4128,9 +4129,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 344
   },
   {
@@ -4140,9 +4141,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 345
   },
   {
@@ -4152,9 +4153,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 346
   },
   {
@@ -4164,9 +4165,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 347
   },
   {
@@ -4176,9 +4177,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 348
   },
   {
@@ -4188,9 +4189,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 349
   },
   {
@@ -4200,9 +4201,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 350
   },
   {
@@ -4212,9 +4213,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 351
   },
   {
@@ -4224,9 +4225,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 352
   },
   {
@@ -4236,9 +4237,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 353
   },
   {
@@ -4248,9 +4249,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 354
   },
   {
@@ -4260,9 +4261,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 355
   },
   {
@@ -4272,9 +4273,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 356
   },
   {
@@ -4284,9 +4285,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "台湾省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 357
   },
   {
@@ -4296,9 +4297,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "香港特别行政区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 358
   },
   {
@@ -4308,9 +4309,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "澳门特别行政区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 359
   },
   {
@@ -4320,9 +4321,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "新疆维吾尔自治区",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 360
   },
   {
@@ -4332,9 +4333,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境内",
     "country": "中国",
     "province": "江苏省",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 361
   },
   {
@@ -4344,9 +4345,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "美国",
     "province": "华盛顿",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 362
   },
   {
@@ -4356,9 +4357,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "美国",
     "province": "华盛顿",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 363
   },
   {
@@ -4416,9 +4417,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "德国",
     "province": "斯图加特",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 368
   },
   {
@@ -4428,9 +4429,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "德国",
     "province": "曼海姆",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 369
   },
   {
@@ -4440,9 +4441,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "德国",
     "province": "法兰克福",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 370
   },
   {
@@ -4452,9 +4453,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "德国",
     "province": "不莱梅哈芬",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 371
   },
   {
@@ -4464,9 +4465,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "德国",
     "province": "路德维希",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 372
   },
   {
@@ -4500,9 +4501,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "波兰",
     "province": "罗兹",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 375
   },
   {
@@ -4512,9 +4513,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "波兰",
     "province": "波兹南",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 376
   },
   {
@@ -4572,9 +4573,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "意大利",
     "province": "维罗纳",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 381
   },
   {
@@ -4584,9 +4585,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "意大利",
     "province": "威尼斯",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 382
   },
   {
@@ -4620,9 +4621,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "丹麦",
     "province": "哥本哈根",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 385
   },
   {
@@ -4632,9 +4633,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "丹麦",
     "province": "奥尔胡斯",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 386
   },
   {
@@ -4644,9 +4645,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "西班牙",
     "province": "巴塞罗那",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 387
   },
   {
@@ -4656,9 +4657,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "西班牙",
     "province": "马德里",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 388
   },
   {
@@ -4668,9 +4669,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "英国",
     "province": "伦敦",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 389
   },
   {
@@ -4680,9 +4681,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "英国",
     "province": "伊明赫姆",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 390
   },
   {
@@ -4692,9 +4693,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "英国",
     "province": "利物浦",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 391
   },
   {
@@ -4704,9 +4705,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "法国",
     "province": "里昂",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 392
   },
   {
@@ -4716,9 +4717,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "法国",
     "province": "杜尔日",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 393
   },
   {
@@ -4728,9 +4729,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "挪威",
     "province": "奥斯陆",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 394
   },
   {
@@ -4740,9 +4741,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "芬兰",
     "province": "赫尔辛基",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 395
   },
   {
@@ -4752,9 +4753,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "瑞典",
     "province": "哥德堡",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 396
   },
   {
@@ -4764,9 +4765,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "瑞典",
     "province": "斯德哥尔摩",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 397
   },
   {
@@ -4776,9 +4777,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "瑞典",
     "province": "赫尔辛堡",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 398
   },
   {
@@ -4788,9 +4789,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "俄罗斯",
     "province": "莫斯科",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 399
   },
   {
@@ -4800,9 +4801,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "俄罗斯",
     "province": "圣彼得堡",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 400
   },
   {
@@ -4812,9 +4813,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "白俄罗斯",
     "province": "明斯克",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 401
   },
   {
@@ -4824,9 +4825,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "拉脱维亚",
     "province": "里加",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 402
   },
   {
@@ -4836,9 +4837,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "土耳其",
     "province": "伊斯坦布尔",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 403
   },
   {
@@ -4848,9 +4849,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "土耳其",
     "province": "伊兹密尔",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 404
   },
   {
@@ -4860,9 +4861,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "土耳其",
     "province": "伊兹米特",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 405
   },
   {
@@ -4872,9 +4873,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "土耳其",
     "province": "梅尔辛",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 406
   },
   {
@@ -4884,9 +4885,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "罗马尼亚",
     "province": "康斯坦察",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 407
   },
   {
@@ -4896,9 +4897,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "罗马尼亚",
     "province": "布加勒斯特",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 408
   },
   {
@@ -4908,9 +4909,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "塞尔维亚",
     "province": "贝尔格莱德",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 409
   },
   {
@@ -4920,9 +4921,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "法国",
     "province": "巴黎",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 410
   },
   {
@@ -4932,9 +4933,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "荷兰",
     "province": "蒂尔堡",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 411
   },
   {
@@ -4944,9 +4945,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "瑞士",
     "province": "巴塞尔",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 412
   },
   {
@@ -4956,9 +4957,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "瑞士",
     "province": "巴赛尔",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 413
   },
   {
@@ -4968,9 +4969,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "波兰",
     "province": "格但斯克",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 414
   },
   {
@@ -4980,9 +4981,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "俄罗斯",
     "province": "明斯克",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 415
   },
   {
@@ -4992,9 +4993,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "波兰",
     "province": "波兰",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 416
   },
   {
@@ -5004,9 +5005,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "波兰",
     "province": "格里维治",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 417
   },
   {
@@ -5016,9 +5017,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "波兰",
     "province": "弗罗茨瓦夫",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 418
   },
   {
@@ -5028,9 +5029,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "越南",
     "province": "海防Haiphong",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 419
   },
   {
@@ -5040,9 +5041,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "白俄罗斯",
     "province": "布列斯特",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 420
   },
   {
@@ -5052,9 +5053,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "越南",
     "province": "胡志明",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 421
   },
   {
@@ -5064,9 +5065,9 @@ export const cityDictSeed: CityDictItem[] = [
     "region": "境外",
     "country": "韩国",
     "province": "仁川",
-    "usableAsPickup": true,
-    "usableAsReturn": true,
-    "enabled": true,
+    "usableAsPickup": false,
+    "usableAsReturn": false,
+    "enabled": false,
     "sort": 422
   }
 ]
