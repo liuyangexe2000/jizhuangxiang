@@ -9,8 +9,30 @@ export const CITY_FIELD_KEYS = new Set([
   "currentCity",
 ])
 
+/** 应使用堆场主数据下拉的字段名 */
+export const YARD_FIELD_KEYS = new Set([
+  "yard",
+  "pickupYard",
+  "returnYard",
+  "pickupPlace",
+  "currentYard",
+])
+
 export function isCityField(key: string) {
   return CITY_FIELD_KEYS.has(key)
+}
+
+export function isYardField(key: string) {
+  return YARD_FIELD_KEYS.has(key)
+}
+
+/** 堆场字段优先按同表单内对应城市字段过滤 */
+export function cityKeyForYardField(yardKey: string): string | null {
+  if (yardKey === "pickupYard" || yardKey === "pickupPlace") return "pickupCity"
+  if (yardKey === "returnYard") return "returnCity"
+  if (yardKey === "currentYard") return "currentCity"
+  if (yardKey === "yard") return "city"
+  return null
 }
 
 export function cityOptionsForField(

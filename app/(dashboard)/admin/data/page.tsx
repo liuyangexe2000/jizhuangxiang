@@ -38,10 +38,11 @@ import {
 import { useResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
 import { useDictionary } from "@/lib/dictionary-context"
-import { cityOptionsForField, isCityField } from "@/lib/city-tree"
+import { cityOptionsForField, cityKeyForYardField, isCityField, isYardField } from "@/lib/city-tree"
 import { CONTAINER_TYPES, defaultFieldValue, isContainerTypeField } from "@/lib/container-types"
 import { CitySearchSelect } from "@/components/city-search-select"
 import type { ResourceKey } from "@/lib/resources"
+import type { Yard } from "@/lib/types"
 
 // 数据集定义：字段以 key/label 描述，支持通用增删改查
 interface FieldDef {
@@ -422,10 +423,37 @@ const datasets: DatasetDef[] = [
 function DatasetTable({ def }: { def: DatasetDef }) {
   const { cities, pickupCities, returnCities } = useDictionary()
   const { data: rows, create, update, remove } = useResource<Record<string, unknown>>(def.resource)
+  const { data: yardRows } = useResource<Yard>("yards")
   const [keyword, setKeyword] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null)
   const [form, setForm] = useState<Record<string, string>>({})
+
+  const enabledYards = useMemo(
+    () => yardRows.filter((y) => y.enabled && !y.deleted),
+    [yardRows],
+  )
+
+  function yardsForField(yardKey: string) {
+    const cityKey = cityKeyForYardField(yardKey)
+    const city = cityKey ? form[cityKey]?.trim() : ""
+    if (city) return enabledYards.filter((y) => y.city === city)
+    return enabledYards
+  }
+
+  function onCityChange(cityKey: string, value: string) {
+    setForm((prev) => {
+      const next = { ...prev, [cityKey]: value }
+      if (cityKey === "city") next.yard = ""
+      if (cityKey === "pickupCity") {
+        next.pickupYard = ""
+        next.pickupPlace = ""
+      }
+      if (cityKey === "returnCity") next.returnYard = ""
+      if (cityKey === "currentCity") next.currentYard = ""
+      return next
+    })
+  }
 
   const filtered = useMemo(() => {
     if (!keyword) return rows
@@ -591,10 +619,33 @@ function DatasetTable({ def }: { def: DatasetDef }) {
                   <CitySearchSelect
                     id={f.key}
                     value={form[f.key] ?? ""}
-                    onValueChange={(v) => setForm((prev) => ({ ...prev, [f.key]: v }))}
+                    onValueChange={(v) => onCityChange(f.key, v)}
                     cities={cityOptionsForField(f.key, { pickupCities, returnCities, cities })}
                     placeholder={`选择${f.label}`}
                   />
+                ) : isYardField(f.key) ? (
+                  <Select
+                    value={form[f.key] ?? ""}
+                    onValueChange={(v) => setForm((prev) => ({ ...prev, [f.key]: v ?? "" }))}
+                  >
+                    <SelectTrigger id={f.key}>
+                      <SelectValue
+                        placeholder={
+                          cityKeyForYardField(f.key) && !form[cityKeyForYardField(f.key)!]?.trim()
+                            ? "可先选城市再过滤堆场"
+                            : `选择${f.label}`
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yardsForField(f.key).map((y) => (
+                        <SelectItem key={y.id} value={y.name}>
+                          {y.name}
+                          {y.city ? `（${y.city}）` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 ) : isContainerTypeField(f.key, f.label) ? (
                   <Select
                     value={form[f.key] || defaultFieldValue(f.key, f.label)}
