@@ -185,7 +185,7 @@
   background: rgb(255 255 255 / 0.4);
 }
 
-/* 成品单据打印：只输出 .print-area，避免隐藏布局占满第一页空白 */
+/* 成品单据 / 账单打印：只输出 .print-area */
 @media print {
   @page {
     size: A4;
@@ -204,38 +204,8 @@
     print-color-adjust: exact;
   }
 
-  /* 非打印节点彻底不占位（visibility:hidden 仍会撑出空白首页） */
   body * {
     visibility: hidden !important;
-  }
-
-  body > * {
-    display: none !important;
-  }
-
-  /* 仅保留含单据的弹层（或页面内含 print-area 的根） */
-  body > [data-slot="dialog-portal"],
-  body > [data-slot="dialog-content"],
-  body > *:has(.print-area),
-  body > *:has([data-slot="dialog-content"]) {
-    display: block !important;
-    position: static !important;
-    height: auto !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    background: transparent !important;
-  }
-
-  /* 收起侧栏/顶栏占位，避免非弹层打印场景撑出空白页 */
-  aside,
-  header,
-  .min-h-screen,
-  .h-screen {
-    min-height: 0 !important;
-    height: auto !important;
-    position: static !important;
   }
 
   .print-area,
@@ -243,10 +213,39 @@
     visibility: visible !important;
   }
 
-  /* 弹层祖先：去掉居中平移与滚动裁切 */
+  /* 收起壳层高度，避免空白首页；勿对整棵子树 display:none（会打散 flex 明细） */
+  body > * {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  body > *:has(.print-area),
+  body > [data-slot="dialog-portal"],
+  body > [data-slot="dialog-content"] {
+    height: auto !important;
+    position: static !important;
+  }
+
+  aside,
+  nav,
+  .min-h-screen,
+  .h-screen {
+    min-height: 0 !important;
+    height: auto !important;
+    position: static !important;
+  }
+
   [data-slot="dialog-portal"],
-  [data-slot="dialog-content"],
-  [data-slot="dialog-overlay"] {
+  [data-slot="dialog-content"] {
     position: static !important;
     inset: auto !important;
     top: auto !important;
@@ -259,21 +258,19 @@
     max-height: none !important;
     height: auto !important;
     min-height: 0 !important;
-    width: auto !important;
+    width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: transparent !important;
+    display: block !important;
   }
 
+  /* 仅隐藏明确标记的 UI；标题请放进 .print-area 内打印 */
   [data-slot="dialog-overlay"],
   [data-slot="dialog-close"],
-  [data-slot="dialog-header"],
-  [data-slot="dialog-footer"],
-  [data-slot="dialog-title"],
-  [data-slot="dialog-description"],
   .no-print {
     display: none !important;
     visibility: hidden !important;
@@ -281,14 +278,12 @@
     overflow: hidden !important;
   }
 
-  /* fixed 相对打印纸张原点，避免被长文档流顶到第 2 页 */
   .print-area {
-    position: fixed !important;
+    position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     right: auto !important;
     bottom: auto !important;
-    inset: auto !important;
     width: 100% !important;
     max-width: 186mm !important;
     margin: 0 !important;
@@ -300,7 +295,12 @@
     background: #fff !important;
     color: #000 !important;
     box-shadow: none !important;
-    z-index: 1 !important;
+    z-index: 9999 !important;
+  }
+
+  .print-area table {
+    width: 100% !important;
+    border-collapse: collapse !important;
   }
 
   .doc-print-sheet {

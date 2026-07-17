@@ -360,34 +360,109 @@ export default function BillsPage() {
       </Card>
 
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent
+          showCloseButton={false}
+          className="sm:max-w-lg print:static print:max-h-none print:max-w-none print:translate-x-0 print:translate-y-0 print:overflow-visible print:rounded-none print:border-0 print:p-0 print:shadow-none print:ring-0"
+        >
           {detail && (
             <>
-              <DialogHeader>
+              <DialogHeader className="no-print">
                 <DialogTitle className="font-mono">{detail.billNo}</DialogTitle>
-                <DialogDescription>{detail.type} · {detail.party}</DialogDescription>
+                <DialogDescription>
+                  {detail.type} · {detail.party}
+                </DialogDescription>
               </DialogHeader>
-              <div className="print-area space-y-3 text-sm">
-                <p>关联单号：{detail.relatedOrderNo}</p>
-                <p>金额：{currency(detail.amount)}</p>
-                <p>开具：{detail.issuedAt} · 确认截止：{detail.confirmDeadline}</p>
-                <Separator />
-                {detail.items.map((it) => (
-                  <div key={it.label} className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">{it.label}</span>
-                    <span>{it.value}</span>
-                  </div>
-                ))}
+              <div className="print-area doc-print-sheet space-y-4 bg-white p-2 text-zinc-900 sm:p-0">
+                <header className="border-b-2 border-zinc-900 pb-3 text-center">
+                  <p className="text-sm text-zinc-600">中欧班列平台公司 · 集装箱管理部</p>
+                  <h2 className="mt-1 text-xl font-bold tracking-[0.15em]">用箱账单</h2>
+                  <p className="mt-2 font-mono text-xs text-zinc-600">{detail.billNo}</p>
+                </header>
+                <table className="w-full border-collapse text-sm">
+                  <tbody>
+                    <tr>
+                      <th className="w-28 border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        账单类型
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2">{detail.type}</td>
+                      <th className="w-28 border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        客户
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2">{detail.party}</td>
+                    </tr>
+                    <tr>
+                      <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        关联单号
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2 font-mono text-xs">
+                        {detail.relatedOrderNo}
+                      </td>
+                      <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        状态
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2">{detail.status}</td>
+                    </tr>
+                    <tr>
+                      <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        开具时间
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2">{detail.issuedAt}</td>
+                      <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        确认截止
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2">{detail.confirmDeadline}</td>
+                    </tr>
+                    <tr>
+                      <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        应付金额
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2 font-semibold" colSpan={3}>
+                        {currency(detail.amount)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div>
+                  <p className="mb-2 text-sm font-medium">费用明细</p>
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                          项目
+                        </th>
+                        <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-right font-medium">
+                          金额 / 说明
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.items.map((it) => (
+                        <tr key={it.label}>
+                          <td className="border border-zinc-300 px-3 py-2">{it.label}</td>
+                          <td className="border border-zinc-300 px-3 py-2 text-right">{it.value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 {detail.disputeReason && (
-                  <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">
+                  <p className="rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-600">
                     客户异议原因：{detail.disputeReason}
                   </p>
                 )}
                 {detail.adjustedBy && (
-                  <p className="text-xs text-muted-foreground">箱管调整人：{detail.adjustedBy}</p>
+                  <p className="text-xs text-zinc-500">箱管调整人：{detail.adjustedBy}</p>
                 )}
+                <p className="pt-4 text-xs text-zinc-500">
+                  本账单由系统生成，确认后请按约定完成支付。
+                </p>
               </div>
-              <Button className="no-print" variant="outline" onClick={() => window.print()}>
+              <Button
+                className="no-print w-full"
+                variant="outline"
+                type="button"
+                onClick={() => window.print()}
+              >
                 <Printer className="mr-1 size-4" />
                 打印账单
               </Button>
