@@ -7,6 +7,7 @@ import { canAccessResource } from "@/lib/acl"
 import { ensureAclRuntime } from "@/lib/acl-runtime"
 import { hashPassword } from "@/lib/password"
 import { canReadRow, canWriteRow } from "@/lib/tenant"
+import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
 
 export const dynamic = "force-dynamic"
 
@@ -44,6 +45,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   if (!canAccessResource(resource, session.roleId, "read")) {
     return NextResponse.json({ error: "无权访问该资源" }, { status: 403 })
   }
+  if (resource === "orders" || resource === "bills") {
+    await ensureCustomerIdColumns()
+  }
   const item = await get(resource, decodeURIComponent(id))
   if (!item) return NextResponse.json({ error: "not found" }, { status: 404 })
   const ctx = await tenantContext(resource)
@@ -61,6 +65,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   await ensureAclRuntime()
   if (!canAccessResource(resource, session.roleId, "write")) {
     return NextResponse.json({ error: "无权写入该资源" }, { status: 403 })
+  }
+  if (resource === "orders" || resource === "bills") {
+    await ensureCustomerIdColumns()
   }
   const existing = await get(resource, decodeURIComponent(id))
   if (!existing) return NextResponse.json({ error: "not found" }, { status: 404 })

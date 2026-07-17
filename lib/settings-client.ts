@@ -11,6 +11,9 @@ export type PublicSettingsClient = {
   workHours: WorkHoursConfig
   billConfirmDays: number
   returnProofOverdueDays: number
+  useboxFreeDays: number
+  useboxOverdueDailyRate: number
+  useboxDamageDefaultFee: number
   approvalThresholds: ApprovalThresholds
   feedbackTicketEnabled: boolean
 }

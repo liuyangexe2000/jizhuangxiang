@@ -68,6 +68,9 @@ export const CODE_DEFAULTS: Record<string, unknown> = {
   [SETTING_KEYS.workHours]: DEFAULT_WORK_HOURS,
   [SETTING_KEYS.billConfirmDays]: 3,
   [SETTING_KEYS.returnProofOverdueDays]: 3,
+  [SETTING_KEYS.useboxFreeDays]: 7,
+  [SETTING_KEYS.useboxOverdueDailyRate]: 50,
+  [SETTING_KEYS.useboxDamageDefaultFee]: 2000,
   [SETTING_KEYS.approvalThresholds]: DEFAULT_APPROVAL_THRESHOLDS,
   [SETTING_KEYS.feedbackTicketEnabled]: true,
 }
@@ -152,6 +155,9 @@ export type PublicSettings = {
   workHours: WorkHoursConfig
   billConfirmDays: number
   returnProofOverdueDays: number
+  useboxFreeDays: number
+  useboxOverdueDailyRate: number
+  useboxDamageDefaultFee: number
   approvalThresholds: ApprovalThresholds
   feedbackTicketEnabled: boolean
 }
@@ -165,6 +171,9 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     workHours,
     billConfirmDays,
     returnProofOverdueDays,
+    useboxFreeDays,
+    useboxOverdueDailyRate,
+    useboxDamageDefaultFee,
     approvalThresholds,
     feedbackTicketEnabled,
   ] = await Promise.all([
@@ -178,6 +187,9 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     getSetting<WorkHoursConfig>(SETTING_KEYS.workHours, DEFAULT_WORK_HOURS),
     getSetting<number>(SETTING_KEYS.billConfirmDays, 3),
     getSetting<number>(SETTING_KEYS.returnProofOverdueDays, 3),
+    getSetting<number>(SETTING_KEYS.useboxFreeDays, 7),
+    getSetting<number>(SETTING_KEYS.useboxOverdueDailyRate, 50),
+    getSetting<number>(SETTING_KEYS.useboxDamageDefaultFee, 2000),
     getSetting<ApprovalThresholds>(SETTING_KEYS.approvalThresholds, DEFAULT_APPROVAL_THRESHOLDS),
     getSetting<boolean>(SETTING_KEYS.feedbackTicketEnabled, true),
   ])
@@ -192,6 +204,9 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     workHours: { ...DEFAULT_WORK_HOURS, ...workHours },
     billConfirmDays,
     returnProofOverdueDays,
+    useboxFreeDays,
+    useboxOverdueDailyRate,
+    useboxDamageDefaultFee,
     approvalThresholds: { ...DEFAULT_APPROVAL_THRESHOLDS, ...approvalThresholds },
     feedbackTicketEnabled: !!feedbackTicketEnabled,
   }

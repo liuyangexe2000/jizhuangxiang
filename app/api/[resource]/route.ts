@@ -8,6 +8,9 @@ import { ensureAclRuntime } from "@/lib/acl-runtime"
 import { hashPassword } from "@/lib/password"
 import { filterRowsByTenant, stampCreatePayload } from "@/lib/tenant"
 import { resolveUseBoxOrderNo } from "@/lib/domain/usebox-order-no"
+import { resolveCustomerId } from "@/lib/domain/resolve-customer"
+import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
+import type { Customer } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -43,6 +46,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ res
   if (!canAccessResource(resource, session.roleId, "read")) {
     return NextResponse.json({ error: "无权访问该资源" }, { status: 403 })
   }
+  if (resource === "orders" || resource === "bills") {
+    await ensureCustomerIdColumns()
+  }
   const data = await list(resource)
   const ctx = await tenantContext(resource)
   const filtered = filterRowsByTenant(resource, data, session, ctx)
@@ -57,6 +63,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
   await ensureAclRuntime()
   if (!canAccessResource(resource, session.roleId, "write")) {
     return NextResponse.json({ error: "无权写入该资源" }, { status: 403 })
+  }
+  if (resource === "orders" || resource === "bills") {
+    await ensureCustomerIdColumns()
   }
   const cfg = RESOURCES[resource]
   const body = await req.json()
@@ -78,6 +87,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
     const existing = await list("orders")
     const existingNos = existing.map((o) => String((o as { orderNo?: string }).orderNo ?? ""))
     stamped.orderNo = resolveUseBoxOrderNo(stamped.orderNo, existingNos)
+    if (!stamped.customerId) {
+      const customers = (await list("customers")) as Customer[]
+      stamped.customerId = resolveCustomerId(String(stamped.customer ?? ""), customers)
+    }
   }
   const created = await create(resource, stamped)
   if (resource !== "audit") {

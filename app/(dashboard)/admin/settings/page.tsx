@@ -23,6 +23,9 @@ type AdminSettingsPayload = {
   workHours: WorkHoursConfig
   billConfirmDays: number
   returnProofOverdueDays: number
+  useboxFreeDays: number
+  useboxOverdueDailyRate: number
+  useboxDamageDefaultFee: number
   approvalThresholds: ApprovalThresholds
   feedbackTicketEnabled: boolean
 }
@@ -46,6 +49,9 @@ export default function AdminSettingsPage() {
           workHours: data.workHours || { startHour: 8, endHour: 18 },
           billConfirmDays: Number(data.billConfirmDays) || 3,
           returnProofOverdueDays: Number(data.returnProofOverdueDays) || 3,
+          useboxFreeDays: Number(data.useboxFreeDays) || 7,
+          useboxOverdueDailyRate: Number(data.useboxOverdueDailyRate) || 50,
+          useboxDamageDefaultFee: Number(data.useboxDamageDefaultFee) || 2000,
           approvalThresholds: data.approvalThresholds || { level2Below: 20000, level3Below: 50000 },
           feedbackTicketEnabled: data.feedbackTicketEnabled !== false,
         })
@@ -69,6 +75,9 @@ export default function AdminSettingsPage() {
         [SETTING_KEYS.workHours]: form.workHours,
         [SETTING_KEYS.billConfirmDays]: form.billConfirmDays,
         [SETTING_KEYS.returnProofOverdueDays]: form.returnProofOverdueDays,
+        [SETTING_KEYS.useboxFreeDays]: form.useboxFreeDays,
+        [SETTING_KEYS.useboxOverdueDailyRate]: form.useboxOverdueDailyRate,
+        [SETTING_KEYS.useboxDamageDefaultFee]: form.useboxDamageDefaultFee,
         [SETTING_KEYS.approvalThresholds]: form.approvalThresholds,
         [SETTING_KEYS.feedbackTicketEnabled]: form.feedbackTicketEnabled,
       }
@@ -205,6 +214,21 @@ export default function AdminSettingsPage() {
             label="还箱证明逾期（天）"
             value={form.returnProofOverdueDays}
             onChange={(n) => setForm({ ...form, returnProofOverdueDays: n })}
+          />
+          <Field
+            label="用箱免租天数（自提箱日起）"
+            value={form.useboxFreeDays}
+            onChange={(n) => setForm({ ...form, useboxFreeDays: n })}
+          />
+          <Field
+            label="用箱超期日费率（元/箱/天）"
+            value={form.useboxOverdueDailyRate}
+            onChange={(n) => setForm({ ...form, useboxOverdueDailyRate: n })}
+          />
+          <Field
+            label="还箱异常默认箱损费（元）"
+            value={form.useboxDamageDefaultFee}
+            onChange={(n) => setForm({ ...form, useboxDamageDefaultFee: n })}
           />
           <Field
             label="工作日开始时刻（时）"

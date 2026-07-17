@@ -11,7 +11,11 @@ import {
   inventoryId,
   nowLocalStr,
 } from "@/lib/domain/dispatch-ops"
-import type { InventoryRow, UseBoxOrder } from "@/lib/types"
+import { buildDamageFeeBill, buildOverdueFeeBill } from "@/lib/domain/order-ops"
+import { getSetting } from "@/lib/settings"
+import { SETTING_KEYS } from "@/lib/settings-keys"
+import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
+import type { Bill, InventoryRow, UseBoxOrder } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -22,6 +26,11 @@ function clientIp(req: NextRequest) {
 type Ctx = { params: Promise<{ id: string }> }
 
 const RETURNABLE_STATUSES = new Set(["提箱中", "已提箱", "还箱中"])
+
+async function hasBillOfType(orderNo: string, type: Bill["type"]) {
+  const bills = (await list("bills")) as Bill[]
+  return bills.some((b) => b.relatedOrderNo === orderNo && b.type === type)
+}
 
 /** 现场角色（堆场/代管）确认收箱：验箱 + 进场Gate + 库存联动，驱动订单->已完成；异常则挂修箱不改状态 */
 export async function POST(req: NextRequest, { params }: Ctx) {
@@ -42,6 +51,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (!RETURNABLE_STATUSES.has(order.status)) {
     return NextResponse.json({ error: "订单须处于提箱中/还箱中才能确认收箱" }, { status: 400 })
   }
+
+  await ensureCustomerIdColumns()
 
   const body = await req.json().catch(() => ({}))
   const conditionCheck: "通过" | "异常" = body?.conditionCheck === "异常" ? "异常" : "通过"
@@ -70,14 +81,45 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       reportedAt: actedAt,
       status: "待报修",
     })
+
+    let damageBillNo: string | undefined
+    try {
+      if (!(await hasBillOfType(order.orderNo, "箱损费账单"))) {
+        const defaultFee = await getSetting<number>(SETTING_KEYS.useboxDamageDefaultFee, 2000)
+        const bill = buildDamageFeeBill(order, {
+          amount: defaultFee,
+          note: conditionNote || "还箱箱况异常（现场判定）",
+        })
+        const created = (await create("bills", bill)) as Bill
+        damageBillNo = created.billNo
+        await create("notifications", {
+          id: `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+          type: "账单",
+          level: "重要",
+          title: `箱损费账单待确认 · ${order.orderNo}`,
+          desc: `默认箱损费 ¥${bill.amount.toLocaleString()}（${created.billNo}），箱管可在账单页按异议调整。`,
+          module: "M01 提还箱作业",
+          href: "/customer/bills",
+          roles: ["R01", "R03"],
+          actionable: true,
+          read: false,
+          createdAt: actedAt,
+        })
+      }
+    } catch (e) {
+      console.warn("[v0] confirm-return damage bill skipped:", (e as Error).message)
+    }
+
     await create("notifications", {
       id: `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
       type: "系统",
       level: "紧急",
       title: `还箱箱况异常 · ${order.orderNo}`,
-      desc: `${actedBy} 现场判定箱况异常：${conditionNote || "—"}，已挂修箱工单，属客户责任的箱损费需箱管核算。`,
+      desc: `${actedBy} 现场判定箱况异常：${conditionNote || "—"}，已挂修箱工单${
+        damageBillNo ? `，已出默认箱损费 ${damageBillNo}` : ""
+      }；箱管可在账单页按异议调整金额。`,
       module: "M01 提还箱作业",
-      href: "/customer/documents",
+      href: "/customer/bills",
       roles: ["R01", "R04"],
       actionable: true,
       read: false,
@@ -88,10 +130,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       action: "修改",
       module: "M01 提还箱作业",
       target: order.orderNo,
-      detail: "现场确认还箱：箱况异常，已挂修箱工单",
+      detail: damageBillNo
+        ? `现场确认还箱：箱况异常，已挂修箱工单并出箱损费 ${damageBillNo}`
+        : "现场确认还箱：箱况异常，已挂修箱工单",
       ip: clientIp(req),
     })
-    return NextResponse.json({ ok: true, conditionCheck, orderStatus: order.status })
+    return NextResponse.json({ ok: true, conditionCheck, orderStatus: order.status, damageBillNo })
   }
 
   const yard = order.returnYard || `${order.returnCity}堆场`
@@ -112,12 +156,42 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     returnGateAt: actedAt,
   })
 
+  let overdueBillNo: string | undefined
+  try {
+    if (!(await hasBillOfType(order.orderNo, "超期费账单"))) {
+      const freeDays = await getSetting<number>(SETTING_KEYS.useboxFreeDays, 7)
+      const dailyRate = await getSetting<number>(SETTING_KEYS.useboxOverdueDailyRate, 50)
+      const bill = buildOverdueFeeBill(order, { freeDays, dailyRate })
+      if (bill) {
+        const created = (await create("bills", bill)) as Bill
+        overdueBillNo = created.billNo
+        await create("notifications", {
+          id: `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+          type: "账单",
+          level: "重要",
+          title: `超期费账单待确认 · ${order.orderNo}`,
+          desc: `超期 ${bill.items.find((i) => i.label === "超期天数")?.value ?? "—"} 天，金额 ¥${bill.amount.toLocaleString()}（${created.billNo}）。`,
+          module: "M01 提还箱作业",
+          href: "/customer/bills",
+          roles: ["R01", "R03"],
+          actionable: true,
+          read: false,
+          createdAt: actedAt,
+        })
+      }
+    }
+  } catch (e) {
+    console.warn("[v0] confirm-return overdue bill skipped:", (e as Error).message)
+  }
+
   await create("notifications", {
     id: `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
     type: "任务",
     level: "普通",
     title: `已确认收箱 · ${order.orderNo}`,
-    desc: `${yard} · ${actedBy} 确认收箱，订单已完成。`,
+    desc: `${yard} · ${actedBy} 确认收箱，订单已完成${
+      overdueBillNo ? `，已出超期费 ${overdueBillNo}` : ""
+    }。`,
     module: "M01 提还箱作业",
     href: "/customer/documents",
     roles: ["R01", "R03"],
@@ -131,9 +205,11 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     action: "修改",
     module: "M01 提还箱作业",
     target: order.orderNo,
-    detail: `现场确认收箱（${yard}），库存联动进场`,
+    detail: overdueBillNo
+      ? `现场确认收箱（${yard}），库存联动进场，已出超期费 ${overdueBillNo}`
+      : `现场确认收箱（${yard}），库存联动进场`,
     ip: clientIp(req),
   })
 
-  return NextResponse.json({ ok: true, conditionCheck, actedBy, actedAt })
+  return NextResponse.json({ ok: true, conditionCheck, actedBy, actedAt, overdueBillNo })
 }

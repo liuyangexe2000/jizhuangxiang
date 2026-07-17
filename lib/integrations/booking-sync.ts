@@ -1,9 +1,11 @@
 import "server-only"
 import { create, list, update } from "@/lib/repo"
 import { nowLocalStr } from "@/lib/domain/dispatch-ops"
-import type { UseBoxOrder } from "@/lib/types"
+import type { Customer, UseBoxOrder } from "@/lib/types"
 import { DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
 import { resolveUseBoxOrderNo, isValidUseBoxOrderNo } from "@/lib/domain/usebox-order-no"
+import { resolveCustomerId } from "@/lib/domain/resolve-customer"
+import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
 
 export type BookingFeedItem = {
   externalId?: string
@@ -65,8 +67,10 @@ export async function syncBookingOrdersFromApi(): Promise<BookingSyncResult> {
     throw new Error(`订舱 API HTTP ${res.status}: ${text.slice(0, 200) || res.statusText}`)
   }
   const items = normalizeFeed(await res.json())
+  await ensureCustomerIdColumns()
   const existing = await list("orders")
   const existingNos = new Set(existing.map((o) => String(o.orderNo)))
+  const customers = (await list("customers")) as Customer[]
   const createdNos: string[] = []
   let skipped = 0
 
@@ -82,6 +86,7 @@ export async function syncBookingOrdersFromApi(): Promise<BookingSyncResult> {
     await create("orders", {
       orderNo,
       customer: item.customer,
+      customerId: resolveCustomerId(item.customer, customers),
       customerType: item.customerType ?? "班列客户",
       pickupCity: item.pickupCity,
       returnCity: item.returnCity,

@@ -36,6 +36,7 @@ export function buildUseBoxBill(o: UseBoxOrder): Omit<Bill, "id"> {
     type: "用箱账单",
     relatedOrderNo: o.orderNo,
     party: o.customer,
+    customerId: o.customerId,
     amount,
     status: "待确认",
     issuedAt,
@@ -57,6 +58,7 @@ export function buildCancelFeeBill(o: UseBoxOrder): Omit<Bill, "id"> {
     type: "用箱变更费账单",
     relatedOrderNo: o.orderNo,
     party: o.customer,
+    customerId: o.customerId,
     amount,
     status: "待确认",
     issuedAt,
@@ -65,6 +67,73 @@ export function buildCancelFeeBill(o: UseBoxOrder): Omit<Bill, "id"> {
       { label: "费用类型", value: "超时取消取消费（20%）" },
       { label: "关联订单", value: o.orderNo },
       { label: "原金额", value: `¥${o.unitPrice * o.quantity}` },
+    ],
+  }
+}
+
+/** 用箱天数（自提箱/确认日起算），不足一天按一天 */
+export function calcUseboxUsedDays(o: UseBoxOrder, asOf = new Date()): number {
+  const start = parseBizTime(o.pickupGateAt || o.confirmedAt || o.createdAt)
+  if (!Number.isFinite(start)) return 0
+  const ms = asOf.getTime() - start
+  if (ms <= 0) return 0
+  return Math.max(1, Math.ceil(ms / (24 * 3600 * 1000)))
+}
+
+export function calcUseboxOverdueDays(o: UseBoxOrder, freeDays: number, asOf = new Date()): number {
+  return Math.max(0, calcUseboxUsedDays(o, asOf) - Math.max(0, freeDays))
+}
+
+export function buildOverdueFeeBill(
+  o: UseBoxOrder,
+  opts: { freeDays: number; dailyRate: number; days?: number },
+): Omit<Bill, "id"> | null {
+  const days = opts.days ?? calcUseboxOverdueDays(o, opts.freeDays)
+  if (days <= 0 || opts.dailyRate <= 0) return null
+  const amount = Math.round(days * opts.dailyRate * o.quantity)
+  const issuedAt = nowLocalStr().slice(0, 10)
+  return {
+    billNo: `BILL${Date.now().toString().slice(-8)}`,
+    type: "超期费账单",
+    relatedOrderNo: o.orderNo,
+    party: o.customer,
+    customerId: o.customerId,
+    amount,
+    status: "待确认",
+    issuedAt,
+    confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
+    items: [
+      { label: "费用类型", value: "用箱超期费" },
+      { label: "免租天数", value: String(opts.freeDays) },
+      { label: "超期天数", value: String(days) },
+      { label: "日费率", value: `¥${opts.dailyRate}/箱/天` },
+      { label: "箱量", value: String(o.quantity) },
+      { label: "关联订单", value: o.orderNo },
+    ],
+  }
+}
+
+export function buildDamageFeeBill(
+  o: UseBoxOrder,
+  opts: { amount: number; note?: string },
+): Omit<Bill, "id"> {
+  const amount = Math.max(0, Math.round(opts.amount))
+  const issuedAt = nowLocalStr().slice(0, 10)
+  return {
+    billNo: `BILL${Date.now().toString().slice(-8)}`,
+    type: "箱损费账单",
+    relatedOrderNo: o.orderNo,
+    party: o.customer,
+    customerId: o.customerId,
+    amount,
+    status: "待确认",
+    issuedAt,
+    confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
+    items: [
+      { label: "费用类型", value: "箱损费" },
+      { label: "关联订单", value: o.orderNo },
+      { label: "箱型×量", value: `${o.containerType}×${o.quantity}` },
+      ...(opts.note ? [{ label: "异常说明", value: opts.note }] : []),
     ],
   }
 }

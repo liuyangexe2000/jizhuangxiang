@@ -91,11 +91,16 @@ export function getCustomerLifecycle(input: CustomerLifecycleInput): CustomerLif
   const nameKeys = customerNameKeys(customer, users)
   const keySet = new Set(nameKeys)
 
-  const orders = input.orders.filter((o) => inKeys(o.customer, keySet))
+  const orders = input.orders.filter(
+    (o) => o.customerId === customer.id || inKeys(o.customer, keySet),
+  )
   const orderNos = new Set(orders.map((o) => o.orderNo))
 
   const bills = input.bills.filter(
-    (b) => inKeys(b.party, keySet) || (b.relatedOrderNo && orderNos.has(b.relatedOrderNo)),
+    (b) =>
+      b.customerId === customer.id ||
+      inKeys(b.party, keySet) ||
+      (b.relatedOrderNo && orderNos.has(b.relatedOrderNo)),
   )
   const bookings = input.bookings.filter((b) => orderNos.has(b.refNo))
   const gate = input.gate.filter((g) => g.relatedOrderNo && orderNos.has(g.relatedOrderNo))

@@ -41,8 +41,9 @@ import { usePublicSettings } from "@/lib/settings-client"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { applyReserveInventory, cityFromPlace, findInventoryRow, inventoryId, nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { buildUseBoxBill, fmtDeadline } from "@/lib/domain/order-ops"
+import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { pushNotification } from "@/lib/domain/notify"
-import type { Bill, InventoryRow, Notification, UseBoxOrder, Yard } from "@/lib/types"
+import type { Bill, Customer, InventoryRow, Notification, UseBoxOrder, Yard } from "@/lib/types"
 
 const statusFilters = ["待确认", "全部", "已确认", "提箱中", "还箱中", "已完成", "已取消", "超时取消"]
 
@@ -51,6 +52,7 @@ export default function OperationsUseboxPage() {
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
   const { data: yards } = useResource<Yard>("yards")
   const { data: bills, create: createBill } = useResource<Bill>("bills")
+  const { data: customers } = useResource<Customer>("customers")
   const { create: createNotification } = useResource<Notification>("notifications")
   const { user } = useRole()
   const { settings } = usePublicSettings()
@@ -126,8 +128,11 @@ export default function OperationsUseboxPage() {
     setSubmitting(true)
     const now = new Date()
     const confirmedAt = nowLocalStr()
+    const customerId =
+      confirming.customerId || resolveCustomerId(confirming.customer, customers)
     const nextOrder: UseBoxOrder = {
       ...confirming,
+      customerId,
       status: "已确认",
       pickupYard,
       returnYard,
@@ -149,6 +154,7 @@ export default function OperationsUseboxPage() {
         confirmedBy: nextOrder.confirmedBy,
         cancelDeadline: nextOrder.cancelDeadline,
         releaseDocReady: true,
+        ...(customerId && !confirming.customerId ? { customerId } : {}),
         __auditAction: "修改",
         __auditDetail: `确认用箱订单 ${confirming.orderNo}，预占 ${pickupYard} ${confirming.quantity} 箱`,
       })

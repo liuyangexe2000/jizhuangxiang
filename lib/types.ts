@@ -28,6 +28,8 @@ export interface UseBoxOrder {
   id: string
   orderNo: string
   customer: string
+  /** 客户主档 id（可选；历史数据可能仅有名称） */
+  customerId?: string
   customerType: "班列客户" | "多式联运客户" | "租箱客户"
   pickupCity: string
   returnCity: string
@@ -75,6 +77,8 @@ export interface Bill {
   type: BillType
   relatedOrderNo: string
   party: string
+  /** 客户主档 id（可选） */
+  customerId?: string
   amount: number
   status: BillStatus
   issuedAt: string
