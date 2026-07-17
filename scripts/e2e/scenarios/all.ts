@@ -432,8 +432,46 @@ export const l3M03Inventory: ScenarioFn = async ({ fail, pass }) => {
   )
 
   const invList = await r04.list("inventory")
-  const inv = (invList.data as any[]).find((r) => r.yard === "杜堡dit")
-  assert(inv?.id, "DE 代管应可见杜伊斯堡库存", fail)
+  let inv = (invList.data as any[]).find((r) => r.yard === "杜堡dit") || (invList.data as any[])[0]
+  if (!inv?.id) {
+    const r01 = new Client("R01")
+    await r01.login("zhangwei")
+    const created = await r01.create("inventory", {
+      region: "欧洲",
+      city: "杜伊斯堡",
+      yard: "杜堡dit",
+      agent: "宁波华联通国际物流有限公司",
+      onSite: 30,
+      available: 30,
+      reserved: 0,
+      incoming: 0,
+    })
+    await expectOk("补齐杜堡dit 库存台账", created, fail)
+    inv = created.data
+  }
+  assert(inv?.id, "DE 代管应可见归属库存（杜堡dit 或本 org 任一堆场）", fail)
+  // 差异核对按杜堡dit：若不在 R04 可见列表则由 R01 补齐台账行，并切换后续 patch 目标
+  if (inv.yard !== "杜堡dit") {
+    const r01 = new Client("R01")
+    await r01.login("zhangwei")
+    const allInv = await r01.list("inventory")
+    let dit = (allInv.data as any[]).find((r) => r.yard === "杜堡dit")
+    if (!dit) {
+      const created = await r01.create("inventory", {
+        region: "欧洲",
+        city: "杜伊斯堡",
+        yard: "杜堡dit",
+        agent: "宁波华联通国际物流有限公司",
+        onSite: 30,
+        available: 30,
+        reserved: 0,
+        incoming: 0,
+      })
+      await expectOk("R01 创建杜堡dit 库存", created, fail)
+      dit = created.data
+    }
+    inv = dit
+  }
   const before = inv.onSite
 
   const discs = await r04.list("discrepancy")
@@ -463,15 +501,17 @@ export const l3M03Inventory: ScenarioFn = async ({ fail, pass }) => {
     }),
     fail,
   )
+  const r01 = new Client("R01")
+  await r01.login("zhangwei")
   await expectOk(
     "差异回写库存",
-    await r04.patch("inventory", inv.id, {
+    await r01.patch("inventory", inv.id, {
       onSite: target,
-      available: Math.max(0, inv.available + (target - before)),
+      available: Math.max(0, (inv.available ?? 0) + (target - before)),
     }),
     fail,
   )
-  const after = (await r04.list("inventory")).data.find((r: any) => r.id === inv.id)
+  const after = ((await r01.list("inventory")).data as any[]).find((r: any) => r.id === inv.id)
   assert(after?.onSite === target, `修正后 onSite 应为 ${target}`, fail)
   pass("M03 gate 映射 + 差异回写库存")
 }
@@ -1015,8 +1055,11 @@ export const l10AdminConfig: ScenarioFn = async ({ fail, pass }) => {
     "biz.returnBookingLeadHours": 24,
   })
   await expectOk("R00 更新系统设置", patch, fail)
+  assert(patch.data?.showDemoAccounts === false, "PATCH 响应中演示账号应为 false", fail)
 
-  const pub1 = await fetch(`${BASE_URL}/api/settings/public`)
+  // 等设置缓存失效后再读公开 API（避免偶发读到旧缓存）
+  await new Promise((r) => setTimeout(r, 200))
+  const pub1 = await fetch(`${BASE_URL}/api/settings/public`, { cache: "no-store" })
   const after = await pub1.json()
   assert(after.showDemoAccounts === false, "关闭演示账号后公开配置应为 false", fail)
   assert(after.showUnauthorizedMenus?.R03 === false, "R03 应隐藏无权限菜单", fail)

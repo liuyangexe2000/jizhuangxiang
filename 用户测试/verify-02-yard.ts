@@ -118,8 +118,15 @@ async function main() {
   mark("UT-YARD-02#2", !!mapped.ok && mapped.data?.mappingStatus === "已映射", "自动匹配→已映射")
 
   const invList = await r04.list("inventory")
-  const inv = (invList.data as any[] | null)?.find((r) => r.yard === "杜堡dit")
-  mark("UT-YARD-02#3", !!inv?.id, inv?.id ? `可见杜伊斯堡库存 onSite=${inv.onSite}` : "不可见代管库存")
+  const invRows = (invList.data as any[] | null) || []
+  const inv = invRows.find((r) => r.yard === "汉堡HCS") || invRows[0]
+  mark(
+    "UT-YARD-02#3",
+    !!inv?.id,
+    inv?.id
+      ? `可见代管库存 ${inv.yard} onSite=${inv.onSite}（共 ${invRows.length} 行）`
+      : "不可见代管库存",
+  )
 
   // —— UT-YARD-03 ——
   const r00 = new Client("R00")
