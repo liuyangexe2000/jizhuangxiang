@@ -132,8 +132,14 @@ export default function BillsPage() {
           },
         })
         await revalidateResource("outboundEvents")
+        // 尽力投递：失败不阻断账单确认
+        void fetch("/api/outbound/flush", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 5 }),
+        }).then(() => revalidateResource("outboundEvents"))
       }
-      toast.success("账单已核对确认，已写入订舱出站队列")
+      toast.success("账单已核对确认，已写入订舱出站队列并尝试投递")
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -157,8 +163,13 @@ export default function BillsPage() {
           },
         })
         await revalidateResource("outboundEvents")
+        void fetch("/api/outbound/flush", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 5 }),
+        }).then(() => revalidateResource("outboundEvents"))
       }
-      toast.success("账款支付成功，出站队列已更新")
+      toast.success("账款支付成功，出站队列已更新并尝试投递")
     } catch (e) {
       toast.error((e as Error).message)
     }

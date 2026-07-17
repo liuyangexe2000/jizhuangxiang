@@ -833,7 +833,7 @@ export const l9GapFill: ScenarioFn = async ({ fail, pass }) => {
     await r03.patch("bills", bill.data.id, { status: "已确认" }),
     fail,
   )
-  // 出站事件由页面 enqueue；E2E 直接写队列验证资源可用
+  // 出站事件由页面 enqueue；E2E 直接写队列并用 HTTP 投递
   const oe = await r03.create("outboundEvents", {
     type: "booking_bill_push",
     relatedNo: billNo,
@@ -845,14 +845,9 @@ export const l9GapFill: ScenarioFn = async ({ fail, pass }) => {
 
   const r00 = new Client("R00")
   await r00.login("admin")
-  await expectOk(
-    "标记已投递",
-    await r00.patch("outboundEvents", oe.data.id, {
-      status: "delivered",
-      deliveredAt: nowStr(),
-    }),
-    fail,
-  )
+  const delivered = await r00.api("POST", `/api/outbound/${encodeURIComponent(oe.data.id)}/deliver`)
+  await expectOk("HTTP 投递出站事件", delivered, fail)
+  assert(delivered.data?.result?.status === "delivered", "投递后状态应为 delivered", fail)
 
   // 跨单还箱：同一承运商两调运单箱号
   const r01 = new Client("R01")

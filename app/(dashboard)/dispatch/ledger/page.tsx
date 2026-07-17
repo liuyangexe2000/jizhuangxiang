@@ -270,7 +270,12 @@ export default function LedgerPage() {
         },
       })
       await Promise.all([revalidateResource("bills"), revalidateResource("outboundEvents")])
-      toast.success(`账单 ${e.billNo} 已核销，并写入订舱账单出站队列`)
+      void fetch("/api/outbound/flush", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 5 }),
+      }).then(() => revalidateResource("outboundEvents"))
+      toast.success(`账单 ${e.billNo} 已核销，并写入出站队列尝试投递`)
     } catch (err) {
       toast.error((err as Error).message)
     }

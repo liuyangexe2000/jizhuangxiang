@@ -495,6 +495,8 @@ CREATE TABLE `outbound_events` (
   `status` VARCHAR(20) NOT NULL,
   `createdAt` VARCHAR(32) NOT NULL,
   `deliveredAt` VARCHAR(32) NULL,
+  `attempts` INT NOT NULL DEFAULT 0,
+  `lastError` VARCHAR(500) NULL,
   PRIMARY KEY (`id`),
   KEY `idx_outbound_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

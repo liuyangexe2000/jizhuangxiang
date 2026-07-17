@@ -30,7 +30,17 @@ export async function markDelivered(update: UpdateFn, id: string) {
   await update(id, {
     status: "delivered",
     deliveredAt: nowLocalStr(),
+    lastError: "",
     __auditAction: "修改",
     __auditDetail: `标记出站已投递 ${id}`,
+  })
+}
+
+export async function markFailed(update: UpdateFn, id: string, lastError: string) {
+  await update(id, {
+    status: "failed",
+    lastError: lastError.slice(0, 500),
+    __auditAction: "修改",
+    __auditDetail: `标记出站失败 ${id}`,
   })
 }

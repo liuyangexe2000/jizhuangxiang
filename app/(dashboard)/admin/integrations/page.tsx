@@ -54,18 +54,24 @@ export default function IntegrationsPage() {
   const { data: outbound, update: updateOutbound, mutate: mutateOutbound } =
     useResource<OutboundEvent>("outboundEvents")
   const [syncing, setSyncing] = useState<string | null>(null)
+  const [delivering, setDelivering] = useState<string | null>(null)
+  const [flushing, setFlushing] = useState(false)
 
   const stats = useMemo(() => {
     const total = items.length
     const healthy = items.filter((i) => i.status === "正常").length
     const abnormal = items.filter((i) => i.status === "异常" || i.status === "延迟").length
     const pending =
-      items.reduce((s, i) => s + i.pending, 0) + outbound.filter((e) => e.status === "pending").length
+      items.reduce((s, i) => s + i.pending, 0) +
+      outbound.filter((e) => e.status === "pending" || e.status === "failed").length
     return { total, healthy, abnormal, pending }
   }, [items, outbound])
 
-  const pendingOutbound = useMemo(
-    () => outbound.filter((e) => e.status === "pending").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+  const queueOutbound = useMemo(
+    () =>
+      outbound
+        .filter((e) => e.status === "pending" || e.status === "failed")
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [outbound],
   )
 
@@ -103,11 +109,48 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function deliverOutbound(ev: OutboundEvent) {
+    setDelivering(ev.id)
+    try {
+      const res = await fetch(`/api/outbound/${encodeURIComponent(ev.id)}/deliver`, { method: "POST" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "投递失败")
+      await mutateOutbound()
+      const dry = data.result?.dryRun ? "（本地 echo）" : ""
+      toast.success(`已 HTTP 投递 ${ev.relatedNo}${dry}`)
+    } catch (e) {
+      toast.error((e as Error).message)
+      await mutateOutbound()
+    } finally {
+      setDelivering(null)
+    }
+  }
+
+  async function flushOutbound() {
+    setFlushing(true)
+    try {
+      const res = await fetch("/api/outbound/flush", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 20 }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "批量投递失败")
+      await mutateOutbound()
+      toast.success(`批量投递完成：成功 ${data.delivered ?? 0}，失败 ${data.failed ?? 0}`)
+    } catch (e) {
+      toast.error((e as Error).message)
+      await mutateOutbound()
+    } finally {
+      setFlushing(false)
+    }
+  }
+
   async function markOutboundDelivered(ev: OutboundEvent) {
     try {
       await markDelivered(updateOutbound, ev.id)
       await mutateOutbound()
-      toast.success(`已标记投递 ${ev.relatedNo}`)
+      toast.success(`已手工标记投递 ${ev.relatedNo}`)
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -128,7 +171,19 @@ export default function IntegrationsPage() {
       <PageHeader
         module="系统管理 · 系统集成"
         title="集成状态面板"
-        description="订舱平台通过 BOOKING_API_URL 真实 HTTP 拉取；账单确认写入出站队列，可在此标记已投递。"
+        description="订舱平台经 BOOKING_API_URL 拉取；账单确认写入出站队列，经 BOOKING_OUTBOUND_URL 真实 HTTP 投递（未配置则打本地 echo）。"
+        actions={
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={flushing || queueOutbound.length === 0}
+            onClick={() => void flushOutbound()}
+          >
+            <RefreshCw className={cn("size-3.5", flushing && "animate-spin")} />
+            {flushing ? "投递中…" : "批量投递出站"}
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -150,29 +205,44 @@ export default function IntegrationsPage() {
                   <TableHead>类型</TableHead>
                   <TableHead>关联单号</TableHead>
                   <TableHead>状态</TableHead>
+                  <TableHead>尝试</TableHead>
                   <TableHead>创建时间</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendingOutbound.map((ev) => (
+                {queueOutbound.map((ev) => (
                   <TableRow key={ev.id}>
                     <TableCell className="text-sm">{ev.type}</TableCell>
                     <TableCell className="font-mono text-xs">{ev.relatedNo}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{ev.status}</Badge>
+                      {ev.lastError && (
+                        <p className="mt-1 max-w-[220px] truncate text-xs text-destructive" title={ev.lastError}>
+                          {ev.lastError}
+                        </p>
+                      )}
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{ev.attempts ?? 0}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{ev.createdAt}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => markOutboundDelivered(ev)}>
-                        标记已投递
+                    <TableCell className="space-x-2 text-right">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        disabled={delivering === ev.id}
+                        onClick={() => void deliverOutbound(ev)}
+                      >
+                        {delivering === ev.id ? "投递中…" : "HTTP 投递"}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => void markOutboundDelivered(ev)}>
+                        手工标记
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
-                {pendingOutbound.length === 0 && (
+                {queueOutbound.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                       暂无待投递出站事件
                     </TableCell>
                   </TableRow>

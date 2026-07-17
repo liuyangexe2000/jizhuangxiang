@@ -600,6 +600,10 @@ export interface OutboundEvent {
   status: OutboundEventStatus
   createdAt: string
   deliveredAt?: string
+  /** 投递尝试次数 */
+  attempts?: number
+  /** 最近一次失败原因 */
+  lastError?: string
 }
 
 // ---------- 附件元数据 ----------
