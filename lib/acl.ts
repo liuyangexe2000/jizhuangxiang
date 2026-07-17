@@ -17,6 +17,17 @@ type ResourceAclMap = Partial<Record<ResourceKey, Access>>
 let runtimeNav: NavAclMap | null = null
 let runtimeResources: ResourceAclMap | null = null
 
+/** 详情页映射到侧栏父路径，供 ACL / PageAccessGuard 复用父菜单权限 */
+export function resolveAclNavPath(pathname: string): string {
+  if (pathname.startsWith("/inventory/containers/")) return "/inventory/ledger"
+  return pathname
+}
+
+/** 客户档案详情：R03 可直链进入（页内再校验 org 匹配） */
+export function isCustomerLifecyclePath(pathname: string): boolean {
+  return /^\/config\/customers\/[^/]+\/?$/.test(pathname)
+}
+
 /** 注入 DB 覆盖（null 表示使用代码默认） */
 export function applyAclRuntime(opts: {
   nav?: NavAclMap | null
@@ -60,23 +71,32 @@ export function defaultAclMatrix(): Record<ResourceKey, Access> {
   return { ...defaultResourceAcl }
 }
 
+function matchNavItem(pathname: string): { href: string; roles: RoleId[] } | null {
+  const resolved = resolveAclNavPath(pathname)
+  let best: { href: string; roles: RoleId[] } | null = null
+  for (const g of navGroups) {
+    for (const item of g.items) {
+      const match =
+        resolved === item.href || (item.href !== "/" && resolved.startsWith(`${item.href}/`))
+      if (match && (!best || item.href.length > best.href.length)) {
+        best = { href: item.href, roles: item.roles }
+      }
+    }
+  }
+  return best
+}
+
 function pathAllowedByNavOverlay(pathname: string, roleId: RoleId): boolean | null {
   if (!runtimeNav) return null
   const hrefs = runtimeNav[roleId]
   if (!Array.isArray(hrefs)) return null
-  let best: string | null = null
-  for (const g of navGroups) {
-    for (const item of g.items) {
-      const match =
-        pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
-      if (match && (!best || item.href.length > best.length)) {
-        best = item.href
-      }
-    }
-  }
+
+  if (isCustomerLifecyclePath(pathname) && roleId === "R03") return true
+
+  const best = matchNavItem(pathname)
   if (!best) return roleId === "R00"
-  if (best === "/" || best === "/inbox") return true
-  return hrefs.includes(best)
+  if (best.href === "/" || best.href === "/inbox") return true
+  return hrefs.includes(best.href)
 }
 
 export function canAccessPath(
@@ -86,19 +106,14 @@ export function canAccessPath(
 ): boolean {
   if (opts?.realAdmin) return true
 
+  if (isCustomerLifecyclePath(pathname) && (roleId === "R03" || roleId === "R00" || roleId === "R01")) {
+    return true
+  }
+
   const overlay = pathAllowedByNavOverlay(pathname, roleId)
   if (overlay !== null) return overlay
 
-  let best: { href: string; roles: RoleId[] } | null = null
-  for (const g of navGroups) {
-    for (const item of g.items) {
-      const match =
-        pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
-      if (match && (!best || item.href.length > best.href.length)) {
-        best = { href: item.href, roles: item.roles }
-      }
-    }
-  }
+  const best = matchNavItem(pathname)
   if (!best) return roleId === "R00"
   if (best.href === "/" || best.href === "/inbox") return true
   return best.roles.includes(roleId)

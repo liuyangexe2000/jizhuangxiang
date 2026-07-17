@@ -20,6 +20,7 @@ import {
   Warehouse,
   MapPinned,
   Users,
+  Building2,
   Database,
   ClipboardCheck,
   Wrench,
@@ -120,6 +121,7 @@ export const navGroups: NavGroup[] = [
     label: "基础数据字典",
     items: [
       { title: "城市字典", href: "/config/cities", icon: MapPinned, roles: ["R00", "R01", "R04"], desc: "提箱/还箱城市字典维护" },
+      { title: "客户主档", href: "/config/customers", icon: Building2, roles: ["R00", "R01"], desc: "客户主档与生命周期档案（用箱订单/账单轨迹）" },
     ],
   },
   {

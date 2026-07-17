@@ -3,17 +3,21 @@
 import { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { useRole } from "@/lib/role-context"
-import { canAccessPath } from "@/lib/acl"
+import { canAccessPath, isCustomerLifecyclePath, resolveAclNavPath } from "@/lib/acl"
 import { useRuntimeSettings } from "@/lib/settings-client"
 import { navGroups } from "@/lib/nav"
+import { PageSpinner } from "@/components/navigation-loading"
 import type { RoleId } from "@/lib/types"
 
-function pathAllowedByHrefs(pathname: string, hrefs: string[]): boolean {
+function pathAllowedByHrefs(pathname: string, hrefs: string[], roleId: RoleId): boolean {
+  if (isCustomerLifecyclePath(pathname) && roleId === "R03") return true
+
+  const resolved = resolveAclNavPath(pathname)
   let best: string | null = null
   for (const g of navGroups) {
     for (const item of g.items) {
       const match =
-        pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
+        resolved === item.href || (item.href !== "/" && resolved.startsWith(`${item.href}/`))
       if (match && (!best || item.href.length > best.length)) {
         best = item.href
       }
@@ -34,7 +38,7 @@ export function PageAccessGuard({ children }: { children: React.ReactNode }) {
   const realAdmin = isAdmin && !impersonating
   const ok = (() => {
     if (realAdmin) return true
-    if (settings?.navHrefs) return pathAllowedByHrefs(pathname, settings.navHrefs)
+    if (settings?.navHrefs) return pathAllowedByHrefs(pathname, settings.navHrefs, roleId as RoleId)
     return canAccessPath(pathname, roleId as RoleId, { realAdmin })
   })()
 
@@ -44,19 +48,11 @@ export function PageAccessGuard({ children }: { children: React.ReactNode }) {
   }, [pathname, roleId, loading, settingsLoading, ok, router])
 
   if (loading || settingsLoading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
-        加载中…
-      </div>
-    )
+    return <PageSpinner />
   }
 
   if (!ok) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
-        无权访问该页面，正在返回工作台…
-      </div>
-    )
+    return <PageSpinner label="无权访问该页面，正在返回工作台…" />
   }
 
   return <>{children}</>

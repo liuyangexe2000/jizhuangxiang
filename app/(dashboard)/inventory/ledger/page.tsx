@@ -31,6 +31,7 @@ import {
 import { useResource, revalidateResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
 import type { ContainerMaster, GateRecord, InventoryRow } from "@/lib/types"
+import Link from "next/link"
 import {
   Boxes,
   PackageCheck,
@@ -38,8 +39,9 @@ import {
   TruckIcon,
   Warehouse,
   Search,
-  Repeat2,
   History,
+  Repeat2,
+  FolderOpen,
 } from "lucide-react"
 
 export default function InventoryLedgerPage() {
@@ -279,7 +281,14 @@ function ContainerMasterTable() {
             <TableBody>
               {list.rows.map((c) => (
                 <TableRow key={c.containerNo}>
-                  <TableCell className="font-mono text-xs font-medium">{c.containerNo}</TableCell>
+                  <TableCell className="font-mono text-xs font-medium">
+                    <Link
+                      href={`/inventory/containers/${encodeURIComponent(c.containerNo)}`}
+                      className="text-primary hover:underline"
+                    >
+                      {c.containerNo}
+                    </Link>
+                  </TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{c.type}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={c.ownership === "自有箱" ? "secondary" : "outline"}>{c.ownership}</Badge>
@@ -297,10 +306,23 @@ function ContainerMasterTable() {
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{c.relatedOrderNo ?? "—"}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={() => toggleOwnership(c.containerNo)}>
-                      <Repeat2 className="mr-1 size-3.5" />
-                      切换箱属
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        nativeButton={false}
+                        render={
+                          <Link href={`/inventory/containers/${encodeURIComponent(c.containerNo)}`} />
+                        }
+                      >
+                        <FolderOpen className="mr-1 size-3.5" />
+                        档案
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => toggleOwnership(c.containerNo)}>
+                        <Repeat2 className="mr-1 size-3.5" />
+                        切换箱属
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
