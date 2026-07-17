@@ -30,10 +30,8 @@ import { buildOrderBooking, returnProofOverdueList, shouldReleaseDoc } from "@/l
 import { isWithinWorkHours } from "@/lib/domain/booking-ops"
 import { cityFromPlace, findInventoryRow, inventoryId, nowLocalStr, relocateIncoming, relocateReserved } from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
-import {
-  DOC_UPLOAD_ACCEPT,
-  validateDocUploadFile,
-} from "@/lib/doc-upload"
+import { printPrintArea } from "@/lib/print-document"
+import { DOC_UPLOAD_ACCEPT, validateDocUploadFile } from "@/lib/doc-upload"
 import type { AttachmentMeta, Booking, DocTemplate, InventoryRow, Notification, RepairOrder, UseBoxOrder } from "@/lib/types"
 
 type Phase = "pickup" | "return"
@@ -722,7 +720,16 @@ export default function DocumentsPage() {
             <Button variant="outline" onClick={() => setPrintTarget(null)}>
               关闭
             </Button>
-            <Button onClick={() => window.print()}>
+            <Button
+              type="button"
+              onClick={() =>
+                printPrintArea({
+                  title: printTarget
+                    ? `${printTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${printTarget.order.orderNo}`
+                    : "打印单据",
+                })
+              }
+            >
               <Printer className="mr-1 size-4" />
               打印
             </Button>

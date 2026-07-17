@@ -185,127 +185,14 @@
   background: rgb(255 255 255 / 0.4);
 }
 
-/* 成品单据 / 账单打印：只输出 .print-area */
+/* 成品单据打印兜底（优先使用 lib/print-document.ts 独立窗口） */
 @media print {
   @page {
     size: A4;
     margin: 12mm;
   }
-
-  html,
-  body {
-    background: #fff !important;
-    height: auto !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  body * {
-    visibility: hidden !important;
-  }
-
-  .print-area,
-  .print-area * {
-    visibility: visible !important;
-  }
-
-  /* 收起壳层高度，避免空白首页；勿对整棵子树 display:none（会打散 flex 明细） */
-  body > * {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    border: none !important;
-    background: transparent !important;
-  }
-
-  body > *:has(.print-area),
-  body > [data-slot="dialog-portal"],
-  body > [data-slot="dialog-content"] {
-    height: auto !important;
-    position: static !important;
-  }
-
-  aside,
-  nav,
-  .min-h-screen,
-  .h-screen {
-    min-height: 0 !important;
-    height: auto !important;
-    position: static !important;
-  }
-
-  [data-slot="dialog-portal"],
-  [data-slot="dialog-content"] {
-    position: static !important;
-    inset: auto !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    transform: none !important;
-    translate: none !important;
-    overflow: visible !important;
-    max-height: none !important;
-    height: auto !important;
-    min-height: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    display: block !important;
-  }
-
-  /* 仅隐藏明确标记的 UI；标题请放进 .print-area 内打印 */
-  [data-slot="dialog-overlay"],
-  [data-slot="dialog-close"],
   .no-print {
     display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  .print-area {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    right: auto !important;
-    bottom: auto !important;
-    width: 100% !important;
-    max-width: 186mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    transform: none !important;
-    overflow: visible !important;
-    height: auto !important;
-    min-height: 0 !important;
-    background: #fff !important;
-    color: #000 !important;
-    box-shadow: none !important;
-    z-index: 9999 !important;
-  }
-
-  .print-area table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-  }
-
-  .doc-print-sheet {
-    box-shadow: none !important;
-    max-width: none !important;
   }
 }
 

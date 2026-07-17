@@ -41,6 +41,7 @@ import type { Bill, Notification, OutboundEvent } from "@/lib/types"
 import { fmtDeadline, isBillOverdue } from "@/lib/domain/order-ops"
 import { enqueueOutbound } from "@/lib/domain/outbound"
 import { pushNotification } from "@/lib/domain/notify"
+import { printPrintArea } from "@/lib/print-document"
 import { toast } from "sonner"
 import { Wallet, FileWarning, CheckCircle2, Receipt, Printer, PencilLine, Search } from "lucide-react"
 
@@ -330,7 +331,14 @@ export default function BillsPage() {
                             调整账单
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" onClick={() => { setDetail(b); setTimeout(() => window.print(), 200) }}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setDetail(b)
+                            setTimeout(() => printPrintArea({ title: b.billNo }), 120)
+                          }}
+                        >
                           <Printer className="size-3.5" />
                         </Button>
                       </div>
@@ -460,7 +468,7 @@ export default function BillsPage() {
                 className="no-print w-full"
                 variant="outline"
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => printPrintArea({ title: detail.billNo })}
               >
                 <Printer className="mr-1 size-4" />
                 打印账单

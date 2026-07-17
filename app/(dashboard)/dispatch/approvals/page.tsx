@@ -22,6 +22,7 @@ import { useRole } from "@/lib/role-context"
 import type { DispatchOrder, DispatchStatus, Notification } from "@/lib/types"
 import { nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
+import { printPrintArea } from "@/lib/print-document"
 import { CheckCircle2, Clock, XCircle, GitBranch, Layers, FileText, Printer } from "lucide-react"
 import { ApprovalFormDocument } from "@/components/dispatch-document"
 import { solidTone } from "@/lib/ui-tone"
@@ -247,7 +248,7 @@ export default function ApprovalsPage() {
           <DialogHeader className="no-print">
             <DialogTitle className="flex items-center justify-between">
               <span>调运审批表预览</span>
-              <Button size="sm" className="mr-6 gap-1.5" onClick={() => window.print()}>
+              <Button size="sm" className="mr-6 gap-1.5" onClick={() => printPrintArea({ title: "调运审批表" })}>
                 <Printer className="size-4" />
                 打印 / 导出PDF
               </Button>
