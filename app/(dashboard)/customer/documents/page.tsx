@@ -359,6 +359,11 @@ export default function DocumentsPage() {
     }
   }
 
+  function closeYardDialog() {
+    setYardTarget(null)
+    // 不在关闭时清空 Select value，避免关闭动画期间受控→非受控切换报错；下次 openYardDialog 会重写
+  }
+
   function openYardDialog(order: UseBoxOrder) {
     const pickupOptions = yardsForCity(order.pickupCity)
     const returnOptions = yardsForCity(order.returnCity)
@@ -578,7 +583,12 @@ export default function DocumentsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!yardTarget} onOpenChange={(open) => !open && setYardTarget(null)}>
+      <Dialog
+        open={!!yardTarget}
+        onOpenChange={(open) => {
+          if (!open) closeYardDialog()
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>变更提还箱堆场</DialogTitle>
@@ -590,7 +600,7 @@ export default function DocumentsPage() {
             <div className="space-y-1.5">
               <Label>提箱堆场（{yardTarget?.pickupCity}）</Label>
               <Select
-                value={pickupYard || undefined}
+                value={pickupYard}
                 onValueChange={(v) => setPickupYard(v ?? "")}
                 disabled={yardChangePickupOptions.length === 0}
               >
@@ -615,7 +625,7 @@ export default function DocumentsPage() {
             <div className="space-y-1.5">
               <Label>还箱堆场（{yardTarget?.returnCity}）</Label>
               <Select
-                value={returnYard || undefined}
+                value={returnYard}
                 onValueChange={(v) => setReturnYard(v ?? "")}
                 disabled={yardChangeReturnOptions.length === 0}
               >
@@ -639,7 +649,7 @@ export default function DocumentsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setYardTarget(null)}>
+            <Button type="button" variant="outline" onClick={closeYardDialog}>
               取消
             </Button>
             <Button
