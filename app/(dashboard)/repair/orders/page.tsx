@@ -17,10 +17,12 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import { CitySearchSelect } from "@/components/city-search-select"
 import { useResource, revalidateResource } from "@/lib/api"
 import { CONTAINER_TYPES } from "@/lib/container-types"
 import { findInventoryRow, inventoryId, nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { compressImageToMaxWidth, revokePreviewUrls } from "@/lib/image-compress"
+import { useDictionary } from "@/lib/dictionary-context"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { useRole } from "@/lib/role-context"
 import { solidTone } from "@/lib/ui-tone"
@@ -88,6 +90,7 @@ const emptyAdvanceForm = (order?: RepairOrder | null): AdvanceFormState => ({
 
 export default function RepairOrdersPage() {
   const { user } = useRole()
+  const { pickupCities } = useDictionary()
   const actor = user?.name || user?.account || "系统用户"
   const { data: orders, create: createRepair, update: updateRepair } = useResource<RepairOrder>("repair")
   const { data: yards } = useResource<Yard>("yards")
@@ -148,14 +151,6 @@ export default function RepairOrdersPage() {
     () => yards.filter((item) => item.enabled && !item.deleted),
     [yards],
   )
-
-  const cityOptions = useMemo(() => {
-    const set = new Set<string>()
-    for (const yard of enabledYards) {
-      if (yard.city) set.add(yard.city)
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "zh"))
-  }, [enabledYards])
 
   const yardsInCity = useMemo(
     () => (form.city ? enabledYards.filter((yard) => yard.city === form.city) : []),
@@ -674,27 +669,18 @@ export default function RepairOrdersPage() {
               </Select>
             </Field>
             <Field label="城市">
-              <Select
+              <CitySearchSelect
                 value={form.city}
                 onValueChange={(value) =>
                   setForm({
                     ...form,
-                    city: value ?? "",
+                    city: value,
                     yard: "",
                   })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="先选择城市" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cityOptions.map((city) => (
-                    <SelectItem key={city} value={city}>
-                      {city}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                cities={pickupCities}
+                placeholder="选择城市"
+              />
             </Field>
             <Field label="堆场">
               <Select
