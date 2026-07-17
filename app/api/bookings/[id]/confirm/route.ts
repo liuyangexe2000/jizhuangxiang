@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { get, update, create } from "@/lib/repo"
+import { get, list, update, create } from "@/lib/repo"
 import { getSession } from "@/lib/auth-server"
 import { canAccessResource } from "@/lib/acl"
+import { canWriteRow } from "@/lib/tenant"
 import { writeAudit } from "@/lib/audit"
 import { nowLocalStr } from "@/lib/domain/dispatch-ops"
 import type { Booking } from "@/lib/types"
@@ -14,7 +15,7 @@ function clientIp(req: NextRequest) {
 
 type Ctx = { params: Promise<{ id: string }> }
 
-/** 现场角色（堆场/代管）接受预约：待发送/已通知 -> 已确认，写入 confirmedBy/confirmedAt */
+/** 现场角色（堆场/代管）接受预约：已通知 -> 已确认，写入 confirmedBy/confirmedAt（BR-21） */
 export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const session = await getSession()
@@ -28,8 +29,17 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   const booking = (await get("bookings", decodeURIComponent(id))) as Booking | null
   if (!booking) return NextResponse.json({ error: "预约不存在" }, { status: 404 })
+
+  const yards = await list("yards")
+  if (!canWriteRow("bookings", booking as unknown as Record<string, unknown>, session, { yards })) {
+    return NextResponse.json({ error: "无权确认该预约（堆场归属不匹配）" }, { status: 403 })
+  }
+
   if (booking.status === "已确认") {
     return NextResponse.json({ error: "该预约已确认，无需重复操作" }, { status: 400 })
+  }
+  if (booking.status === "超时") {
+    return NextResponse.json({ error: "预约已超时，不可确认" }, { status: 400 })
   }
   if (booking.status !== "已通知") {
     return NextResponse.json({ error: "须先发送通知，堆场/代管方才能确认预约" }, { status: 400 })
@@ -52,7 +62,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     desc: `${booking.type} · ${booking.yard} · ETA ${booking.planTime} · 由 ${confirmedBy} 确认接受`,
     module: "M04 预约与通知",
     href: "/yard/bookings",
-    roles: ["R01"],
+    roles: ["R01", "R03"],
     actionable: false,
     read: false,
     createdAt: confirmedAt,

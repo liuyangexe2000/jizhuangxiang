@@ -109,7 +109,7 @@ export default function BookingsPage() {
     <div className="space-y-6">
       <PageHeader
         title="预约与通知"
-        description="M04-F02 提还箱预约管理 — 司机/车牌登记、工作时段校验；通知时写站内消息，并按堆场邮箱走 SMTP 发信"
+        description="M04-F02 提还箱预约管理 — 发送通知后须堆场/代管「确认预约」才生效（BR-21）；通知含站内消息与可选 SMTP"
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
