@@ -685,10 +685,13 @@ export default function DocumentsPage() {
       </Dialog>
 
       <Dialog open={!!printTarget} onOpenChange={(open) => !open && setPrintTarget(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
-          <DialogHeader>
+        <DialogContent
+          showCloseButton={false}
+          className="max-h-[90vh] overflow-y-auto sm:max-w-4xl print:static print:max-h-none print:max-w-none print:translate-x-0 print:translate-y-0 print:overflow-visible print:rounded-none print:border-0 print:p-0 print:shadow-none print:ring-0"
+        >
+          <DialogHeader className="no-print">
             <DialogTitle>单据预览</DialogTitle>
-            <DialogDescription className="no-print">
+            <DialogDescription>
               提箱单不含用箱价格；可切换已启用模板，打印时带电子章。
             </DialogDescription>
           </DialogHeader>

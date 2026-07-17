@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useResource, revalidateResource } from "@/lib/api"
+import { useRole } from "@/lib/role-context"
 import type { DispatchOrder, DispatchStatus, Notification } from "@/lib/types"
 import { nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
@@ -36,6 +37,7 @@ function requiredLevels(total: number) {
 }
 
 export default function ApprovalsPage() {
+  const { user, role } = useRole()
   const { data: orders, update } = useResource<DispatchOrder>("dispatch")
   const { create: createNotif } = useResource<Notification>("notifications")
   const [active, setActive] = useState<DispatchOrder | null>(null)
@@ -108,7 +110,13 @@ export default function ApprovalsPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="待我审批" value={inFlow.length} icon={Clock} tone="warning" hint="财务部门 王芳" />
+        <StatCard
+          label="待我审批"
+          value={inFlow.length}
+          icon={Clock}
+          tone="warning"
+          hint={user ? `${role.name} ${user.name}` : undefined}
+        />
         <StatCard label="已驳回" value={rejected.length} icon={XCircle} tone="danger" />
         <StatCard label="已通过" value={approved.length} icon={CheckCircle2} tone="success" />
       </div>
@@ -232,7 +240,10 @@ export default function ApprovalsPage() {
       </Dialog>
 
       <Dialog open={!!docOrder} onOpenChange={(open) => !open && setDocOrder(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent
+          showCloseButton={false}
+          className="max-h-[90vh] overflow-y-auto sm:max-w-3xl print:static print:max-h-none print:max-w-none print:translate-x-0 print:translate-y-0 print:overflow-visible print:rounded-none print:border-0 print:p-0 print:shadow-none print:ring-0"
+        >
           <DialogHeader className="no-print">
             <DialogTitle className="flex items-center justify-between">
               <span>调运审批表预览</span>
