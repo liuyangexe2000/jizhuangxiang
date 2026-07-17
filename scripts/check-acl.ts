@@ -33,6 +33,7 @@ const PAGE_RESOURCES: Record<string, ResourceKey[]> = {
   "/supply/contracts": ["supplyContracts"],
   "/supply/suppliers": ["suppliers"],
   "/config/cities": ["cities"],
+  "/config/customers": ["customers"],
   "/admin/users": ["users"],
   "/admin": ["settings"],
   "/admin/data": ["orders"],

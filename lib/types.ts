@@ -107,6 +107,33 @@ export interface ApprovalStep {
   time?: string
 }
 
+/** 调运单价方案（按提箱地 + 还箱范围） */
+export interface DispatchPriceRule {
+  id: string
+  pickupPlace: string
+  scope: string
+  unitPrice: number
+  overdue: string
+  suggestTerm: number
+  zone: "近距" | "中距" | "远距"
+  enabled: boolean
+}
+
+/** 承运商台账 */
+export interface Carrier {
+  id: string
+  name: string
+  enabled: boolean
+}
+
+/** 调运审批链配置（按账号解析审批人姓名） */
+export interface DispatchApprovalLevel {
+  id: string
+  level: number
+  roleTitle: string
+  account: string
+}
+
 export interface DispatchOrder {
   id: string
   dispatchNo: string
@@ -174,12 +201,53 @@ export interface GateRecord {
 }
 
 export interface ContainerMaster {
+  /** 箱号（本系统主键） */
   containerNo: string
+  /** 老系统 base_container_info.id，仅作匹配，非主键 */
+  legacyId?: number | null
   type: ContainerType
+  /** 老系统集装箱类型 id */
+  containerTypeId?: number | null
+  /** 老系统集装箱尺寸 id */
+  containerTypeSpecId?: number | null
   ownership: "自有箱" | "租赁箱"
-  currentYard: string
+  /** 老系统属性码：1 自有 / 2 长租 / 3 短租 */
+  containerAttribute?: string
+  containerSupplierId?: string
+  /** 老系统 city 原文，如「中国-陕西省-西安市」 */
+  cityRaw?: string
   currentCity: string
+  currentYard: string
+  /** 老系统堆场 uuid，对应 yards.factoryId */
+  factoryId?: string
+  color?: string
+  batch?: string
   status: "在场" | "已提未还" | "在途" | "维修中" | "已报废"
+  /** 老系统状态码：0 可用 1 在途 2 锁定 3 维修 4 灭失 */
+  statusCode?: string
+  validStart?: number | null
+  validEnd?: number | null
+  currencyId?: number | null
+  exchangeRate?: number
+  /** 成色：1 新箱 2 次新箱 3 适货箱 */
+  containerLife?: number | null
+  productionTime?: number | null
+  manufacturer?: string
+  depreciation?: number | null
+  purchasePrice?: number | null
+  lifeCycle?: number | null
+  createBy?: string
+  createTime?: string
+  updateBy?: string
+  updateTime?: string
+  deleted?: boolean
+  remark?: string
+  createName?: string
+  updateName?: string
+  /** 开始堆存时间（10 位时间戳） */
+  startTime?: number | null
+  manualStatus?: string
+  freeDay?: number
   lastGateTime: string
   storageDays: number
   relatedOrderNo?: string
@@ -431,6 +499,33 @@ export interface CityDictItem {
   usableAsReturn: boolean // 可作为还箱城市
   enabled: boolean // 是否启用
   sort: number // 排序
+}
+
+/** 客户主档（源自 old sql/base_custom） */
+export interface Customer {
+  id: string
+  /** 老系统 base_custom.id，仅作匹配，非主键 */
+  legacyId: number
+  /** 老系统 uuid（custom_id） */
+  customId: string
+  name: string
+  abbreviation: string
+  contactUser: string
+  contactPhone: string
+  address: string
+  creditCode: string
+  /** 是否有电子章（源表 has_seal：0 有 / 1 没有） */
+  hasSeal: boolean
+  enabled: boolean
+  deleted: boolean
+  createBy: string
+  createName: string
+  createTime: string
+  updateBy: string
+  updateName: string
+  updateTime: string
+  identityCard: string
+  email: string
 }
 
 // ---------- 统一待办与通知中心 ----------

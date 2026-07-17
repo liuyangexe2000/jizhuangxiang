@@ -62,6 +62,10 @@ export const defaultResourceAcl: Record<ResourceKey, Access> = {
     read: ALL,
     write: roles(["R00", "R01", "R04"]),
   },
+  customers: {
+    read: roles(["R00", "R01", "R02", "R03"]),
+    write: roles(["R00", "R01"]),
+  },
   suppliers: {
     read: roles(["R00", "R01"]),
     write: roles(["R00", "R01"]),
@@ -93,6 +97,18 @@ export const defaultResourceAcl: Record<ResourceKey, Access> = {
   feedbackTickets: {
     read: roles(["R00"]),
     write: ALL,
+  },
+  dispatchPriceRules: {
+    read: roles(["R00", "R01", "R02"]),
+    write: roles(["R00", "R01"]),
+  },
+  carriers: {
+    read: roles(["R00", "R01", "R02", "R05"]),
+    write: roles(["R00", "R01"]),
+  },
+  dispatchApprovalChain: {
+    read: roles(["R00", "R01", "R02"]),
+    write: roles(["R00"]),
   },
   settings: { read: ["R00"], write: ["R00"] },
 }

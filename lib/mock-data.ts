@@ -3,9 +3,7 @@ import type {
   Bill,
   DispatchOrder,
   ReturnApplication,
-  InventoryRow,
   GateRecord,
-  ContainerMaster,
   DiscrepancyRow,
   DocTemplate,
   Booking,
@@ -21,6 +19,9 @@ import type {
   AttachmentMeta,
   FeedbackTicket,
   SystemSetting,
+  DispatchPriceRule,
+  Carrier,
+  DispatchApprovalLevel,
 } from "./types"
 import {
   defaultPickupLayout,
@@ -415,18 +416,8 @@ export const returnApplications: ReturnApplication[] = [
   },
 ]
 
-// ---------- M03 五维库存 ----------
-
-export const inventoryRows: InventoryRow[] = [
-  { region: "境内", city: "西安", yard: "陆港堆场", agent: "西安国际陆港多式联运有限公司", onSite: 320, available: 260, reserved: 60, incoming: 40 },
-  { region: "境内", city: "武汉", yard: "箱满多堆场", agent: "上海珉泰集装箱服务有限公司", onSite: 180, available: 150, reserved: 30, incoming: 22 },
-  { region: "境内", city: "成都", yard: "成都德成堆场", agent: "中集凯通物流发展有限公司", onSite: 240, available: 205, reserved: 35, incoming: 28 },
-  { region: "境内", city: "西安", yard: "147堆场", agent: "西安国际陆港多式联运有限公司", onSite: 210, available: 180, reserved: 30, incoming: 18 },
-  { region: "境外", city: "汉堡", yard: "汉堡HCS", agent: "宁波华联通国际物流有限公司", onSite: 96, available: 70, reserved: 26, incoming: 34 },
-  { region: "境外", city: "杜伊斯堡", yard: "杜堡dit", agent: "宁波华联通国际物流有限公司", onSite: 130, available: 98, reserved: 32, incoming: 25 },
-  { region: "境外", city: "马拉舍维奇", yard: "马拉ADAMPOL", agent: "宁波华联通国际物流有限公司", onSite: 78, available: 53, reserved: 25, incoming: 20 },
-  { region: "境外", city: "华沙", yard: "华沙pkpcc", agent: "宁波华联通国际物流有限公司", onSite: 64, available: 46, reserved: 18, incoming: 12 },
-]
+// ---------- M03 五维库存（由集装箱主档汇总，见 scripts/rebuild-inventory-from-containers.ts） ----------
+export { inventoryRowsSeed as inventoryRows } from "./data/inventory-rows.seed"
 
 export const gateRecords: GateRecord[] = [
   { id: "g1", containerNo: "TCLU3421100", type: "进场", time: "2026-07-02 08:30", yard: "华沙pkpcc", city: "华沙", source: "代管公司上传", relatedOrderNo: "DP2026060015", mappingStatus: "已映射", ownership: "自有箱" },
@@ -438,20 +429,13 @@ export const gateRecords: GateRecord[] = [
   { id: "g7", containerNo: "TEMP99920021", type: "进场", time: "2026-07-01 21:15", yard: "成都德成堆场", city: "成都", source: "手工补录异常", mappingStatus: "未映射", ownership: "自有箱" },
 ]
 
-export const containerMasters: ContainerMaster[] = [
-  { containerNo: "TCLU3421100", type: "40HQ", ownership: "自有箱", currentYard: "华沙pkpcc", currentCity: "华沙", status: "在场", lastGateTime: "2026-07-02 08:30", storageDays: 1, relatedOrderNo: "DP2026060015" },
-  { containerNo: "CCLU7845120", type: "40GP", ownership: "租赁箱", currentYard: "在途", currentCity: "汉堡→纽伦堡", status: "已提未还", lastGateTime: "2026-07-01 14:10", storageDays: 2, relatedOrderNo: "DP2026070001" },
-  { containerNo: "FCIU8812345", type: "20GP", ownership: "自有箱", currentYard: "陆港堆场", currentCity: "西安", status: "在场", lastGateTime: "2026-06-28 16:20", storageDays: 5, relatedOrderNo: "DP2026060008" },
-  { containerNo: "MSKU1122334", type: "40HQ", ownership: "租赁箱", currentYard: "维修厂", currentCity: "西安", status: "维修中", lastGateTime: "2026-07-03 07:05", storageDays: 0 },
-  { containerNo: "BEAU4590233", type: "40GP", ownership: "自有箱", currentYard: "华沙pkpcc", currentCity: "华沙", status: "在场", lastGateTime: "2026-07-02 08:35", storageDays: 1, relatedOrderNo: "DP2026060015" },
-  { containerNo: "TCLU3421099", type: "40HQ", ownership: "自有箱", currentYard: "华沙balticon", currentCity: "华沙", status: "在场", lastGateTime: "2026-06-27 12:00", storageDays: 6, relatedOrderNo: "DP2026060015" },
-]
+export { containerMastersSeed as containerMasters } from "./data/containers.seed"
 
 export const discrepancyRows: DiscrepancyRow[] = [
-  { id: "dc1", yard: "汉堡HCS", city: "汉堡", systemCount: 96, agentCount: 96, diff: 0, checkedAt: "2026-07-02 22:00", status: "无差异" },
-  { id: "dc2", yard: "杜堡dit", city: "杜伊斯堡", systemCount: 130, agentCount: 132, diff: 2, checkedAt: "2026-07-02 22:00", status: "待核对" },
-  { id: "dc3", yard: "陆港堆场", city: "西安", systemCount: 320, agentCount: 319, diff: -1, checkedAt: "2026-07-02 22:00", status: "待核对" },
-  { id: "dc4", yard: "马拉ADAMPOL", city: "马拉舍维奇", systemCount: 78, agentCount: 78, diff: 0, checkedAt: "2026-07-02 22:00", status: "已修正" },
+  { id: "dc1", yard: "汉堡HCS", city: "汉堡", systemCount: 114, agentCount: 114, diff: 0, checkedAt: "2026-07-16 22:00", status: "无差异" },
+  { id: "dc2", yard: "陆港堆场", city: "西安", systemCount: 206, agentCount: 205, diff: -1, checkedAt: "2026-07-16 22:00", status: "待核对" },
+  { id: "dc3", yard: "青岛珉钧堆场", city: "青岛", systemCount: 630, agentCount: 628, diff: -2, checkedAt: "2026-07-16 22:00", status: "待核对" },
+  { id: "dc4", yard: "PKP CARGO TERMINALE", city: "马拉", systemCount: 60, agentCount: 60, diff: 0, checkedAt: "2026-07-16 22:00", status: "已修正" },
 ]
 
 // ---------- M04 模板与堆场 ----------
@@ -636,6 +620,9 @@ export const bookings: Booking[] = [
 /** 堆场：源自 old sql/base_container_factory.sql（见 scripts/import-base-container-factory.ts） */
 export { yardsSeed as yards } from "./data/yards.seed"
 
+/** 客户：源自 old sql/base_custom.sql（见 scripts/import-base-custom.ts） */
+export { customersSeed as customers } from "./data/customers-list.seed"
+
 // 基础数据字典：提箱/还箱城市（可维护）
 /** 提/还箱城市字典：源自 old sql/base_region.sql（见 scripts/import-base-region-cities.ts） */
 export { cityDictSeed as cityDict } from "./data/city-dict.seed"
@@ -645,6 +632,9 @@ export const systemUsers: SystemUser[] = [
   { id: "u0", account: "admin", name: "系统管理员", roleId: "R00", org: "多联公司 · 信息中心", email: "admin@multimodal.com", phone: "029-8888 0000", status: "启用", lastLogin: "2026-07-03 08:00", createdAt: "2025-01-01" },
   { id: "u1", account: "zhangwei", name: "张伟", roleId: "R01", org: "多联公司 · 集装箱管理部", email: "zhangwei@multimodal.com", phone: "138 0000 1001", status: "启用", lastLogin: "2026-07-03 07:42", createdAt: "2025-02-11" },
   { id: "u2", account: "wangfang", name: "王芳", roleId: "R02", org: "多联公司 · 财务部", email: "wangfang@multimodal.com", phone: "138 0000 1002", status: "启用", lastLogin: "2026-07-02 18:20", createdAt: "2025-02-11" },
+  { id: "u2b", account: "liqiang", name: "李强", roleId: "R02", org: "多联公司 · 副总", email: "liqiang@multimodal.com", phone: "138 0000 1012", status: "启用", lastLogin: "2026-07-01 17:00", createdAt: "2025-02-12" },
+  { id: "u2c", account: "zhaomin", name: "赵敏", roleId: "R02", org: "多联公司 · 常务副总", email: "zhaomin@multimodal.com", phone: "138 0000 1013", status: "启用", lastLogin: "2026-07-01 16:00", createdAt: "2025-02-12" },
+  { id: "u2d", account: "suntao", name: "孙涛", roleId: "R02", org: "多联公司 · 总经理", email: "suntao@multimodal.com", phone: "138 0000 1014", status: "启用", lastLogin: "2026-06-30 10:00", createdAt: "2025-02-12" },
   { id: "u3", account: "customer_xa", name: "李晓明", roleId: "R03", org: "西安国际陆港集团", email: "lixm@xaport.net", phone: "138 0000 1003", status: "启用", lastLogin: "2026-07-02 15:05", createdAt: "2025-03-20" },
   { id: "u4", account: "agent_de", name: "Klaus Weber", roleId: "R04", org: "宁波华联通国际物流有限公司", email: "klaus@euyard.de", phone: "+49 40 3000 010", status: "启用", lastLogin: "2026-07-03 06:30", createdAt: "2025-04-08" },
   { id: "u5", account: "carrier_pl", name: "Piotr Nowak", roleId: "R05", org: "波兰联运物流", email: "piotr@pllogistics.pl", phone: "+48 601 223 445", status: "启用", lastLogin: "2026-07-02 20:10", createdAt: "2025-04-08" },
@@ -739,6 +729,38 @@ export const outboundEvents: OutboundEvent[] = []
 export const attachments: AttachmentMeta[] = []
 
 export const feedbackTickets: FeedbackTicket[] = []
+
+/** 调运价目方案（BR-11） */
+export const dispatchPriceRules: DispatchPriceRule[] = [
+  { id: "ham-1", pickupPlace: "汉堡HCS", scope: "不来梅 / 汉诺威", unitPrice: 620, overdue: "¥100/箱/天", suggestTerm: 21, zone: "近距", enabled: true },
+  { id: "ham-2", pickupPlace: "汉堡HCS", scope: "杜伊斯堡 / 纽伦堡 / 慕尼黑", unitPrice: 850, overdue: "¥120/箱/天", suggestTerm: 30, zone: "中距", enabled: true },
+  { id: "ham-3", pickupPlace: "汉堡HCS", scope: "华沙 / 布达佩斯 / 维也纳", unitPrice: 1180, overdue: "¥150/箱/天", suggestTerm: 45, zone: "远距", enabled: true },
+  { id: "mal-1", pickupPlace: "马拉ADAMPOL", scope: "华沙 / 罗兹", unitPrice: 480, overdue: "¥100/箱/天", suggestTerm: 18, zone: "近距", enabled: true },
+  { id: "mal-2", pickupPlace: "马拉ADAMPOL", scope: "柏林 / 布拉格", unitPrice: 720, overdue: "¥120/箱/天", suggestTerm: 25, zone: "中距", enabled: true },
+  { id: "mal-3", pickupPlace: "马拉ADAMPOL", scope: "西安（境内） / 郑州（境内）", unitPrice: 2600, overdue: "¥120/箱/天", suggestTerm: 45, zone: "远距", enabled: true },
+  { id: "dui-1", pickupPlace: "杜堡dit", scope: "汉堡 / 不来梅", unitPrice: 560, overdue: "¥100/箱/天", suggestTerm: 20, zone: "近距", enabled: true },
+  { id: "dui-2", pickupPlace: "杜堡dit", scope: "纽伦堡 / 慕尼黑 / 维也纳", unitPrice: 920, overdue: "¥130/箱/天", suggestTerm: 32, zone: "中距", enabled: true },
+  { id: "nue-1", pickupPlace: "纽伦堡CDN", scope: "慕尼黑 / 维也纳", unitPrice: 500, overdue: "¥100/箱/天", suggestTerm: 18, zone: "近距", enabled: true },
+  { id: "nue-2", pickupPlace: "纽伦堡CDN", scope: "西安（境内）", unitPrice: 2400, overdue: "¥120/箱/天", suggestTerm: 45, zone: "远距", enabled: true },
+  { id: "bud-1", pickupPlace: "布达佩斯MCC", scope: "维也纳 / 布拉迪斯拉发", unitPrice: 700, overdue: "¥120/箱/天", suggestTerm: 30, zone: "中距", enabled: true },
+  { id: "bud-2", pickupPlace: "布达佩斯MCC", scope: "华沙 / 罗兹", unitPrice: 980, overdue: "¥140/箱/天", suggestTerm: 38, zone: "远距", enabled: true },
+]
+
+export const carriers: Carrier[] = [
+  { id: "c1", name: "中远海运欧洲承运", enabled: true },
+  { id: "c2", name: "波兰联运物流", enabled: true },
+  { id: "c3", name: "德铁货运代理", enabled: true },
+  { id: "c4", name: "中欧陆桥物流", enabled: true },
+]
+
+/** 调运五级审批链：按账号从用户表解析审批人姓名 */
+export const dispatchApprovalChain: DispatchApprovalLevel[] = [
+  { id: "ac1", level: 1, roleTitle: "业务部门负责人", account: "zhangwei" },
+  { id: "ac2", level: 2, roleTitle: "财务部门", account: "wangfang" },
+  { id: "ac3", level: 3, roleTitle: "副总", account: "liqiang" },
+  { id: "ac4", level: 4, roleTitle: "常务副总", account: "zhaomin" },
+  { id: "ac5", level: 5, roleTitle: "总经理", account: "suntao" },
+]
 
 /** 系统设置（种子为空；运行时 CODE_DEFAULTS 回退，管理员保存后落库） */
 export const systemSettings: SystemSetting[] = []

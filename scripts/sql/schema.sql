@@ -144,16 +144,50 @@ CREATE TABLE `gate_records` (
 -- ---------- M03 集装箱主档 ----------
 DROP TABLE IF EXISTS `container_masters`;
 CREATE TABLE `container_masters` (
-  `containerNo` VARCHAR(20) NOT NULL,
+  `containerNo` VARCHAR(40) NOT NULL,
+  `legacyId` INT NULL,
   `type` VARCHAR(10) NOT NULL,
+  `containerTypeId` INT NULL,
+  `containerTypeSpecId` INT NULL,
   `ownership` VARCHAR(20) NOT NULL,
-  `currentYard` VARCHAR(120) NOT NULL,
-  `currentCity` VARCHAR(60) NOT NULL,
+  `containerAttribute` CHAR(1) NOT NULL DEFAULT '1',
+  `containerSupplierId` VARCHAR(32) NOT NULL DEFAULT '',
+  `cityRaw` VARCHAR(120) NOT NULL DEFAULT '',
+  `currentCity` VARCHAR(60) NOT NULL DEFAULT '',
+  `currentYard` VARCHAR(120) NOT NULL DEFAULT '',
+  `factoryId` VARCHAR(64) NOT NULL DEFAULT '',
+  `color` VARCHAR(20) NOT NULL DEFAULT '',
+  `batch` VARCHAR(20) NOT NULL DEFAULT '',
   `status` VARCHAR(20) NOT NULL,
-  `lastGateTime` VARCHAR(32) NOT NULL,
+  `statusCode` CHAR(1) NOT NULL DEFAULT '0',
+  `validStart` BIGINT NULL,
+  `validEnd` BIGINT NULL,
+  `currencyId` INT NULL,
+  `exchangeRate` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `containerLife` INT NULL,
+  `productionTime` BIGINT NULL,
+  `manufacturer` VARCHAR(60) NOT NULL DEFAULT '',
+  `depreciation` DECIMAL(12,4) NULL,
+  `purchasePrice` DECIMAL(12,4) NULL,
+  `lifeCycle` INT NULL,
+  `createBy` VARCHAR(60) NOT NULL DEFAULT '',
+  `createTime` VARCHAR(32) NOT NULL DEFAULT '',
+  `updateBy` VARCHAR(60) NOT NULL DEFAULT '',
+  `updateTime` VARCHAR(32) NOT NULL DEFAULT '',
+  `deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `remark` TEXT NULL,
+  `createName` VARCHAR(50) NOT NULL DEFAULT '',
+  `updateName` VARCHAR(50) NOT NULL DEFAULT '',
+  `startTime` BIGINT NULL,
+  `manualStatus` CHAR(1) NOT NULL DEFAULT '0',
+  `freeDay` INT NOT NULL DEFAULT 0,
+  `lastGateTime` VARCHAR(32) NOT NULL DEFAULT '',
   `storageDays` INT NOT NULL DEFAULT 0,
   `relatedOrderNo` VARCHAR(40) NULL,
-  PRIMARY KEY (`containerNo`)
+  PRIMARY KEY (`containerNo`),
+  UNIQUE KEY `uk_cm_legacyId` (`legacyId`),
+  KEY `idx_cm_factoryId` (`factoryId`),
+  KEY `idx_cm_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------- M03 库存差异 ----------
@@ -270,6 +304,35 @@ CREATE TABLE `city_dict` (
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
   `sort` INT NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------- 客户主档 ----------
+DROP TABLE IF EXISTS `customers`;
+CREATE TABLE `customers` (
+  `id` VARCHAR(32) NOT NULL,
+  `legacyId` INT NOT NULL,
+  `customId` VARCHAR(32) NOT NULL DEFAULT '',
+  `name` VARCHAR(120) NOT NULL,
+  `abbreviation` VARCHAR(120) NOT NULL DEFAULT '',
+  `contactUser` VARCHAR(120) NOT NULL DEFAULT '',
+  `contactPhone` VARCHAR(40) NOT NULL DEFAULT '',
+  `address` VARCHAR(300) NOT NULL DEFAULT '',
+  `creditCode` VARCHAR(60) NOT NULL DEFAULT '',
+  `hasSeal` TINYINT(1) NOT NULL DEFAULT 0,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `createBy` VARCHAR(60) NOT NULL DEFAULT '',
+  `createName` VARCHAR(50) NOT NULL DEFAULT '',
+  `createTime` VARCHAR(32) NOT NULL DEFAULT '',
+  `updateBy` VARCHAR(60) NOT NULL DEFAULT '',
+  `updateName` VARCHAR(50) NOT NULL DEFAULT '',
+  `updateTime` VARCHAR(32) NOT NULL DEFAULT '',
+  `identityCard` VARCHAR(150) NOT NULL DEFAULT '',
+  `email` VARCHAR(200) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_customers_legacyId` (`legacyId`),
+  KEY `idx_customers_customId` (`customId`),
+  KEY `idx_customers_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------- 系统用户（含密码哈希） ----------
@@ -446,6 +509,40 @@ CREATE TABLE `attachments` (
   `uploadedAt` VARCHAR(32) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_attach_ref` (`refType`, `refNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------- M02 调运价目 / 承运商 / 审批链配置 ----------
+DROP TABLE IF EXISTS `dispatch_price_rules`;
+CREATE TABLE `dispatch_price_rules` (
+  `id` VARCHAR(32) NOT NULL,
+  `pickupPlace` VARCHAR(120) NOT NULL,
+  `scope` VARCHAR(200) NOT NULL,
+  `unitPrice` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `overdue` VARCHAR(80) NOT NULL,
+  `suggestTerm` INT NOT NULL DEFAULT 30,
+  `zone` VARCHAR(20) NOT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_dpr_pickup` (`pickupPlace`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `carriers`;
+CREATE TABLE `carriers` (
+  `id` VARCHAR(32) NOT NULL,
+  `name` VARCHAR(120) NOT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_carriers_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `dispatch_approval_chain`;
+CREATE TABLE `dispatch_approval_chain` (
+  `id` VARCHAR(32) NOT NULL,
+  `level` INT NOT NULL,
+  `roleTitle` VARCHAR(80) NOT NULL,
+  `account` VARCHAR(80) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_dac_level` (`level`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------- 软件反馈工单 ----------
