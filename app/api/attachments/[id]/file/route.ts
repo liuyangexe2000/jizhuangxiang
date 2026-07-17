@@ -36,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       status: 200,
       headers: {
         "Content-Type": row.mime || "application/octet-stream",
-        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(row.fileName)}`,
+        "Content-Disposition": `${row.mime?.startsWith("image/") ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(row.fileName)}`,
         "Content-Length": String(buf.length),
       },
     })

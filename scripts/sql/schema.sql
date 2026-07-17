@@ -431,6 +431,7 @@ CREATE TABLE `repair_orders` (
   `reportedAt` VARCHAR(32) NOT NULL,
   `finishedAt` VARCHAR(32) NULL,
   `status` VARCHAR(20) NOT NULL,
+  `processLog` JSON NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

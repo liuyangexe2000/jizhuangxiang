@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CheckCircle2, CircleDollarSign, ClipboardList, Plus, Search, Trash2, Wrench } from "lucide-react"
+import { CircleDollarSign, ClipboardList, Eye, Plus, Search, Trash2, Wrench, X } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { StatusBadge } from "@/components/status-badge"
@@ -16,12 +16,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
 import { useResource, revalidateResource } from "@/lib/api"
 import { CONTAINER_TYPES } from "@/lib/container-types"
 import { findInventoryRow, inventoryId, nowLocalStr } from "@/lib/domain/dispatch-ops"
+import { compressImageToMaxWidth, revokePreviewUrls } from "@/lib/image-compress"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
+import { useRole } from "@/lib/role-context"
 import { solidTone } from "@/lib/ui-tone"
-import type { ContainerMaster, InventoryRow, RepairLevel, RepairOrder, RepairStatus, Yard } from "@/lib/types"
+import type {
+  AttachmentMeta,
+  ContainerMaster,
+  InventoryRow,
+  RepairLevel,
+  RepairOrder,
+  RepairProcessLogEntry,
+  RepairStatus,
+  Yard,
+} from "@/lib/types"
 
 const STATUS_TABS: Array<RepairStatus | "all"> = ["all", "待报修", "待检验", "维修中", "待验收", "已完工", "已报废"]
 const LEVELS: RepairLevel[] = ["小修", "中修", "大修", "报废评估"]
@@ -50,18 +62,49 @@ const initialForm = {
   reportedBy: "",
 }
 
+type PhotoDraft = { blob: Blob; previewUrl: string; name: string; width: number; height: number }
+
+type AdvanceFormState = {
+  note: string
+  inspectResult: string
+  level: RepairLevel
+  vendor: string
+  estCost: string
+  actualCost: string
+  repairSummary: string
+  acceptResult: string
+}
+
+const emptyAdvanceForm = (order?: RepairOrder | null): AdvanceFormState => ({
+  note: "",
+  inspectResult: "",
+  level: order?.level ?? "小修",
+  vendor: order?.vendor ?? "",
+  estCost: order?.estCost?.toString() ?? "",
+  actualCost: order?.actualCost?.toString() ?? "",
+  repairSummary: "",
+  acceptResult: "合格",
+})
+
 export default function RepairOrdersPage() {
+  const { user } = useRole()
+  const actor = user?.name || user?.account || "系统用户"
   const { data: orders, create: createRepair, update: updateRepair } = useResource<RepairOrder>("repair")
   const { data: yards } = useResource<Yard>("yards")
   const { data: containers, create: createContainer, update: updateContainer } = useResource<ContainerMaster>("containers")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
+  const { data: attachments } = useResource<AttachmentMeta>("attachments")
   const [keyword, setKeyword] = useState("")
   const [status, setStatus] = useState<RepairStatus | "all">("all")
   const [createOpen, setCreateOpen] = useState(false)
-  const [costTarget, setCostTarget] = useState<RepairOrder | null>(null)
+  const [advanceTarget, setAdvanceTarget] = useState<RepairOrder | null>(null)
+  const [advanceForm, setAdvanceForm] = useState<AdvanceFormState>(emptyAdvanceForm())
   const [scrapTarget, setScrapTarget] = useState<RepairOrder | null>(null)
-  const [actualCost, setActualCost] = useState("")
+  const [scrapReason, setScrapReason] = useState("")
+  const [detailTarget, setDetailTarget] = useState<RepairOrder | null>(null)
   const [form, setForm] = useState(initialForm)
+  const [photos, setPhotos] = useState<PhotoDraft[]>([])
+  const [uploading, setUploading] = useState(false)
 
   const filtered = useMemo(() => {
     const needle = keyword.trim().toLowerCase()
@@ -96,8 +139,88 @@ export default function RepairOrdersPage() {
     [orders],
   )
 
+  const detailPhotos = useMemo(() => {
+    if (!detailTarget) return []
+    return attachments.filter((item) => item.refType === "repair_photo" && item.refNo === detailTarget.repairNo)
+  }, [attachments, detailTarget])
+
   async function refresh() {
-    await Promise.all([revalidateResource("repair"), revalidateResource("containers"), revalidateResource("inventory")])
+    await Promise.all([
+      revalidateResource("repair"),
+      revalidateResource("containers"),
+      revalidateResource("inventory"),
+      revalidateResource("attachments"),
+    ])
+  }
+
+  function clearPhotos() {
+    revokePreviewUrls(photos.map((p) => p.previewUrl))
+    setPhotos([])
+  }
+
+  async function onPickPhotos(files: FileList | null) {
+    if (!files?.length) return
+    const next: PhotoDraft[] = []
+    try {
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          toast.error(`${file.name} 不是图片文件`)
+          continue
+        }
+        const compressed = await compressImageToMaxWidth(file, 1440)
+        next.push({
+          blob: compressed.blob,
+          previewUrl: compressed.previewUrl,
+          name: file.name.replace(/\.\w+$/, "") + ".jpg",
+          width: compressed.width,
+          height: compressed.height,
+        })
+      }
+      if (next.length) setPhotos((prev) => [...prev, ...next])
+    } catch (error) {
+      toast.error((error as Error).message || "图片压缩失败")
+    }
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((prev) => {
+      const target = prev[index]
+      if (target) revokePreviewUrls([target.previewUrl])
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  async function uploadPhotos(repairId: string, drafts: PhotoDraft[]) {
+    for (const photo of drafts) {
+      const body = new FormData()
+      body.append("file", photo.blob, photo.name)
+      const res = await fetch(`/api/repair/${encodeURIComponent(repairId)}/upload-photo`, {
+        method: "POST",
+        body,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `上传失败：${photo.name}`)
+      }
+    }
+  }
+
+  function buildLog(
+    order: RepairOrder,
+    toStatus: RepairStatus,
+    action: string,
+    note: string | undefined,
+    fields: { label: string; value: string }[],
+  ): RepairProcessLogEntry {
+    return {
+      at: nowLocalStr(),
+      by: actor,
+      fromStatus: order.status,
+      toStatus,
+      action,
+      note: note?.trim() || undefined,
+      fields: fields.filter((f) => f.value.trim()),
+    }
   }
 
   async function enterRepair(order: Pick<RepairOrder, "repairNo" | "containerNo" | "containerType" | "ownership" | "yard" | "city">) {
@@ -144,6 +267,20 @@ export default function RepairOrdersPage() {
       return
     }
     const sequence = String(orders.filter((item) => item.repairNo.startsWith("RP2026")).length + 1).padStart(4, "0")
+    const createLog: RepairProcessLogEntry = {
+      at: nowLocalStr(),
+      by: form.reportedBy || actor,
+      fromStatus: "待报修",
+      toStatus: "待报修",
+      action: "新建报修",
+      note: form.damageDesc.trim(),
+      fields: [
+        { label: "维修等级", value: form.level },
+        { label: "维修厂", value: form.vendor || "待指定" },
+        { label: "预估费用", value: String(Number(form.estCost) || 0) },
+        { label: "照片数", value: String(photos.length) },
+      ],
+    }
     const order: Omit<RepairOrder, "id"> = {
       repairNo: "RP2026" + sequence,
       containerNo: form.containerNo.trim().toUpperCase(),
@@ -155,33 +292,118 @@ export default function RepairOrdersPage() {
       level: form.level,
       vendor: form.vendor || "待指定",
       estCost: Number(form.estCost) || 0,
-      reportedBy: form.reportedBy || "系统用户",
+      reportedBy: form.reportedBy || actor,
       reportedAt: nowLocalStr(),
       status: "待报修",
+      processLog: [createLog],
     }
+    setUploading(true)
     try {
-      await createRepair({ ...order, __auditAction: "新增", __auditDetail: "新建修箱工单 " + order.repairNo })
+      const created = await createRepair({ ...order, __auditAction: "新增", __auditDetail: "新建修箱工单 " + order.repairNo })
       await enterRepair(order)
+      if (photos.length && created?.id) {
+        await uploadPhotos(created.id, photos)
+      }
       await refresh()
       setCreateOpen(false)
       setForm(initialForm)
-      toast.success("修箱工单已创建并入修")
+      clearPhotos()
+      toast.success(photos.length ? `修箱工单已创建，已上传 ${photos.length} 张照片` : "修箱工单已创建并入修")
     } catch (error) {
       toast.error((error as Error).message)
+    } finally {
+      setUploading(false)
     }
   }
 
-  async function advance(order: RepairOrder) {
+  function openAdvance(order: RepairOrder) {
+    if (!NEXT_STEP[order.status]) return
+    setAdvanceTarget(order)
+    setAdvanceForm(emptyAdvanceForm(order))
+  }
+
+  async function confirmAdvance() {
+    if (!advanceTarget) return
+    const order = advanceTarget
     const step = NEXT_STEP[order.status]
     if (!step) return
-    if (order.status === "维修中") {
-      setCostTarget(order)
-      setActualCost(order.actualCost?.toString() ?? "")
-      return
+
+    const fields: { label: string; value: string }[] = []
+    const patch: Partial<RepairOrder> = { status: step.status }
+
+    if (order.status === "待报修") {
+      if (!advanceForm.note.trim()) {
+        toast.error("请填写报修提交说明")
+        return
+      }
+      fields.push({ label: "提交说明", value: advanceForm.note.trim() })
     }
+
+    if (order.status === "待检验") {
+      if (!advanceForm.inspectResult.trim()) {
+        toast.error("请填写检验结论")
+        return
+      }
+      if (!advanceForm.vendor.trim()) {
+        toast.error("请指定维修厂")
+        return
+      }
+      const est = Number(advanceForm.estCost)
+      if (Number.isNaN(est) || est < 0) {
+        toast.error("请输入有效的预估费用")
+        return
+      }
+      patch.level = advanceForm.level
+      patch.vendor = advanceForm.vendor.trim()
+      patch.estCost = est
+      fields.push(
+        { label: "检验结论", value: advanceForm.inspectResult.trim() },
+        { label: "维修等级", value: advanceForm.level },
+        { label: "维修厂", value: advanceForm.vendor.trim() },
+        { label: "预估费用", value: String(est) },
+      )
+      if (advanceForm.note.trim()) fields.push({ label: "备注", value: advanceForm.note.trim() })
+    }
+
+    if (order.status === "维修中") {
+      const cost = Number(advanceForm.actualCost)
+      if (Number.isNaN(cost) || cost < 0) {
+        toast.error("请输入有效的实际维修费用")
+        return
+      }
+      if (!advanceForm.repairSummary.trim()) {
+        toast.error("请填写完工说明")
+        return
+      }
+      patch.actualCost = cost
+      fields.push(
+        { label: "实际费用", value: String(cost) },
+        { label: "完工说明", value: advanceForm.repairSummary.trim() },
+      )
+      if (advanceForm.note.trim()) fields.push({ label: "备注", value: advanceForm.note.trim() })
+    }
+
+    if (order.status === "待验收") {
+      if (!advanceForm.acceptResult.trim()) {
+        toast.error("请填写验收结论")
+        return
+      }
+      fields.push({ label: "验收结论", value: advanceForm.acceptResult.trim() })
+      if (advanceForm.note.trim()) fields.push({ label: "验收意见", value: advanceForm.note.trim() })
+    }
+
+    const note =
+      order.status === "待报修"
+        ? advanceForm.note
+        : order.status === "维修中"
+          ? advanceForm.repairSummary
+          : advanceForm.note
+
+    const log = buildLog(order, step.status, step.label, note, fields)
+    patch.processLog = [...(order.processLog ?? []), log]
+
     try {
       if (step.status === "维修中") await enterRepair(order)
-      const patch: Partial<RepairOrder> = { status: step.status }
       if (step.status === "已完工") {
         patch.finishedAt = nowLocalStr()
         const container = containers.find((item) => item.containerNo === order.containerNo)
@@ -205,29 +427,14 @@ export default function RepairOrdersPage() {
           })
         }
       }
-      await updateRepair(order.id, { ...patch, __auditAction: "流转", __auditDetail: step.label })
-      await refresh()
-      toast.success(step.label)
-    } catch (error) {
-      toast.error((error as Error).message)
-    }
-  }
-
-  async function confirmCost() {
-    if (!costTarget || Number.isNaN(Number(actualCost)) || Number(actualCost) < 0) {
-      toast.error("请输入有效的实际维修费用")
-      return
-    }
-    try {
-      await updateRepair(costTarget.id, {
-        status: "待验收",
-        actualCost: Number(actualCost),
-        __auditAction: "流转",
-        __auditDetail: "完工报验并录入实际费用",
+      await updateRepair(order.id, {
+        ...patch,
+        __auditAction: "修改",
+        __auditDetail: `${step.label}：${fields.map((f) => `${f.label}=${f.value}`).join("；")}`,
       })
       await refresh()
-      setCostTarget(null)
-      toast.success("费用已录入并提交验收")
+      setAdvanceTarget(null)
+      toast.success(step.label + "已完成并留痕")
     } catch (error) {
       toast.error((error as Error).message)
     }
@@ -235,13 +442,19 @@ export default function RepairOrdersPage() {
 
   async function scrap() {
     if (!scrapTarget) return
+    if (!scrapReason.trim()) {
+      toast.error("请填写报废原因")
+      return
+    }
     try {
       const order = scrapTarget
+      const log = buildLog(order, "已报废", "报废处置", scrapReason, [{ label: "报废原因", value: scrapReason.trim() }])
       await updateRepair(order.id, {
         status: "已报废",
         finishedAt: nowLocalStr(),
-        __auditAction: "报废",
-        __auditDetail: "箱体维修无法修复、报废处理",
+        processLog: [...(order.processLog ?? []), log],
+        __auditAction: "修改",
+        __auditDetail: "箱体维修无法修复、报废处理：" + scrapReason.trim(),
       })
       const container = containers.find((item) => item.containerNo === order.containerNo)
       if (container) {
@@ -249,7 +462,7 @@ export default function RepairOrdersPage() {
           status: "已报废",
           relatedOrderNo: order.repairNo,
           lastGateTime: nowLocalStr(),
-          __auditAction: "报废",
+          __auditAction: "修改",
           __auditDetail: "箱主档状态设为已报废",
         })
       }
@@ -258,17 +471,20 @@ export default function RepairOrdersPage() {
         await updateInventory(inventoryId(row), {
           onSite: Math.max(0, row.onSite - 1),
           available: Math.max(0, row.available - 1),
-          __auditAction: "报废",
+          __auditAction: "修改",
           __auditDetail: "报废扣减在场及可用库存",
         })
       }
       await refresh()
       setScrapTarget(null)
-      toast.success("工单已报废")
+      setScrapReason("")
+      toast.success("工单已报废并留痕")
     } catch (error) {
       toast.error((error as Error).message)
     }
   }
+
+  const advanceStep = advanceTarget ? NEXT_STEP[advanceTarget.status] : null
 
   return (
     <>
@@ -277,7 +493,12 @@ export default function RepairOrdersPage() {
         title="修箱工单"
         description="报修、检验、派修、验收及报废处置的全流程协作管理。"
         actions={
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button
+            onClick={() => {
+              setCreateOpen(true)
+              setForm({ ...initialForm, reportedBy: actor })
+            }}
+          >
             <Plus className="mr-1 size-4" />
             新建报修
           </Button>
@@ -355,13 +576,25 @@ export default function RepairOrdersPage() {
                       <StatusBadge status={order.status} />
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-right">
+                      <Button size="sm" variant="ghost" onClick={() => setDetailTarget(order)}>
+                        <Eye className="mr-1 size-3.5" />
+                        详情
+                      </Button>
                       {NEXT_STEP[order.status] && (
-                        <Button size="sm" variant="ghost" onClick={() => advance(order)}>
+                        <Button size="sm" variant="ghost" onClick={() => openAdvance(order)}>
                           {NEXT_STEP[order.status]?.label}
                         </Button>
                       )}
                       {!["已完工", "已报废"].includes(order.status) && (
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setScrapTarget(order)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => {
+                            setScrapTarget(order)
+                            setScrapReason("")
+                          }}
+                        >
                           报废
                         </Button>
                       )}
@@ -389,11 +622,17 @@ export default function RepairOrdersPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-xl">
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open)
+          if (!open) clearPhotos()
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>新建修箱报修</DialogTitle>
-            <DialogDescription>提交后工单进入待报修状态并同步箱主档和库存。</DialogDescription>
+            <DialogDescription>提交后工单进入待报修状态并同步箱主档和库存；损坏照片将压缩至宽 1440px。</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="箱号">
@@ -472,49 +711,325 @@ export default function RepairOrdersPage() {
             </Field>
             <div className="sm:col-span-2">
               <Field label="损坏描述">
-                <Input value={form.damageDesc} onChange={(event) => setForm({ ...form, damageDesc: event.target.value })} />
+                <Textarea
+                  rows={2}
+                  value={form.damageDesc}
+                  onChange={(event) => setForm({ ...form, damageDesc: event.target.value })}
+                />
               </Field>
+            </div>
+            <div className="sm:col-span-2">
+              <Field label="损坏照片（可多选，自动压缩至宽 1440px）">
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  onChange={(event) => {
+                    void onPickPhotos(event.target.files)
+                    event.target.value = ""
+                  }}
+                />
+              </Field>
+              {photos.length > 0 && (
+                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {photos.map((photo, index) => (
+                    <div key={photo.previewUrl} className="relative overflow-hidden rounded-md border bg-muted/40">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={photo.previewUrl} alt={photo.name} className="aspect-square w-full object-cover" />
+                      <p className="truncate px-1 py-0.5 text-[10px] text-muted-foreground">
+                        {photo.width}×{photo.height}
+                      </p>
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white"
+                        onClick={() => removePhoto(index)}
+                        aria-label="移除照片"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateOpen(false)
+                clearPhotos()
+              }}
+            >
               取消
             </Button>
-            <Button onClick={handleCreate}>提交报修</Button>
+            <Button disabled={uploading} onClick={handleCreate}>
+              {uploading ? "提交中…" : "提交报修"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!costTarget} onOpenChange={(open) => !open && setCostTarget(null)}>
-        <DialogContent>
+      <Dialog open={!!advanceTarget} onOpenChange={(open) => !open && setAdvanceTarget(null)}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>完工报验与费用录入</DialogTitle>
-            <DialogDescription>{costTarget?.repairNo} 将流转至待验收。</DialogDescription>
+            <DialogTitle>{advanceStep?.label ?? "节点录入"}</DialogTitle>
+            <DialogDescription>
+              {advanceTarget?.repairNo}：{advanceTarget?.status} → {advanceStep?.status}，提交后写入节点留痕。
+            </DialogDescription>
           </DialogHeader>
-          <Field label="实际维修费用">
-            <Input type="number" min="0" value={actualCost} onChange={(event) => setActualCost(event.target.value)} />
-          </Field>
+          <div className="grid gap-3">
+            {advanceTarget?.status === "待报修" && (
+              <Field label="报修提交说明（必填）">
+                <Textarea
+                  rows={3}
+                  placeholder="补充损坏部位、紧急程度等"
+                  value={advanceForm.note}
+                  onChange={(event) => setAdvanceForm({ ...advanceForm, note: event.target.value })}
+                />
+              </Field>
+            )}
+            {advanceTarget?.status === "待检验" && (
+              <>
+                <Field label="检验结论（必填）">
+                  <Textarea
+                    rows={2}
+                    placeholder="损坏确认、可否修复等"
+                    value={advanceForm.inspectResult}
+                    onChange={(event) => setAdvanceForm({ ...advanceForm, inspectResult: event.target.value })}
+                  />
+                </Field>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="维修等级">
+                    <Select
+                      value={advanceForm.level}
+                      onValueChange={(value) => setAdvanceForm({ ...advanceForm, level: (value ?? "小修") as RepairLevel })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LEVELS.map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="预估费用">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={advanceForm.estCost}
+                      onChange={(event) => setAdvanceForm({ ...advanceForm, estCost: event.target.value })}
+                    />
+                  </Field>
+                </div>
+                <Field label="维修厂（必填）">
+                  <Input
+                    value={advanceForm.vendor}
+                    onChange={(event) => setAdvanceForm({ ...advanceForm, vendor: event.target.value })}
+                  />
+                </Field>
+                <Field label="备注">
+                  <Textarea
+                    rows={2}
+                    value={advanceForm.note}
+                    onChange={(event) => setAdvanceForm({ ...advanceForm, note: event.target.value })}
+                  />
+                </Field>
+              </>
+            )}
+            {advanceTarget?.status === "维修中" && (
+              <>
+                <Field label="实际维修费用（必填）">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={advanceForm.actualCost}
+                    onChange={(event) => setAdvanceForm({ ...advanceForm, actualCost: event.target.value })}
+                  />
+                </Field>
+                <Field label="完工说明（必填）">
+                  <Textarea
+                    rows={3}
+                    placeholder="维修项目、换件情况、完工质量说明"
+                    value={advanceForm.repairSummary}
+                    onChange={(event) => setAdvanceForm({ ...advanceForm, repairSummary: event.target.value })}
+                  />
+                </Field>
+                <Field label="备注">
+                  <Textarea
+                    rows={2}
+                    value={advanceForm.note}
+                    onChange={(event) => setAdvanceForm({ ...advanceForm, note: event.target.value })}
+                  />
+                </Field>
+              </>
+            )}
+            {advanceTarget?.status === "待验收" && (
+              <>
+                <Field label="验收结论">
+                  <Select
+                    value={advanceForm.acceptResult}
+                    onValueChange={(value) => setAdvanceForm({ ...advanceForm, acceptResult: value ?? "合格" })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="合格">合格</SelectItem>
+                      <SelectItem value="有条件通过">有条件通过</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="验收意见">
+                  <Textarea
+                    rows={3}
+                    placeholder="验收检查结果、遗留问题等"
+                    value={advanceForm.note}
+                    onChange={(event) => setAdvanceForm({ ...advanceForm, note: event.target.value })}
+                  />
+                </Field>
+              </>
+            )}
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCostTarget(null)}>
+            <Button variant="outline" onClick={() => setAdvanceTarget(null)}>
               取消
             </Button>
-            <Button onClick={confirmCost}>确认报验</Button>
+            <Button onClick={confirmAdvance}>确认提交</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!scrapTarget} onOpenChange={(open) => !open && setScrapTarget(null)}>
+      <Dialog
+        open={!!scrapTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setScrapTarget(null)
+            setScrapReason("")
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>确认报废</DialogTitle>
-            <DialogDescription>{scrapTarget?.repairNo} 将终止维修并扣减在场库存。</DialogDescription>
+            <DialogDescription>{scrapTarget?.repairNo} 将终止维修并扣减在场库存，请填写报废原因留痕。</DialogDescription>
           </DialogHeader>
+          <Field label="报废原因（必填）">
+            <Textarea
+              rows={3}
+              placeholder="无法修复的具体原因、评估依据等"
+              value={scrapReason}
+              onChange={(event) => setScrapReason(event.target.value)}
+            />
+          </Field>
           <DialogFooter>
             <Button variant="outline" onClick={() => setScrapTarget(null)}>
               取消
             </Button>
             <Button variant="destructive" onClick={scrap}>
               确认报废
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!detailTarget} onOpenChange={(open) => !open && setDetailTarget(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>工单详情 · {detailTarget?.repairNo}</DialogTitle>
+            <DialogDescription>
+              {detailTarget?.containerNo} · {detailTarget?.status} · {detailTarget?.level}
+            </DialogDescription>
+          </DialogHeader>
+          {detailTarget && (
+            <div className="space-y-4 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <p>
+                  <span className="text-muted-foreground">堆场：</span>
+                  {detailTarget.yard} / {detailTarget.city}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">维修厂：</span>
+                  {detailTarget.vendor}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">预估/实际：</span>
+                  {detailTarget.estCost.toLocaleString()} / {detailTarget.actualCost?.toLocaleString() ?? "—"}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">报修人：</span>
+                  {detailTarget.reportedBy} · {detailTarget.reportedAt}
+                </p>
+              </div>
+              <div>
+                <p className="mb-1 font-medium">损坏描述</p>
+                <p className="text-muted-foreground">{detailTarget.damageDesc}</p>
+              </div>
+              {detailPhotos.length > 0 && (
+                <div>
+                  <p className="mb-2 font-medium">损坏照片（{detailPhotos.length}）</p>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {detailPhotos.map((photo) => (
+                      <a
+                        key={photo.id}
+                        href={`/api/attachments/${encodeURIComponent(photo.id)}/file`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="overflow-hidden rounded-md border"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`/api/attachments/${encodeURIComponent(photo.id)}/file`}
+                          alt={photo.fileName}
+                          className="aspect-square w-full object-cover"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <p className="mb-2 font-medium">节点留痕</p>
+                {(detailTarget.processLog?.length ?? 0) === 0 ? (
+                  <p className="text-muted-foreground">暂无流转记录</p>
+                ) : (
+                  <ol className="space-y-3 border-l-2 border-muted pl-4">
+                    {(detailTarget.processLog ?? []).map((entry, index) => (
+                      <li key={`${entry.at}-${index}`} className="relative">
+                        <span className="absolute -left-[21px] top-1.5 size-2.5 rounded-full bg-primary" />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">{entry.action}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {entry.fromStatus} → {entry.toStatus}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {entry.at} · {entry.by}
+                        </p>
+                        {entry.note && <p className="mt-1">{entry.note}</p>}
+                        {(entry.fields?.length ?? 0) > 0 && (
+                          <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                            {entry.fields!.map((field) => (
+                              <li key={field.label}>
+                                {field.label}：{field.value}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailTarget(null)}>
+              关闭
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -456,6 +456,17 @@ export type RepairStatus =
 
 export type RepairLevel = "小修" | "中修" | "大修" | "报废评估"
 
+/** 修箱节点流转留痕 */
+export interface RepairProcessLogEntry {
+  at: string
+  by: string
+  fromStatus: RepairStatus
+  toStatus: RepairStatus
+  action: string
+  note?: string
+  fields?: { label: string; value: string }[]
+}
+
 export interface RepairOrder {
   id: string
   repairNo: string
@@ -473,6 +484,8 @@ export interface RepairOrder {
   reportedAt: string
   finishedAt?: string
   status: RepairStatus
+  /** 各节点表单录入留痕（按时间追加） */
+  processLog?: RepairProcessLogEntry[]
 }
 
 // ---------- 系统管理：用户与代理 ----------

@@ -46,7 +46,7 @@ export const RESOURCES = {
   suppliers: { table: "suppliers", id: "id", json: [], bool: ["enabled"], seed: "suppliers", module: "M05 供应计划", label: "供应商" },
   supplyPlans: { table: "supply_plans", id: "id", json: [], bool: [], seed: "supplyPlans", module: "M05 供应计划", label: "供应计划" },
   supplyContracts: { table: "supply_contracts", id: "id", json: [], bool: [], seed: "supplyContracts", module: "M05 供应计划", label: "供应合同" },
-  repair: { table: "repair_orders", id: "id", json: [], bool: [], seed: "repairOrders", module: "M06 维修管理", label: "修箱工单" },
+  repair: { table: "repair_orders", id: "id", json: ["processLog"], bool: [], seed: "repairOrders", module: "M06 维修管理", label: "修箱工单" },
   notifications: { table: "notifications", id: "id", json: ["roles"], bool: ["actionable", "read"], seed: "notifications", module: "通知中心", label: "通知" },
   audit: { table: "audit_logs", id: "id", json: [], bool: ["proxied"], seed: "auditLogs", module: "系统管理", label: "操作日志" },
   integrations: { table: "integrations", id: "id", json: [], bool: [], seed: "integrations", module: "系统集成", label: "集成" },
