@@ -22,6 +22,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useResource, revalidateResource } from "@/lib/api"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { useRole } from "@/lib/role-context"
@@ -32,7 +39,7 @@ import { cityFromPlace, findInventoryRow, inventoryId, nowLocalStr, relocateInco
 import { pushNotification } from "@/lib/domain/notify"
 import { printPrintArea } from "@/lib/print-document"
 import { DOC_UPLOAD_ACCEPT, validateDocUploadFile } from "@/lib/doc-upload"
-import type { AttachmentMeta, Booking, DocTemplate, InventoryRow, Notification, RepairOrder, UseBoxOrder } from "@/lib/types"
+import type { AttachmentMeta, Booking, DocTemplate, InventoryRow, Notification, RepairOrder, UseBoxOrder, Yard } from "@/lib/types"
 
 type Phase = "pickup" | "return"
 const pickupStates = ["已确认", "提箱中", "已提箱", "还箱中", "已完成"]
@@ -61,6 +68,7 @@ export default function DocumentsPage() {
   const { data: templates } = useResource<DocTemplate>("templates")
   const { data: attachments } = useResource<AttachmentMeta>("attachments")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
+  const { data: yards } = useResource<Yard>("yards")
   const { create: createRepair } = useResource<RepairOrder>("repair")
 
   const [keyword, setKeyword] = useState("")
@@ -89,6 +97,27 @@ export default function DocumentsPage() {
   const overdueProofs = useMemo(
     () => returnProofOverdueList(orders, settings?.returnProofOverdueDays ?? 3),
     [orders, settings?.returnProofOverdueDays],
+  )
+
+  /** 仅返回与订单城市对应的启用堆场（不回退到全部堆场） */
+  function yardsForCity(city: string) {
+    const c = city.trim()
+    if (!c) return []
+    return yards.filter(
+      (y) =>
+        y.enabled &&
+        !y.deleted &&
+        (y.city === c || y.city.includes(c) || c.includes(y.city)),
+    )
+  }
+
+  const yardChangePickupOptions = useMemo(
+    () => (yardTarget ? yardsForCity(yardTarget.pickupCity) : []),
+    [yards, yardTarget],
+  )
+  const yardChangeReturnOptions = useMemo(
+    () => (yardTarget ? yardsForCity(yardTarget.returnCity) : []),
+    [yards, yardTarget],
   )
 
   useEffect(() => {
@@ -331,14 +360,35 @@ export default function DocumentsPage() {
   }
 
   function openYardDialog(order: UseBoxOrder) {
+    const pickupOptions = yardsForCity(order.pickupCity)
+    const returnOptions = yardsForCity(order.returnCity)
+    const pickup =
+      (order.pickupYard && pickupOptions.some((y) => y.name === order.pickupYard)
+        ? order.pickupYard
+        : pickupOptions[0]?.name) || ""
+    const ret =
+      (order.returnYard && returnOptions.some((y) => y.name === order.returnYard)
+        ? order.returnYard
+        : returnOptions[0]?.name) || ""
     setYardTarget(order)
-    setPickupYard(order.pickupYard || order.pickupCity + "堆场")
-    setReturnYard(order.returnYard || order.returnCity + "堆场")
+    setPickupYard(pickup)
+    setReturnYard(ret)
+    if (pickupOptions.length === 0 || returnOptions.length === 0) {
+      toast.warning(
+        `提箱城市「${order.pickupCity}」可选堆场 ${pickupOptions.length} 个，还箱城市「${order.returnCity}」可选堆场 ${returnOptions.length} 个`,
+      )
+    }
   }
 
   async function saveOrderYard() {
     if (!yardTarget || !pickupYard.trim() || !returnYard.trim()) {
-      toast.error("提还箱堆场不能为空")
+      toast.error("请选择提箱堆场与还箱堆场")
+      return
+    }
+    const pickupOk = yardChangePickupOptions.some((y) => y.name === pickupYard)
+    const returnOk = yardChangeReturnOptions.some((y) => y.name === returnYard)
+    if (!pickupOk || !returnOk) {
+      toast.error("所选堆场须与订单提箱/还箱城市对应")
       return
     }
     const order = yardTarget
@@ -346,14 +396,16 @@ export default function DocumentsPage() {
       const openQty = ["已确认", "提箱中"].includes(order.status) && !order.stuffingListUploaded ? order.quantity : 0
       const transitQty = ["提箱中", "已提箱", "还箱中"].includes(order.status) ? order.quantity : 0
       const oldPickup = findInventoryRow(inventory, { yard: order.pickupYard, city: order.pickupCity })
-      const newPickup = findInventoryRow(inventory, { yard: pickupYard, city: cityFromPlace(pickupYard) })
+      const newPickupCity = cityFromPlace(pickupYard, yards) || order.pickupCity
+      const newPickup = findInventoryRow(inventory, { yard: pickupYard, city: newPickupCity })
       if (oldPickup && newPickup && inventoryId(oldPickup) !== inventoryId(newPickup) && openQty) {
         const move = relocateReserved(oldPickup, newPickup, openQty)
         await updateInventory(inventoryId(oldPickup), { ...move.fromPatch, __auditAction: "修改", __auditDetail: "BR-16 提箱堆场迁出" })
         await updateInventory(inventoryId(newPickup), { ...move.toPatch, __auditAction: "修改", __auditDetail: "BR-16 提箱堆场迁入" })
       }
       const oldReturn = findInventoryRow(inventory, { yard: order.returnYard, city: order.returnCity })
-      const newReturn = findInventoryRow(inventory, { yard: returnYard, city: cityFromPlace(returnYard) })
+      const newReturnCity = cityFromPlace(returnYard, yards) || order.returnCity
+      const newReturn = findInventoryRow(inventory, { yard: returnYard, city: newReturnCity })
       if (oldReturn && newReturn && inventoryId(oldReturn) !== inventoryId(newReturn) && transitQty) {
         const move = relocateIncoming(oldReturn, newReturn, transitQty)
         await updateInventory(inventoryId(oldReturn), { ...move.fromPatch, __auditAction: "修改", __auditDetail: "BR-16 还箱堆场迁出" })
@@ -362,8 +414,8 @@ export default function DocumentsPage() {
       await updateOrder(order.id, {
         pickupYard: pickupYard.trim(),
         returnYard: returnYard.trim(),
-        pickupCity: cityFromPlace(pickupYard) || order.pickupCity,
-        returnCity: cityFromPlace(returnYard) || order.returnCity,
+        pickupCity: order.pickupCity,
+        returnCity: order.returnCity,
         __auditAction: "修改",
         __auditDetail: "BR-16 订单改堆场 " + order.orderNo,
       })
@@ -530,16 +582,73 @@ export default function DocumentsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>变更提还箱堆场</DialogTitle>
+            <DialogDescription>
+              订单 {yardTarget?.orderNo} · 提箱城市「{yardTarget?.pickupCity}」/ 还箱城市「{yardTarget?.returnCity}」，仅可选择对应城市下的堆场。
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Label>提箱堆场</Label>
-            <Input value={pickupYard} onChange={(e) => setPickupYard(e.target.value)} />
-            <Label>还箱堆场</Label>
-            <Input value={returnYard} onChange={(e) => setReturnYard(e.target.value)} />
+            <div className="space-y-1.5">
+              <Label>提箱堆场（{yardTarget?.pickupCity}）</Label>
+              <Select
+                value={pickupYard || undefined}
+                onValueChange={(v) => setPickupYard(v ?? "")}
+                disabled={yardChangePickupOptions.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      yardChangePickupOptions.length === 0
+                        ? `「${yardTarget?.pickupCity ?? ""}」暂无可用堆场`
+                        : "选择提箱堆场"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {yardChangePickupOptions.map((y) => (
+                    <SelectItem key={y.id} value={y.name}>
+                      {y.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>还箱堆场（{yardTarget?.returnCity}）</Label>
+              <Select
+                value={returnYard || undefined}
+                onValueChange={(v) => setReturnYard(v ?? "")}
+                disabled={yardChangeReturnOptions.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      yardChangeReturnOptions.length === 0
+                        ? `「${yardTarget?.returnCity ?? ""}」暂无可用堆场`
+                        : "选择还箱堆场"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {yardChangeReturnOptions.map((y) => (
+                    <SelectItem key={y.id} value={y.name}>
+                      {y.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setYardTarget(null)}>取消</Button>
-            <Button onClick={saveOrderYard}>保存变更</Button>
+            <Button type="button" variant="outline" onClick={() => setYardTarget(null)}>
+              取消
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void saveOrderYard()}
+              disabled={!pickupYard || !returnYard}
+            >
+              保存变更
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
