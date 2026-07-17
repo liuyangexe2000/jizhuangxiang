@@ -35,33 +35,34 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { CitySearchSelect } from "@/components/city-search-select"
 import { useResource, revalidateResource } from "@/lib/api"
+import { useDictionary } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
 import type { ContainerMaster, DispatchOrder, GateRecord, InventoryRow, UseBoxOrder, Yard } from "@/lib/types"
 import { applyPickupInventory, applyReturnInventory, findInventoryRow, nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { AlertTriangle, Plus, Wrench, CheckCircle2, Search } from "lucide-react"
 
 export default function ExceptionsPage() {
+  const { pickupCities } = useDictionary()
   const { data: allRecords, create, update } = useResource<GateRecord>("gate")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
   const { data: containers, update: updateContainer } = useResource<ContainerMaster>("containers")
   const { data: dispatches } = useResource<DispatchOrder>("dispatch")
   const { data: orders } = useResource<UseBoxOrder>("orders")
   const { data: yardRows } = useResource<Yard>("yards")
-  const yards = useMemo(
-    () =>
-      yardRows
-        .filter((y) => y.enabled !== false && y.deleted !== true)
-        .map((y) => y.name)
-        .sort((a, b) => a.localeCompare(b, "zh")),
+  const enabledYards = useMemo(
+    () => yardRows.filter((y) => y.enabled !== false && y.deleted !== true),
     [yardRows],
   )
   const [keyword, setKeyword] = useState("")
   const [addOpen, setAddOpen] = useState(false)
-  const [form, setForm] = useState({ containerNo: "", type: "进场", yard: "" })
+  const [form, setForm] = useState({ containerNo: "", type: "进场", city: "", yard: "" })
 
-  const defaultYard = yards[0] ?? ""
-  const formYard = form.yard || defaultYard
+  const yardsInCity = useMemo(
+    () => (form.city ? enabledYards.filter((y) => y.city === form.city) : []),
+    [enabledYards, form.city],
+  )
 
   const pool = useMemo(
     () => allRecords.filter((r) => r.mappingStatus !== "已映射"),
@@ -157,18 +158,18 @@ export default function ExceptionsPage() {
       toast.error("请填写箱号")
       return
     }
-    const yard = formYard
-    if (!yard) {
-      toast.error("暂无可用堆场，请先在堆场管理中维护")
+    if (!form.city || !form.yard) {
+      toast.error("请选择城市与堆场")
       return
     }
-    const city = yard.replace(/(港|中央)?堆场$/, "").slice(0, 10) || yard.slice(0, 2)
+    const yardRow = enabledYards.find((y) => y.name === form.yard)
+    const city = yardRow?.city || form.city
     try {
       await create({
         containerNo: form.containerNo.toUpperCase(),
         type: form.type as "进场" | "出场",
         time: nowLocalStr(),
-        yard,
+        yard: form.yard,
         city,
         source: "手工补录异常",
         mappingStatus: "未映射",
@@ -178,7 +179,7 @@ export default function ExceptionsPage() {
       })
       toast.success("手工补录成功，已加入异常排查池待映射")
       setAddOpen(false)
-      setForm({ containerNo: "", type: "进场", yard: yards[0] ?? "" })
+      setForm({ containerNo: "", type: "进场", city: "", yard: "" })
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -217,14 +218,33 @@ export default function ExceptionsPage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>堆场</Label>
-                    <Select value={formYard} onValueChange={(v) => setForm((f) => ({ ...f, yard: v ?? defaultYard }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {yards.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Label>城市</Label>
+                    <CitySearchSelect
+                      value={form.city}
+                      onValueChange={(city) => setForm((f) => ({ ...f, city, yard: "" }))}
+                      cities={pickupCities}
+                      placeholder="选择城市"
+                    />
                   </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>堆场</Label>
+                  <Select
+                    value={form.yard}
+                    disabled={!form.city}
+                    onValueChange={(v) => setForm((f) => ({ ...f, yard: v ?? "" }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={form.city ? "选择该城市堆场" : "请先选择城市"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yardsInCity.map((y) => (
+                        <SelectItem key={y.id} value={y.name}>
+                          {y.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <DialogFooter>

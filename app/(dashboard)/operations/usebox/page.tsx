@@ -68,9 +68,7 @@ export default function OperationsUseboxPage() {
   const pendingCount = useMemo(() => orders.filter((order) => order.status === "待确认").length, [orders])
 
   function yardsForCity(city: string) {
-    const enabled = yards.filter((yard) => yard.enabled)
-    const matched = enabled.filter((yard) => yard.city === city)
-    return matched.length > 0 ? matched : enabled
+    return yards.filter((yard) => yard.enabled && !yard.deleted && yard.city === city)
   }
 
   const filtered = useMemo(
@@ -105,6 +103,12 @@ export default function OperationsUseboxPage() {
   function openConfirm(order: UseBoxOrder) {
     const pickupOptions = yardsForCity(order.pickupCity)
     const returnOptions = yardsForCity(order.returnCity)
+    if (pickupOptions.length === 0) {
+      toast.error(`提箱城市「${order.pickupCity}」暂无可用堆场`)
+    }
+    if (returnOptions.length === 0) {
+      toast.error(`还箱城市「${order.returnCity}」暂无可用堆场`)
+    }
     setConfirming(order)
     setPickupYard(order.pickupYard || pickupOptions[0]?.name || "")
     setReturnYard(order.returnYard || returnOptions[0]?.name || "")

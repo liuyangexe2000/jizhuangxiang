@@ -7,12 +7,18 @@ import { StatCard } from "@/components/stat-card"
 import { StatusBadge } from "@/components/status-badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CitySearchSelect } from "@/components/city-search-select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -30,6 +36,7 @@ import type {
   GateRecord,
   InventoryRow,
   ReturnApplication,
+  Yard,
 } from "@/lib/types"
 import {
   applyPickupInventory,
@@ -47,10 +54,16 @@ import {
 import { isWithinWorkHours } from "@/lib/domain/booking-ops"
 import { Truck, PackageOpen, CalendarClock, CheckCircle2, PackageCheck, MapPin } from "lucide-react"
 
-function parseReturnScope(scope: string) {
+function parseReturnScopeCity(scope: string) {
   const first = scope.split(/[/／,，]/).map((s) => s.trim()).filter(Boolean)[0] || scope
-  const city = first.replace(/（.*?）/g, "").replace(/(港|中央)?堆场$/, "").trim() || first
-  return { city, yard: `${city}堆场` }
+  return first.replace(/（.*?）/g, "").replace(/(港|中央)?堆场$/, "").trim() || first
+}
+
+function resolveReturnYardHint(scope: string, yards: Yard[], city: string) {
+  const exact = yards.find((y) => y.name === scope)
+  if (exact) return exact.name
+  const inCity = yards.filter((y) => y.enabled && !y.deleted && y.city === city)
+  return inCity[0]?.name ?? ""
 }
 
 /** 提箱箱号：优先预约箱号 → 堆场在场箱 → TMP */
@@ -59,8 +72,9 @@ function resolvePickupNos(
   delta: number,
   bookings: Booking[],
   containers: ContainerMaster[],
+  yards: Yard[],
 ): string[] {
-  const city = cityFromPlace(o.pickupPlace)
+  const city = cityFromPlace(o.pickupPlace, yards)
   const used = new Set(
     containers.filter((c) => c.relatedOrderNo === o.dispatchNo).map((c) => c.containerNo),
   )
@@ -128,13 +142,14 @@ function collectReturnCandidates(
 }
 
 export default function TasksPage() {
-  const { returnCities } = useDictionary()
+  const { pickupCities, returnCities } = useDictionary()
   const { data: orders, update } = useResource<DispatchOrder>("dispatch")
   const { data: bookings, create: createBooking } = useResource<Booking>("bookings")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
   const { create: createGate } = useResource<GateRecord>("gate")
   const { data: containers, update: updateContainer } = useResource<ContainerMaster>("containers")
   const { create: createReturn } = useResource<ReturnApplication>("returns")
+  const { data: yards } = useResource<Yard>("yards")
 
   const [returnOpen, setReturnOpen] = useState(false)
   const [returnCarrier, setReturnCarrier] = useState("")
@@ -143,8 +158,27 @@ export default function TasksPage() {
   const [selectedNos, setSelectedNos] = useState<Set<string>>(new Set())
 
   const [yardTarget, setYardTarget] = useState<DispatchOrder | null>(null)
+  const [pickupCityEdit, setPickupCityEdit] = useState("")
   const [pickupYardEdit, setPickupYardEdit] = useState("")
+  const [returnCityEdit, setReturnCityEdit] = useState("")
   const [returnYardEdit, setReturnYardEdit] = useState("")
+
+  const enabledYards = useMemo(
+    () => yards.filter((y) => y.enabled && !y.deleted),
+    [yards],
+  )
+  const returnYardsInCity = useMemo(
+    () => (returnCity ? enabledYards.filter((y) => y.city === returnCity) : []),
+    [enabledYards, returnCity],
+  )
+  const pickupYardsEditInCity = useMemo(
+    () => (pickupCityEdit ? enabledYards.filter((y) => y.city === pickupCityEdit) : []),
+    [enabledYards, pickupCityEdit],
+  )
+  const returnYardsEditInCity = useMemo(
+    () => (returnCityEdit ? enabledYards.filter((y) => y.city === returnCityEdit) : []),
+    [enabledYards, returnCityEdit],
+  )
 
   const tasks = orders.filter((o) =>
     ["已下发", "提箱中", "还箱中", "已结束"].includes(o.status),
@@ -162,10 +196,10 @@ export default function TasksPage() {
   )
 
   function openReturnDialog(o: DispatchOrder) {
-    const { city, yard } = parseReturnScope(o.returnScope)
+    const city = parseReturnScopeCity(o.returnScope)
     setReturnCarrier(o.carrier)
     setReturnCity(city)
-    setReturnYard(yard)
+    setReturnYard(resolveReturnYardHint(o.returnScope, enabledYards, city))
     const cands = collectReturnCandidates(tasks, o.carrier, bookings, containers)
     const mine = cands.filter((c) => c.dispatchNo === o.dispatchNo).map((c) => c.containerNo)
     setSelectedNos(new Set(mine))
@@ -184,7 +218,7 @@ export default function TasksPage() {
   async function submitReturn() {
     const nos = [...selectedNos]
     if (!returnCity.trim() || !returnYard.trim()) {
-      toast.error("请填写还箱城市与堆场")
+      toast.error("请选择还箱城市与堆场")
       return
     }
     if (nos.length === 0) {
@@ -253,7 +287,7 @@ export default function TasksPage() {
     const delta = 1
     const picked = Math.min(o.quantity, o.pickedCount + delta)
     const status: DispatchOrder["status"] = picked >= o.quantity ? "还箱中" : "提箱中"
-    const nos = resolvePickupNos(o, delta, bookings, containers)
+    const nos = resolvePickupNos(o, delta, bookings, containers, yards)
     try {
       await update(o.id, {
         pickedCount: picked,
@@ -278,7 +312,7 @@ export default function TasksPage() {
           })
         }
       }
-      const inv = findInventoryRow(inventory, { yard: o.pickupPlace, city: cityFromPlace(o.pickupPlace) })
+      const inv = findInventoryRow(inventory, { yard: o.pickupPlace, city: cityFromPlace(o.pickupPlace, yards) })
       if (inv) {
         await updateInventory(inventoryId(inv), {
           ...applyPickupInventory(inv, delta),
@@ -302,9 +336,12 @@ export default function TasksPage() {
 
   function openYardDialog(o: DispatchOrder) {
     setYardTarget(o)
+    const pickupCity = cityFromPlace(o.pickupPlace, yards) || ""
+    setPickupCityEdit(pickupCity)
     setPickupYardEdit(o.pickupPlace)
-    const { yard } = parseReturnScope(o.returnScope)
-    setReturnYardEdit(yard)
+    const retCity = parseReturnScopeCity(o.returnScope)
+    setReturnCityEdit(retCity)
+    setReturnYardEdit(resolveReturnYardHint(o.returnScope, enabledYards, retCity))
   }
 
   async function saveYardChange() {
@@ -312,8 +349,8 @@ export default function TasksPage() {
     const o = yardTarget
     const newPickup = pickupYardEdit.trim()
     const newReturnYard = returnYardEdit.trim()
-    if (!newPickup || !newReturnYard) {
-      toast.error("提箱堆场与还箱堆场不能为空")
+    if (!pickupCityEdit || !returnCityEdit || !newPickup || !newReturnYard) {
+      toast.error("请选择提箱/还箱城市与堆场")
       return
     }
     try {
@@ -321,8 +358,8 @@ export default function TasksPage() {
       const qtyInTransit = Math.max(0, o.pickedCount - o.returnedCount)
 
       if (newPickup !== o.pickupPlace && qtyOpen > 0) {
-        const from = findInventoryRow(inventory, { yard: o.pickupPlace, city: cityFromPlace(o.pickupPlace) })
-        const to = findInventoryRow(inventory, { yard: newPickup, city: cityFromPlace(newPickup) })
+        const from = findInventoryRow(inventory, { yard: o.pickupPlace, city: cityFromPlace(o.pickupPlace, yards) })
+        const to = findInventoryRow(inventory, { yard: newPickup, city: cityFromPlace(newPickup, yards) || pickupCityEdit })
         if (from && to && inventoryId(from) !== inventoryId(to)) {
           const { fromPatch, toPatch } = relocateReserved(from, to, qtyOpen)
           await updateInventory(inventoryId(from), {
@@ -338,10 +375,10 @@ export default function TasksPage() {
         }
       }
 
-      const oldReturn = parseReturnScope(o.returnScope).yard
-      if (newReturnYard !== oldReturn && qtyInTransit > 0) {
-        const from = findInventoryRow(inventory, { yard: oldReturn, city: cityFromPlace(oldReturn) })
-        const to = findInventoryRow(inventory, { yard: newReturnYard, city: cityFromPlace(newReturnYard) })
+      const oldReturn = resolveReturnYardHint(o.returnScope, enabledYards, parseReturnScopeCity(o.returnScope))
+      if (oldReturn && newReturnYard !== oldReturn && qtyInTransit > 0) {
+        const from = findInventoryRow(inventory, { yard: oldReturn, city: cityFromPlace(oldReturn, yards) })
+        const to = findInventoryRow(inventory, { yard: newReturnYard, city: cityFromPlace(newReturnYard, yards) || returnCityEdit })
         if (from && to && inventoryId(from) !== inventoryId(to)) {
           const { fromPatch, toPatch } = relocateIncoming(from, to, qtyInTransit)
           await updateInventory(inventoryId(from), {
@@ -486,14 +523,32 @@ export default function TasksPage() {
               <CitySearchSelect
                 id="returnCity"
                 value={returnCity}
-                onValueChange={setReturnCity}
+                onValueChange={(city) => {
+                  setReturnCity(city)
+                  setReturnYard("")
+                }}
                 cities={returnCities}
                 placeholder="选择还箱城市"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="returnYard">还箱堆场</Label>
-              <Input id="returnYard" value={returnYard} onChange={(e) => setReturnYard(e.target.value)} />
+              <Label>还箱堆场</Label>
+              <Select
+                value={returnYard}
+                disabled={!returnCity}
+                onValueChange={(v) => setReturnYard(v ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={returnCity ? "选择该城市堆场" : "请先选择城市"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {returnYardsInCity.map((y) => (
+                    <SelectItem key={y.id} value={y.name}>
+                      {y.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-2">
               {returnCandidates.map((c) => (
@@ -528,12 +583,66 @@ export default function TasksPage() {
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
+              <Label>提箱城市</Label>
+              <CitySearchSelect
+                value={pickupCityEdit}
+                onValueChange={(city) => {
+                  setPickupCityEdit(city)
+                  setPickupYardEdit("")
+                }}
+                cities={pickupCities}
+                placeholder="选择城市"
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label>提箱堆场</Label>
-              <Input value={pickupYardEdit} onChange={(e) => setPickupYardEdit(e.target.value)} />
+              <Select
+                value={pickupYardEdit}
+                disabled={!pickupCityEdit}
+                onValueChange={(v) => setPickupYardEdit(v ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={pickupCityEdit ? "选择该城市堆场" : "请先选择城市"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {pickupYardsEditInCity.map((y) => (
+                    <SelectItem key={y.id} value={y.name}>
+                      {y.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>还箱城市</Label>
+              <CitySearchSelect
+                value={returnCityEdit}
+                onValueChange={(city) => {
+                  setReturnCityEdit(city)
+                  setReturnYardEdit("")
+                }}
+                cities={returnCities}
+                placeholder="选择城市"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>还箱堆场</Label>
-              <Input value={returnYardEdit} onChange={(e) => setReturnYardEdit(e.target.value)} />
+              <Select
+                value={returnYardEdit}
+                disabled={!returnCityEdit}
+                onValueChange={(v) => setReturnYardEdit(v ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={returnCityEdit ? "选择该城市堆场" : "请先选择城市"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {returnYardsEditInCity.map((y) => (
+                    <SelectItem key={y.id} value={y.name}>
+                      {y.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
