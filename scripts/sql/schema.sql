@@ -496,7 +496,7 @@ CREATE TABLE `outbound_events` (
   KEY `idx_outbound_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------- 附件元数据（无对象存储，仅登记） ----------
+-- ---------- 附件（元数据 + 本地文件路径） ----------
 DROP TABLE IF EXISTS `attachments`;
 CREATE TABLE `attachments` (
   `id` VARCHAR(32) NOT NULL,
@@ -507,6 +507,7 @@ CREATE TABLE `attachments` (
   `size` INT NOT NULL DEFAULT 0,
   `uploadedBy` VARCHAR(80) NOT NULL,
   `uploadedAt` VARCHAR(32) NOT NULL,
+  `storagePath` VARCHAR(500) NULL,
   PRIMARY KEY (`id`),
   KEY `idx_attach_ref` (`refType`, `refNo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -35,3 +35,6 @@ Desktop.ini
 # Temp scripts
 scripts/_tmp-*
 scripts/_write-*
+
+# 本地上传附件（随箱/还箱证明实体文件）
+data/uploads/

@@ -69,6 +69,11 @@ async function getColumns(cfg: ResourceConfig): Promise<string[]> {
   return cols
 }
 
+export function clearColumnCache(table?: string) {
+  if (table) columnCache.delete(table)
+  else columnCache.clear()
+}
+
 // ---------- 内存存储 ----------
 const memStore = new Map<ResourceKey, any[]>()
 function memData(key: ResourceKey, cfg: ResourceConfig): any[] {

@@ -30,6 +30,10 @@ import { buildOrderBooking, returnProofOverdueList, shouldReleaseDoc } from "@/l
 import { isWithinWorkHours } from "@/lib/domain/booking-ops"
 import { cityFromPlace, findInventoryRow, inventoryId, nowLocalStr, relocateIncoming, relocateReserved } from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
+import {
+  DOC_UPLOAD_ACCEPT,
+  validateDocUploadFile,
+} from "@/lib/doc-upload"
 import type { AttachmentMeta, Booking, DocTemplate, InventoryRow, Notification, RepairOrder, UseBoxOrder } from "@/lib/types"
 
 type Phase = "pickup" | "return"
@@ -57,7 +61,7 @@ export default function DocumentsPage() {
   const { data: bookings, create: createBooking } = useResource<Booking>("bookings")
   const { data: notifications, create: createNotification } = useResource<Notification>("notifications")
   const { data: templates } = useResource<DocTemplate>("templates")
-  const { data: attachments, create: createAttachment } = useResource<AttachmentMeta>("attachments")
+  const { data: attachments } = useResource<AttachmentMeta>("attachments")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
   const { create: createRepair } = useResource<RepairOrder>("repair")
 
@@ -75,11 +79,13 @@ export default function DocumentsPage() {
   const [stuffingTarget, setStuffingTarget] = useState<UseBoxOrder | null>(null)
   const [stuffingFileName, setStuffingFileName] = useState("")
   const [stuffingNote, setStuffingNote] = useState("")
+  const [stuffingFile, setStuffingFile] = useState<File | null>(null)
   const [exceptionTarget, setExceptionTarget] = useState<UseBoxOrder | null>(null)
   const [exceptionNote, setExceptionNote] = useState("")
   const [exceptionLevel, setExceptionLevel] = useState<"小修" | "中修" | "大修">("小修")
   const [returnProofTarget, setReturnProofTarget] = useState<UseBoxOrder | null>(null)
   const [returnProofFileName, setReturnProofFileName] = useState("")
+  const [returnProofFile, setReturnProofFile] = useState<File | null>(null)
   const [submittingProof, setSubmittingProof] = useState(false)
 
   const overdueProofs = useMemo(
@@ -135,8 +141,9 @@ export default function DocumentsPage() {
 
   function openStuffingDialog(order: UseBoxOrder) {
     setStuffingTarget(order)
-    setStuffingFileName("stuffing_" + order.orderNo + ".pdf")
+    setStuffingFileName("")
     setStuffingNote("")
+    setStuffingFile(null)
   }
 
   function openExceptionDialog(order: UseBoxOrder) {
@@ -147,43 +154,63 @@ export default function DocumentsPage() {
 
   function openReturnProofDialog(order: UseBoxOrder) {
     setReturnProofTarget(order)
-    setReturnProofFileName("return_proof_" + order.orderNo + ".pdf")
+    setReturnProofFileName("")
+    setReturnProofFile(null)
+  }
+
+  async function onPickStuffingFile(file: File | null) {
+    if (!file) {
+      setStuffingFile(null)
+      setStuffingFileName("")
+      return
+    }
+    const err = validateDocUploadFile(file)
+    if (err) {
+      toast.error(err)
+      return
+    }
+    setStuffingFile(file)
+    setStuffingFileName(file.name)
+  }
+
+  async function onPickReturnProofFile(file: File | null) {
+    if (!file) {
+      setReturnProofFile(null)
+      setReturnProofFileName("")
+      return
+    }
+    const err = validateDocUploadFile(file)
+    if (err) {
+      toast.error(err)
+      return
+    }
+    setReturnProofFile(file)
+    setReturnProofFileName(file.name)
   }
 
   async function submitStuffing() {
     if (!stuffingTarget) return
-    const fileName = stuffingFileName.trim()
-    if (!fileName) {
-      toast.error("请填写随箱资料文件名")
+    if (!stuffingFile) {
+      toast.error("请先选择要上传的随箱资料文件")
       return
     }
     setSubmittingProof(true)
     try {
       const order = stuffingTarget
-      await updateOrder(order.id, {
-        conditionCheck: "通过",
-        conditionNote: stuffingNote.trim() || undefined,
-        stuffingListUploaded: true,
-        __auditAction: "修改",
-        __auditDetail: order.orderNo + " 随箱资料已上传",
-      })
-      await createAttachment({
-        refType: "stuffing_list",
-        refNo: order.orderNo,
-        fileName,
-        mime: fileName.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream",
-        size: 0,
-        uploadedBy: "当前用户",
-        uploadedAt: nowLocalStr(),
-        __auditAction: "新增",
-        __auditDetail: order.orderNo + " stuffing list · " + fileName,
-      })
-      await Promise.all([
-        revalidateResource("orders"),
-        revalidateResource("attachments"),
-      ])
-      toast.success("随箱资料已登记，请等待现场确认放箱")
+      const form = new FormData()
+      form.set("kind", "stuffing_list")
+      form.set("note", stuffingNote.trim())
+      form.set("file", stuffingFile, stuffingFileName.trim() || stuffingFile.name)
+      const response = await fetch(
+        "/api/orders/" + encodeURIComponent(order.id) + "/upload-doc",
+        { method: "POST", body: form },
+      )
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || "上传失败")
+      await Promise.all([revalidateResource("orders"), revalidateResource("attachments")])
+      toast.success("随箱资料已上传，请等待现场确认放箱")
       setStuffingTarget(null)
+      setStuffingFile(null)
     } catch (error) {
       toast.error((error as Error).message)
     } finally {
@@ -249,33 +276,26 @@ export default function DocumentsPage() {
 
   async function submitReturnProof() {
     if (!returnProofTarget) return
-    const fileName = returnProofFileName.trim()
-    if (!fileName) {
-      toast.error("请填写还箱证明文件名")
+    if (!returnProofFile) {
+      toast.error("请先选择要上传的还箱证明文件")
       return
     }
     setSubmittingProof(true)
     try {
       const order = returnProofTarget
-      await createAttachment({
-        refType: "return_proof",
-        refNo: order.orderNo,
-        fileName,
-        mime: fileName.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream",
-        size: 0,
-        uploadedBy: "当前用户",
-        uploadedAt: nowLocalStr(),
-        __auditAction: "新增",
-        __auditDetail: order.orderNo + " 还箱证明 · " + fileName,
-      })
-      await updateOrder(order.id, {
-        returnProofUploaded: true,
-        __auditAction: "修改",
-        __auditDetail: order.orderNo + " 还箱证明已上传",
-      })
+      const form = new FormData()
+      form.set("kind", "return_proof")
+      form.set("file", returnProofFile, returnProofFileName.trim() || returnProofFile.name)
+      const response = await fetch(
+        "/api/orders/" + encodeURIComponent(order.id) + "/upload-doc",
+        { method: "POST", body: form },
+      )
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || "上传失败")
       await Promise.all([revalidateResource("attachments"), revalidateResource("orders")])
-      toast.success("还箱证明已登记，请等待现场确认收箱")
+      toast.success("还箱证明已上传，请等待现场确认收箱")
       setReturnProofTarget(null)
+      setReturnProofFile(null)
     } catch (error) {
       toast.error((error as Error).message)
     } finally {
@@ -531,17 +551,22 @@ export default function DocumentsPage() {
           <DialogHeader>
             <DialogTitle>上传随箱资料</DialogTitle>
             <DialogDescription>
-              订单 {stuffingTarget?.orderNo} · 请登记 stuffing list 文件信息后再提交。
+              订单 {stuffingTarget?.orderNo} · 请选择 stuffing list 文件（PDF/图片/Word，最大 8MB）后提交。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>文件名 *</Label>
+              <Label>选择文件 *</Label>
               <Input
-                value={stuffingFileName}
-                onChange={(e) => setStuffingFileName(e.target.value)}
-                placeholder="例如 stuffing_UB202607160001.pdf"
+                type="file"
+                accept={DOC_UPLOAD_ACCEPT}
+                onChange={(e) => void onPickStuffingFile(e.target.files?.[0] ?? null)}
               />
+              {stuffingFile && (
+                <p className="text-xs text-muted-foreground">
+                  已选：{stuffingFileName || stuffingFile.name}（{(stuffingFile.size / 1024).toFixed(1)} KB）
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>备注</Label>
@@ -553,9 +578,11 @@ export default function DocumentsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStuffingTarget(null)}>取消</Button>
-            <Button onClick={submitStuffing} disabled={submittingProof}>
-              {submittingProof ? "提交中…" : "确认上传"}
+            <Button type="button" variant="outline" onClick={() => setStuffingTarget(null)}>
+              取消
+            </Button>
+            <Button type="button" onClick={() => void submitStuffing()} disabled={submittingProof || !stuffingFile}>
+              {submittingProof ? "上传中…" : "确认上传"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -610,23 +637,34 @@ export default function DocumentsPage() {
           <DialogHeader>
             <DialogTitle>上传还箱证明</DialogTitle>
             <DialogDescription>
-              订单 {returnProofTarget?.orderNo} · 请登记还箱证明文件后再提交。
+              订单 {returnProofTarget?.orderNo} · 请选择还箱证明文件（PDF/图片/Word，最大 8MB）后提交。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>文件名 *</Label>
+              <Label>选择文件 *</Label>
               <Input
-                value={returnProofFileName}
-                onChange={(e) => setReturnProofFileName(e.target.value)}
-                placeholder="例如 return_proof_UB202607160001.pdf"
+                type="file"
+                accept={DOC_UPLOAD_ACCEPT}
+                onChange={(e) => void onPickReturnProofFile(e.target.files?.[0] ?? null)}
               />
+              {returnProofFile && (
+                <p className="text-xs text-muted-foreground">
+                  已选：{returnProofFileName || returnProofFile.name}（{(returnProofFile.size / 1024).toFixed(1)} KB）
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setReturnProofTarget(null)}>取消</Button>
-            <Button onClick={submitReturnProof} disabled={submittingProof}>
-              {submittingProof ? "提交中…" : "确认上传"}
+            <Button type="button" variant="outline" onClick={() => setReturnProofTarget(null)}>
+              取消
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void submitReturnProof()}
+              disabled={submittingProof || !returnProofFile}
+            >
+              {submittingProof ? "上传中…" : "确认上传"}
             </Button>
           </DialogFooter>
         </DialogContent>

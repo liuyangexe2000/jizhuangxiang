@@ -607,6 +607,8 @@ export interface AttachmentMeta {
   size: number
   uploadedBy: string
   uploadedAt: string
+  /** 相对项目根的存储路径，如 data/uploads/attachments/xxx.pdf */
+  storagePath?: string
 }
 
 // ---------- 系统设置 ----------
