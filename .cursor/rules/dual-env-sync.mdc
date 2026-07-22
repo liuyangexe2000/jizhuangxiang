@@ -5,59 +5,50 @@ alwaysApply: true
 
 # 双环境：生产 ↔ 开发/测试
 
+## 默认模式：生产优先
+
+用户**优先在生产机改**（本工作区 `/opt/jizhuangxiang`）。Agent 默认：
+
+1. 在生产改源码 / 跑幂等迁移
+2. 改完 `commit` + `push` 到 `origin/main`
+3. Windows 开发机需要测时再 `git pull`（用户连上开发机会话时 Agent 拉齐）
+
+只有用户明确说「先在开发机改 / 先测再上生产」时，才反过来。
+
 ## 环境对照
 
 | 角色 | 路径 | 系统 | 数据库 |
 |------|------|------|--------|
-| **生产** | `/opt/jizhuangxiang`（当前 Cursor 工作区） | Linux CentOS，Next `:3000`，MySQL 8 `:3306` | 本机 `container_biz`，真实业务数据 |
-| **开发/测试** | `D:\V0 projects\jizhuangxiang` | Windows，本地 MySQL 8 | 独立库，可随意测 |
-
-用户可能改**任一侧**；Agent 负责把可共享改动同步到另一侧（经 GitHub `main`），不要让用户手工拷文件。
+| **生产（默认改这里）** | `/opt/jizhuangxiang` | Linux CentOS，Next `:3000`，MySQL 8 | 真实业务数据 |
+| **开发/测试** | `D:\V0 projects\jizhuangxiang` | Windows + 本地 MySQL 8 | 独立库，可大胆测 |
 
 ## 同步什么 / 不同步什么
 
-**要同步（经 git commit + push / pull）：**
+**要同步（git）：** 源码、`scripts/`、`scripts/sql/`、schema 迁移、`.cursor/rules/`、依赖清单  
 
-- 源码、`scripts/`、`scripts/sql/`、schema 迁移、`.cursor/rules/`、依赖清单
+**永不同步：** `.env*.local`、密钥、业务数据 dump、`node_modules`、`.next`、上传附件实体
 
-**永不同步 / 永不提交：**
+## 生产优先时的注意点
 
-- `.env`、`.env*.local`、密钥、真实业务数据 dump
-- `node_modules`、`.next`
-- 生产库业务单据、会话、上传附件实体文件（若有本地存储）
+- 改 UI/逻辑：可直接改生产；改完备份推送。
+- **破坏性库操作**（删列、改类型、清表）：先说明风险；能写成幂等迁移再执行；必要时先在 Windows 库试。
+- 临时调试代码、只给自己看的实验：**不要**推进 `main`；用完删掉或留在未跟踪文件。
+- 生产 `.env*.local` 动过变量名时：同步更新 `.env.example`（占位符），方便开发机补齐。
 
-两侧 `.env*.local` **各自保留**；只保证变量名与 `.env.example` 对齐，值按环境不同。
+## 数据库
 
-## 改哪边时怎么做
+- 默认只同步 **schema / 迁移脚本**，业务数据两边独立。
+- 迁移必须幂等；生产优先时可先在生产执行，再靠 git 让开发机跟上。
+- 禁止未经确认的整库 dump 互盖。
 
-1. **开工前**：确认当前工作区是生产还是开发；`git status` / `git pull` 拉齐 `origin/main`。
-2. **改代码后**：按 `agent-owns-git-backup` 规则 `commit` + `push`；回复中写明已推送，另一侧下次开工 `pull` 即可。
-3. **改生产时**：更谨慎——先备份/确认可回滚；避免把仅测试用的脏数据、临时代码推上 `main`。
-4. **改开发/测试时**：可大胆试验；合并进 `main` 前确认不影响生产运行（尤其 SQL 迁移要幂等）。
-5. **会话跨机器**：用户说「同步到生产/开发」时，Agent 在当前机 `push`，并说明对侧需 `git pull` +（如有）跑迁移；若当前机可 SSH/远程到对侧则直接拉齐，否则短告知对侧一步。
+## 生产机 Git
 
-## 数据库约定
+- 二进制：`/usr/local/bin/git`
+- Remote：`git@github.com-jizhuangxiang:liuyangexe2000/jizhuangxiang.git`（Deploy Key）
+- `safe.directory` 已配；源码 **LF**（`.gitattributes`）
+- `.env.example` 只放占位符
 
-- 默认：**只同步 schema / 迁移脚本**（`scripts/sql/*`、`lib/ensure-*-schema.ts`、`scripts/alter-*.ts`），**业务数据两边独立**。
-- 新迁移必须：**可重复执行**（`IF NOT EXISTS` / 先检查再 ALTER），先在开发库验证，再在生产执行。
-- 未经用户明确要求：**禁止**生产库 dump 覆盖开发库，也禁止开发库数据灌进生产。
-- 需要种子/字典类数据时：用仓库内 import/seed 脚本，不用整库还原。
+## Shell
 
-## Shell 差异
-
-- **生产（Linux）**：commit message 可用 bash heredoc。
-- **开发（Windows PowerShell）**：用 here-string，不要用 bash heredoc（见 `agent-owns-git-backup`）。
-
-## 识别当前机
-
-- 路径以 `/opt/jizhuangxiang` 或 Linux → **生产**
-- 路径含 `V0 projects\jizhuangxiang` 或 Windows 盘符 → **开发/测试**
-
-## 生产机 Git 备注（CentOS）
-
-- 系统 yum 版 git 因 perl 模块冲突不可用；已源码安装到 `/usr/local/bin/git`（2.45.x）。
-- 目录属主为 `www`，Agent 常以 root 操作：命令前加  
-  `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/opt/jizhuangxiang`  
-  或本机已配置 `safe.directory`。
-- 源码统一 **LF**（见 `.gitattributes`）；勿把 Windows CRLF 整树提交上来。
-- `.env.example` 只放占位符；真实密码只在各机 `.env*.local`。
+- 生产：bash heredoc（见 `agent-owns-git-backup`）
+- Windows：PowerShell here-string
