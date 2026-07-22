@@ -38,3 +38,10 @@ scripts/_write-*
 
 # 本地上传附件（随箱/还箱证明实体文件）
 data/uploads/
+
+# 部署包 / 误放进目录的本地工具
+jizhuangxiang-deploy.zip
+*.deploy.zip
+my-project@*
+/tsx
+

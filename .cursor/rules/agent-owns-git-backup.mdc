@@ -27,16 +27,34 @@ alwaysApply: true
 - 分支：`main` → `origin/main`
 - **永不提交**：`.env`、`.env*.local`、密钥、`node_modules`、`.next`
 
-## 执行方式（PowerShell）
+## 执行方式
+
+**生产（Linux `/opt/jizhuangxiang`）** — bash heredoc：
+
+```bash
+export PATH=/usr/local/bin:$PATH
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/opt/jizhuangxiang
+git add -A
+git status
+git -c user.name="liuyangexe2000" -c user.email="liuyangexe2000@gmail.com" commit -m "$(cat <<'EOF'
+消息
+
+EOF
+)"
+git push -u origin HEAD
+```
+
+**开发（Windows `D:\V0 projects\jizhuangxiang`）** — PowerShell here-string，**不要**用 bash heredoc：
 
 ```powershell
 git add -A
 git status
-git -c user.name="liuyangexe2000" -c user.email="liuyangexe2000@gmail.com" commit -m "消息"
+git -c user.name="liuyangexe2000" -c user.email="liuyangexe2000@gmail.com" commit -m @'
+消息
+'@
 git push -u origin HEAD
 ```
 
-- Windows 下 commit message 用 PowerShell here-string，**不要**用 bash heredoc。
 - push 失败（鉴权等）时：自行重试 / 说明阻塞原因；**仍不要**把「请你去 GitHub 点一下」写成用户的日常义务——仅在 Agent 侧确实无法完成鉴权时才简短说明卡点。
 
 ## 与「安全改码」的关系
