@@ -22,6 +22,7 @@ import {
   Settings2,
   ArrowRight,
   Inbox as InboxIcon,
+  Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { softTone } from "@/lib/ui-tone"
@@ -52,8 +53,9 @@ const FILTERS: { key: string; label: string }[] = [
 
 export default function InboxPage() {
   const { roleId, isAdmin, impersonating } = useRole()
-  const { data: items, update } = useResource<Notification>("notifications")
+  const { data: items, update, mutate } = useResource<Notification>("notifications")
   const [filter, setFilter] = useState("全部")
+  const [markingAll, setMarkingAll] = useState(false)
   const effectiveAdmin = isAdmin && !impersonating
 
   // 真实管理员可见全部；代理中或其它角色按生效角色过滤
@@ -99,14 +101,38 @@ export default function InboxPage() {
   }
 
   async function markAllRead() {
+    if (markingAll) return
     const unread = visible.filter((n) => !n.read)
+    if (unread.length === 0) {
+      toast.info("暂无未读通知")
+      return
+    }
+    setMarkingAll(true)
     try {
+      // 直接 PATCH，避免逐条 update 触发 N 次列表刷新；结束后统一 mutate 一次
       await Promise.all(
-        unread.map((n) => update(n.id, { read: true, __auditAction: "修改", __auditDetail: "标记通知已读" })),
+        unread.map(async (n) => {
+          const res = await fetch(`/api/notifications/${encodeURIComponent(n.id)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              read: true,
+              __auditAction: "修改",
+              __auditDetail: "标记通知已读",
+            }),
+          })
+          if (!res.ok) {
+            throw new Error((await res.json().catch(() => ({}))).error ?? "更新失败")
+          }
+        }),
       )
-      toast.success("已将全部通知标记为已读")
+      await mutate()
+      toast.success(`已将 ${unread.length} 条通知标记为已读`)
     } catch (e) {
       toast.error((e as Error).message)
+      await mutate()
+    } finally {
+      setMarkingAll(false)
     }
   }
 
@@ -117,9 +143,18 @@ export default function InboxPage() {
         title="待办与通知中心"
         description="聚合审批、任务、账单与时限提醒，未读与待办优先呈现，可一键跳转至对应业务处理。"
         actions={
-          <Button variant="outline" className="gap-1.5" onClick={markAllRead}>
-            <CheckCheck className="size-4" />
-            全部已读
+          <Button
+            variant="outline"
+            className="gap-1.5"
+            disabled={markingAll || unreadCount === 0}
+            onClick={markAllRead}
+          >
+            {markingAll ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCheck className="size-4" />
+            )}
+            {markingAll ? "处理中…" : "全部已读"}
           </Button>
         }
       />
