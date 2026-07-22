@@ -73,3 +73,34 @@ export async function verifySession(token: string | undefined | null): Promise<S
 }
 
 export const SESSION_MAX_AGE = MAX_AGE_SEC
+
+/**
+ * 会话 Cookie 是否加 Secure。
+ * 纯 HTTP 反代（未上 HTTPS）时若强制 Secure，浏览器会丢弃 Cookie，表现为登录无反应。
+ * 优先级：COOKIE_SECURE 显式开关 → X-Forwarded-Proto / APP_BASE_URL → 生产默认 true
+ */
+export function sessionCookieSecure(req?: { headers: Headers }): boolean {
+  const flag = process.env.COOKIE_SECURE?.trim().toLowerCase()
+  if (flag === "1" || flag === "true" || flag === "yes") return true
+  if (flag === "0" || flag === "false" || flag === "no") return false
+
+  const proto = req?.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase()
+  if (proto === "https") return true
+  if (proto === "http") return false
+
+  const base = process.env.APP_BASE_URL?.trim()
+  if (base?.startsWith("https://")) return true
+  if (base?.startsWith("http://")) return false
+
+  return process.env.NODE_ENV === "production"
+}
+
+export function sessionCookieOptions(req?: { headers: Headers }) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+    secure: sessionCookieSecure(req),
+  }
+}

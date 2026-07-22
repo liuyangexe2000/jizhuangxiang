@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { list } from "@/lib/repo"
 import { verifyPassword } from "@/lib/password"
-import { signSession, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/session"
+import { signSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session"
 import { writeAudit } from "@/lib/audit"
 
 const DEFAULT_PASSWORD = process.env.SEED_PASSWORD ?? "Passw0rd!"
@@ -52,12 +52,6 @@ export async function POST(req: NextRequest) {
   })
 
   const res = NextResponse.json({ user: sessionUser })
-  res.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
-    secure: process.env.NODE_ENV === "production",
-  })
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(req))
   return res
 }
