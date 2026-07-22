@@ -18,11 +18,17 @@ import * as mock from "../lib/mock-data"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = resolve(__dirname, "..")
 
-// 与 Next.js 一致：优先加载 .env.development.local，再回退 .env.local / .env
-for (const name of [".env.development.local", ".env.local", ".env"]) {
+// 与 Next.js / 生产部署一致：优先本地开发文件，再生产本地文件，最后 .env
+for (const name of [
+  ".env.development.local",
+  ".env.production.local",
+  ".env.local",
+  ".env",
+]) {
   const p = join(root, name)
   if (existsSync(p)) {
     loadEnv({ path: p })
+    console.log(`→ 已加载环境变量文件：${name}`)
     break
   }
 }
