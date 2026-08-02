@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CalendarClock, CheckCircle2, FileText, MapPin, MoreHorizontal, Printer, Search, Upload, Wrench } from "lucide-react"
+import { CalendarClock, CheckCircle2, Download, FileText, MapPin, MoreHorizontal, Printer, Search, Upload, Wrench } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { ListPagination } from "@/components/list-pagination"
@@ -76,14 +76,17 @@ function toInputTime(time: string) {
   return time.replace(" ", "T").slice(0, 16)
 }
 
-/** 解析放箱清单：一行一个箱号，兼容逗号/分号分隔 */
+/** 解析放箱清单：一行一个箱号，兼容逗号/分号分隔；忽略 # 注释行 */
 function parseContainerNoLines(text: string): string[] {
   return Array.from(
     new Set(
       text
-        .split(/[\n\r,;，；\t]+/)
-        .map((s) => s.trim().toUpperCase())
-        .filter(Boolean),
+        .split(/[\n\r]+/)
+        .flatMap((line) => {
+          const trimmed = line.trim()
+          if (!trimmed || trimmed.startsWith("#")) return []
+          return trimmed.split(/[,;，；\t]+/).map((s) => s.trim().toUpperCase()).filter(Boolean)
+        }),
     ),
   )
 }
@@ -296,6 +299,26 @@ export default function DocumentsPage() {
     } catch {
       toast.error("读取清单失败")
     }
+  }
+
+  function downloadContainerListTemplate() {
+    const qty = conditionTarget?.order.quantity ?? 1
+    const samples = Array.from({ length: Math.max(1, qty) }, (_, i) => `MSCU${String(i + 1).padStart(7, "0")}`)
+    const content = [
+      "# 放箱箱号清单模板",
+      "# 规则：一行一个箱号；以 # 开头的行为说明，上传时忽略",
+      "# 也可使用英文逗号或中文逗号分隔",
+      ...samples,
+      "",
+    ].join("\n")
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "放箱箱号清单模板.txt"
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("已下载清单模板")
   }
 
   function openStuffingDialog(order: UseBoxOrder) {
@@ -766,6 +789,16 @@ export default function DocumentsPage() {
                         className="min-h-28 font-mono text-xs"
                       />
                       <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={downloadContainerListTemplate}
+                        >
+                          <Download className="size-3.5" />
+                          下载模板
+                        </Button>
                         <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted">
                           <Upload className="size-3.5" />
                           上传清单
