@@ -19,6 +19,7 @@ import {
   CalendarClock,
   Warehouse,
   MapPinned,
+  Tags,
   Users,
   Building2,
   Database,
@@ -121,6 +122,7 @@ export const navGroups: NavGroup[] = [
     label: "基础数据字典",
     items: [
       { title: "城市字典", href: "/config/cities", icon: MapPinned, roles: ["R00", "R01", "R04"], desc: "提箱/还箱城市字典维护" },
+      { title: "用箱价目", href: "/config/usebox-prices", icon: Tags, roles: ["R00", "R01"], desc: "按线路与箱型维护用箱参考单价" },
       { title: "客户主档", href: "/config/customers", icon: Building2, roles: ["R00", "R01"], desc: "客户主档与生命周期档案（用箱订单/账单轨迹）" },
     ],
   },

@@ -77,6 +77,15 @@ export const RESOURCES = {
     module: "系统管理",
     label: "反馈工单",
   },
+  useBoxPriceRules: {
+    table: "use_box_price_rules",
+    id: "id",
+    json: [],
+    bool: ["enabled"],
+    seed: "useBoxPriceRules",
+    module: "M01 客户服务",
+    label: "用箱价目",
+  },
   dispatchPriceRules: {
     table: "dispatch_price_rules",
     id: "id",

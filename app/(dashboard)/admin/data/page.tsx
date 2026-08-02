@@ -77,6 +77,20 @@ const datasets: DatasetDef[] = [
     ],
   },
   {
+    id: "useBoxPriceRules",
+    resource: "useBoxPriceRules",
+    name: "用箱价目",
+    desc: "M01 线路+箱型参考单价",
+    idKey: "id",
+    fields: [
+      { key: "pickupCity", label: "提箱城市" },
+      { key: "returnCity", label: "还箱城市" },
+      { key: "containerType", label: "箱型" },
+      { key: "unitPrice", label: "单价" },
+      { key: "enabled", label: "启用" },
+    ],
+  },
+  {
     id: "dispatch",
     resource: "dispatch",
     name: "调运订单",

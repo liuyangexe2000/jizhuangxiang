@@ -51,6 +51,20 @@ CREATE TABLE `use_box_orders` (
   KEY `idx_orders_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------- M01 用箱价目 ----------
+DROP TABLE IF EXISTS `use_box_price_rules`;
+CREATE TABLE `use_box_price_rules` (
+  `id` VARCHAR(32) NOT NULL,
+  `pickupCity` VARCHAR(60) NOT NULL,
+  `returnCity` VARCHAR(60) NOT NULL,
+  `containerType` VARCHAR(10) NOT NULL,
+  `unitPrice` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ubpr_route_type` (`pickupCity`, `returnCity`, `containerType`),
+  KEY `idx_ubpr_pickup` (`pickupCity`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------- M01 账单 ----------
 DROP TABLE IF EXISTS `bills`;
 CREATE TABLE `bills` (

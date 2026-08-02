@@ -113,6 +113,16 @@ export interface ApprovalStep {
   time?: string
 }
 
+/** 用箱单价方案（按提箱城市 + 还箱城市 + 箱型） */
+export interface UseBoxPriceRule {
+  id: string
+  pickupCity: string
+  returnCity: string
+  containerType: ContainerType
+  unitPrice: number
+  enabled: boolean
+}
+
 /** 调运单价方案（按提箱地 + 还箱范围） */
 export interface DispatchPriceRule {
   id: string

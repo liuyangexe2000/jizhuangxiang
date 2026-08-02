@@ -19,9 +19,11 @@ import type {
   AttachmentMeta,
   FeedbackTicket,
   SystemSetting,
+  UseBoxPriceRule,
   DispatchPriceRule,
   Carrier,
   DispatchApprovalLevel,
+  ContainerType,
 } from "./types"
 import {
   defaultPickupLayout,
@@ -729,6 +731,32 @@ export const outboundEvents: OutboundEvent[] = []
 export const attachments: AttachmentMeta[] = []
 
 export const feedbackTickets: FeedbackTicket[] = []
+
+/** 用箱价目（提箱城市 + 还箱城市 + 箱型） */
+const USEBOX_TYPE_PRICES: Record<ContainerType, number> = {
+  "20GP": 2100,
+  "40GP": 2980,
+  "40HQ": 3280,
+  "45HQ": 3600,
+}
+
+const USEBOX_SEED_ROUTES: Array<{ pickupCity: string; returnCity: string }> = [
+  { pickupCity: "西安", returnCity: "布拉格" },
+  { pickupCity: "西安", returnCity: "鹿特丹" },
+  { pickupCity: "西安", returnCity: "汉堡" },
+  { pickupCity: "郑州", returnCity: "布拉格" },
+]
+
+export const useBoxPriceRules: UseBoxPriceRule[] = USEBOX_SEED_ROUTES.flatMap((route, ri) =>
+  (Object.keys(USEBOX_TYPE_PRICES) as ContainerType[]).map((containerType, ti) => ({
+    id: `ubpr-${ri + 1}-${ti + 1}`,
+    pickupCity: route.pickupCity,
+    returnCity: route.returnCity,
+    containerType,
+    unitPrice: USEBOX_TYPE_PRICES[containerType],
+    enabled: true,
+  })),
+)
 
 /** 调运价目方案（BR-11） */
 export const dispatchPriceRules: DispatchPriceRule[] = [

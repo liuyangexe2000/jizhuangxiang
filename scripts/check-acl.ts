@@ -11,7 +11,7 @@ import type { ResourceKey } from "../lib/resources"
 const PAGE_RESOURCES: Record<string, ResourceKey[]> = {
   "/": ["orders", "dispatch", "bills", "inventory", "notifications", "integrations"],
   "/inbox": ["notifications"],
-  "/customer/apply": ["orders", "cities"],
+  "/customer/apply": ["orders", "cities", "yards", "useBoxPriceRules"],
   "/customer/orders": ["orders"],
   "/customer/documents": ["orders", "bookings", "templates", "attachments", "inventory", "repair", "notifications"],
   "/customer/bills": ["bills", "outboundEvents", "notifications"],
@@ -33,6 +33,7 @@ const PAGE_RESOURCES: Record<string, ResourceKey[]> = {
   "/supply/contracts": ["supplyContracts"],
   "/supply/suppliers": ["suppliers"],
   "/config/cities": ["cities"],
+  "/config/usebox-prices": ["useBoxPriceRules", "cities"],
   "/config/customers": ["customers"],
   "/admin/users": ["users"],
   "/admin": ["settings"],

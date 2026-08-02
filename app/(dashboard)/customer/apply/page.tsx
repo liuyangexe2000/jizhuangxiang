@@ -22,9 +22,14 @@ import { useResource, revalidateResource } from "@/lib/api"
 import { useRole } from "@/lib/role-context"
 import { pushNotification } from "@/lib/domain/notify"
 import { CONTAINER_TYPES, DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
-import type { ContainerType, Notification, SystemUser, UseBoxOrder, Yard } from "@/lib/types"
-
-const priceMap: Record<string, number> = { "20GP": 2100, "40GP": 2980, "40HQ": 3280, "45HQ": 3600 }
+import type {
+  ContainerType,
+  Notification,
+  SystemUser,
+  UseBoxOrder,
+  UseBoxPriceRule,
+  Yard,
+} from "@/lib/types"
 
 export default function ApplyPage() {
   const { pickupCities, returnCities } = useDictionary()
@@ -32,6 +37,7 @@ export default function ApplyPage() {
   const { create: createNotif } = useResource<Notification>("notifications")
   const { data: users } = useResource<SystemUser>("users")
   const { data: yards } = useResource<Yard>("yards")
+  const { data: priceRules } = useResource<UseBoxPriceRule>("useBoxPriceRules")
   const { user, roleId } = useRole()
   const isProxy = roleId === "R01"
 
@@ -57,6 +63,7 @@ export default function ApplyPage() {
   const [quantity, setQuantity] = useState("")
   const [remark, setRemark] = useState("")
   const [quoted, setQuoted] = useState<number | null>(null)
+  const [quotedUnit, setQuotedUnit] = useState<number | null>(null)
 
   const valid =
     pickupCity &&
@@ -65,12 +72,29 @@ export default function ApplyPage() {
     Number(quantity) > 0 &&
     (!isProxy || !!customerOrg)
 
+  const enabledPriceRules = useMemo(
+    () => priceRules.filter((r) => r.enabled !== false),
+    [priceRules],
+  )
+
+  function findPriceRule() {
+    return (
+      enabledPriceRules.find(
+        (r) =>
+          r.pickupCity === pickupCity &&
+          r.returnCity === returnCity &&
+          r.containerType === containerType,
+      ) ?? null
+    )
+  }
+
   function assertCitiesHaveYards(): boolean {
     if (yards.length === 0) {
       toast.error("无法校验堆场数据", {
         description: "当前账号未能读取堆场列表，请联系管理员开通堆场只读权限后重试",
       })
       setQuoted(null)
+      setQuotedUnit(null)
       return false
     }
     if (pickupCity && !citiesWithYard.has(pickupCity)) {
@@ -78,6 +102,7 @@ export default function ApplyPage() {
         description: `提箱城市「${pickupCity}」暂无启用中的堆场（与库存台账无关）`,
       })
       setQuoted(null)
+      setQuotedUnit(null)
       return false
     }
     if (returnCity && !citiesWithYard.has(returnCity)) {
@@ -85,6 +110,7 @@ export default function ApplyPage() {
         description: `还箱城市「${returnCity}」暂无启用中的堆场（与库存台账无关）`,
       })
       setQuoted(null)
+      setQuotedUnit(null)
       return false
     }
     return true
@@ -100,14 +126,31 @@ export default function ApplyPage() {
       return
     }
     if (!assertCitiesHaveYards()) return
-    const unit = priceMap[containerType] ?? 3000
+    const rule = findPriceRule()
+    if (!rule) {
+      toast.error("该线路暂无启用价目", {
+        description: `${pickupCity} → ${returnCity} · ${containerType}，请联系箱管在「用箱价目」中配置`,
+      })
+      setQuoted(null)
+      setQuotedUnit(null)
+      return
+    }
+    const unit = Number(rule.unitPrice)
+    setQuotedUnit(unit)
     setQuoted(unit * Number(quantity))
     toast.success("系统已反馈用箱服务价格")
   }
 
   async function handleSubmit() {
-    if (quoted == null) return
+    if (quoted == null || quotedUnit == null) return
     if (!assertCitiesHaveYards()) return
+    const rule = findPriceRule()
+    if (!rule || Number(rule.unitPrice) !== quotedUnit) {
+      toast.error("价目已变更，请重新获取用箱价格")
+      setQuoted(null)
+      setQuotedUnit(null)
+      return
+    }
     if (isProxy && !customerOrg) {
       toast.error("代客申请须选择客户")
       return
@@ -116,7 +159,7 @@ export default function ApplyPage() {
     const pad = (n: number) => String(n).padStart(2, "0")
     const fmt = (d: Date) =>
       `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-    const unit = priceMap[containerType] ?? 3000
+    const unit = quotedUnit
     const customer = isProxy ? customerOrg : user?.org || user?.name || "客户"
     try {
       const created = await create({
@@ -316,7 +359,10 @@ export default function ApplyPage() {
                   <div className="space-y-2 text-sm">
                     <Row label="线路" value={`${pickupCity} → ${returnCity}`} />
                     <Row label="箱型 / 数量" value={`${containerType} × ${quantity}`} />
-                    <Row label="用箱单价" value={`¥${priceMap[containerType].toLocaleString()}`} />
+                    <Row
+                      label="用箱单价"
+                      value={`¥${(quotedUnit ?? 0).toLocaleString()}`}
+                    />
                     {isProxy && customerOrg ? <Row label="客户" value={customerOrg} /> : null}
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-primary/10 p-3">
