@@ -103,7 +103,7 @@ export default function UseBoxPricesPage() {
 
   function openAdd() {
     setEditing(null)
-    setForm(emptyForm)
+    setForm({ ...emptyForm, containerType: DEFAULT_CONTAINER_TYPE })
     setDialogOpen(true)
   }
 
@@ -377,11 +377,17 @@ export default function UseBoxPricesPage() {
             <div className="space-y-2">
               <Label>箱型 *</Label>
               <Select
-                value={form.containerType}
-                onValueChange={(v) => setForm((f) => ({ ...f, containerType: v as ContainerType }))}
+                key={editing?.id ?? "new"}
+                value={form.containerType || DEFAULT_CONTAINER_TYPE}
+                onValueChange={(v) =>
+                  setForm((f) => ({
+                    ...f,
+                    containerType: (v as ContainerType) || DEFAULT_CONTAINER_TYPE,
+                  }))
+                }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={DEFAULT_CONTAINER_TYPE} />
                 </SelectTrigger>
                 <SelectContent>
                   {CONTAINER_TYPES.map((t) => (

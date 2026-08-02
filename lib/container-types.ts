@@ -1,6 +1,7 @@
 import type { ContainerType } from "./types"
 
-export const CONTAINER_TYPES: ContainerType[] = ["20GP", "40GP", "40HQ", "45HQ"]
+/** 业务默认箱型 40HQ 置前，下拉与新增表单默认一致 */
+export const CONTAINER_TYPES: ContainerType[] = ["40HQ", "40GP", "20GP", "45HQ"]
 
 export const DEFAULT_CONTAINER_TYPE: ContainerType = "40HQ"
 
