@@ -76,6 +76,18 @@ function toInputTime(time: string) {
   return time.replace(" ", "T").slice(0, 16)
 }
 
+/** 解析放箱清单：一行一个箱号，兼容逗号/分号分隔 */
+function parseContainerNoLines(text: string): string[] {
+  return Array.from(
+    new Set(
+      text
+        .split(/[\n\r,;，；\t]+/)
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean),
+    ),
+  )
+}
+
 export default function DocumentsPage() {
   const { roleId } = useRole()
   const isYardAdmin = roleId === "R01" || roleId === "R00"
@@ -96,6 +108,9 @@ export default function DocumentsPage() {
   const [conditionCheck, setConditionCheck] = useState<"通过" | "异常">("通过")
   const [conditionNote, setConditionNote] = useState("")
   const [selectedContainerNos, setSelectedContainerNos] = useState<string[]>([])
+  const [containerPaste, setContainerPaste] = useState("")
+  const [containerSearch, setContainerSearch] = useState("")
+  const [pickupSelectTab, setPickupSelectTab] = useState<"paste" | "search">("paste")
   const [yardTarget, setYardTarget] = useState<UseBoxOrder | null>(null)
   const [pickupYard, setPickupYard] = useState("")
   const [returnYard, setReturnYard] = useState("")
@@ -185,17 +200,16 @@ export default function DocumentsPage() {
     setConditionTarget({ order, phase })
     setConditionCheck("通过")
     setConditionNote("")
+    setContainerSearch("")
+    setPickupSelectTab("paste")
     if (phase === "pickup") {
-      const yard = order.pickupYard || `${order.pickupCity}堆场`
-      const city = cityFromPlace(yard, yards) || order.pickupCity
-      const pool = listAvailableUseboxContainers(containers, {
-        yard,
-        city,
-        containerType: order.containerType,
-      })
-      setSelectedContainerNos(pool.slice(0, order.quantity).map((c) => c.containerNo))
+      // 现场录入：不预勾选，避免误放箱
+      setSelectedContainerNos([])
+      setContainerPaste("")
     } else {
-      setSelectedContainerNos(order.containerNos || [])
+      const nos = order.containerNos || []
+      setSelectedContainerNos(nos)
+      setContainerPaste(nos.join("\n"))
     }
   }
 
@@ -211,14 +225,77 @@ export default function DocumentsPage() {
     })
   }, [conditionTarget, containers, yards])
 
+  const pickupAvailSet = useMemo(
+    () => new Set(pickupCandidateContainers.map((c) => c.containerNo.toUpperCase())),
+    [pickupCandidateContainers],
+  )
+
+  const filteredPickupCandidates = useMemo(() => {
+    const q = containerSearch.trim().toUpperCase()
+    if (!q) return pickupCandidateContainers
+    return pickupCandidateContainers.filter(
+      (c) =>
+        c.containerNo.toUpperCase().includes(q) ||
+        c.currentYard?.toUpperCase().includes(q) ||
+        c.ownership?.toUpperCase().includes(q),
+    )
+  }, [pickupCandidateContainers, containerSearch])
+
+  const pickupInvalidNos = useMemo(
+    () => selectedContainerNos.filter((no) => !pickupAvailSet.has(no.toUpperCase())),
+    [selectedContainerNos, pickupAvailSet],
+  )
+
+  function applyPickupContainerNos(nos: string[]) {
+    if (!conditionTarget) return
+    const qty = conditionTarget.order.quantity
+    const next = nos.slice(0, qty)
+    setSelectedContainerNos(next)
+    setContainerPaste(next.join("\n"))
+  }
+
+  function onContainerPasteChange(text: string) {
+    setContainerPaste(text)
+    if (!conditionTarget) return
+    const qty = conditionTarget.order.quantity
+    setSelectedContainerNos(parseContainerNoLines(text).slice(0, qty))
+  }
+
   function togglePickupContainer(no: string) {
     if (!conditionTarget) return
     const qty = conditionTarget.order.quantity
+    const upper = no.toUpperCase()
     setSelectedContainerNos((prev) => {
-      if (prev.includes(no)) return prev.filter((x) => x !== no)
-      if (prev.length >= qty) return prev
-      return [...prev, no]
+      const exists = prev.some((x) => x.toUpperCase() === upper)
+      const next = exists
+        ? prev.filter((x) => x.toUpperCase() !== upper)
+        : prev.length >= qty
+          ? prev
+          : [...prev, no]
+      setContainerPaste(next.join("\n"))
+      return next
     })
+  }
+
+  async function onPickContainerListFile(file: File | null) {
+    if (!file) return
+    const name = file.name.toLowerCase()
+    if (!name.endsWith(".txt") && !name.endsWith(".csv") && !name.endsWith(".text")) {
+      toast.error("请上传 txt 或 csv 清单（一行一个箱号）")
+      return
+    }
+    if (file.size > 200 * 1024) {
+      toast.error("清单文件过大（上限 200KB）")
+      return
+    }
+    try {
+      const text = await file.text()
+      onContainerPasteChange(text)
+      setPickupSelectTab("paste")
+      toast.success("已导入箱号清单")
+    } catch {
+      toast.error("读取清单失败")
+    }
   }
 
   function openStuffingDialog(order: UseBoxOrder) {
@@ -390,7 +467,13 @@ export default function DocumentsPage() {
     const { order, phase } = conditionTarget
     if (phase === "pickup" && conditionCheck === "通过") {
       if (selectedContainerNos.length !== order.quantity) {
-        toast.error(`请选择恰好 ${order.quantity} 个真实箱号`)
+        toast.error(`请录入恰好 ${order.quantity} 个真实箱号（当前 ${selectedContainerNos.length} 个）`)
+        return
+      }
+      if (pickupInvalidNos.length > 0) {
+        toast.error("存在不可用箱号", {
+          description: pickupInvalidNos.slice(0, 5).join("、") + (pickupInvalidNos.length > 5 ? "…" : ""),
+        })
         return
       }
     }
@@ -632,7 +715,7 @@ export default function DocumentsPage() {
       </Tabs>
 
       <Dialog open={!!conditionTarget} onOpenChange={(open) => !open && setConditionTarget(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{conditionTarget?.phase === "pickup" ? "现场确认放箱" : "现场确认收箱"}</DialogTitle>
             <DialogDescription>仅堆场、代管或管理角色可执行现场确认。</DialogDescription>
@@ -645,30 +728,111 @@ export default function DocumentsPage() {
             </div>
             {conditionTarget?.phase === "pickup" && conditionCheck === "通过" && (
               <div className="space-y-2">
-                <Label>
-                  选择放箱箱号（须选 {conditionTarget.order.quantity} 个，已选 {selectedContainerNos.length}）
-                </Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>
+                    放箱箱号（须录 {conditionTarget.order.quantity} 个，已录 {selectedContainerNos.length}）
+                  </Label>
+                  {selectedContainerNos.length > 0 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => applyPickupContainerNos([])}
+                    >
+                      清空
+                    </Button>
+                  ) : null}
+                </div>
                 {pickupCandidateContainers.length === 0 ? (
                   <p className="text-sm text-destructive">
                     提箱堆场「{conditionTarget.order.pickupYard || `${conditionTarget.order.pickupCity}堆场`}」暂无在场的{" "}
                     {conditionTarget.order.containerType} 可用箱，请先补库存主档后再放箱。
                   </p>
                 ) : (
-                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-2">
-                    {pickupCandidateContainers.map((c) => (
-                      <label key={c.containerNo} className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={selectedContainerNos.includes(c.containerNo)}
-                          onCheckedChange={() => togglePickupContainer(c.containerNo)}
-                        />
-                        <span className="font-mono text-xs">{c.containerNo}</span>
-                        <span className="text-muted-foreground">
-                          {c.currentYard} · {c.ownership}
+                  <Tabs
+                    value={pickupSelectTab}
+                    onValueChange={(v) => setPickupSelectTab(v as "paste" | "search")}
+                  >
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="paste">粘贴 / 上传清单</TabsTrigger>
+                      <TabsTrigger value="search">搜索勾选</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="paste" className="space-y-2">
+                      <Textarea
+                        value={containerPaste}
+                        onChange={(e) => onContainerPasteChange(e.target.value)}
+                        placeholder={"一行一个箱号，也可逗号分隔\n例如：\nMSCU1234567\nTGHU7654321"}
+                        className="min-h-28 font-mono text-xs"
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted">
+                          <Upload className="size-3.5" />
+                          上传清单
+                          <input
+                            type="file"
+                            accept=".txt,.csv,.text,text/plain,text/csv"
+                            className="hidden"
+                            onChange={(e) => {
+                              void onPickContainerListFile(e.target.files?.[0] ?? null)
+                              e.target.value = ""
+                            }}
+                          />
+                        </label>
+                        <span className="text-xs text-muted-foreground">
+                          支持 txt/csv；堆场可用 {pickupCandidateContainers.length} 箱
                         </span>
-                      </label>
-                    ))}
-                  </div>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="search" className="space-y-2">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={containerSearch}
+                          onChange={(e) => setContainerSearch(e.target.value)}
+                          placeholder="搜索箱号 / 堆场"
+                          className="pl-8"
+                        />
+                      </div>
+                      <div className="max-h-44 space-y-2 overflow-y-auto rounded-md border p-2">
+                        {filteredPickupCandidates.length === 0 ? (
+                          <p className="py-4 text-center text-xs text-muted-foreground">无匹配可用箱</p>
+                        ) : (
+                          filteredPickupCandidates.map((c) => {
+                            const checked = selectedContainerNos.some(
+                              (x) => x.toUpperCase() === c.containerNo.toUpperCase(),
+                            )
+                            return (
+                              <label key={c.containerNo} className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() => togglePickupContainer(c.containerNo)}
+                                />
+                                <span className="font-mono text-xs">{c.containerNo}</span>
+                                <span className="text-muted-foreground">
+                                  {c.currentYard} · {c.ownership}
+                                </span>
+                              </label>
+                            )
+                          })
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 )}
+                {selectedContainerNos.length > 0 ? (
+                  <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                    <div className="font-medium text-foreground">
+                      已确认 {selectedContainerNos.length}/{conditionTarget.order.quantity}：
+                      {selectedContainerNos.join("、")}
+                    </div>
+                    {pickupInvalidNos.length > 0 ? (
+                      <div className="mt-1 text-destructive">
+                        不可用（非本堆场在场同箱型）：{pickupInvalidNos.join("、")}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             )}
             {conditionTarget?.phase === "return" && (conditionTarget.order.containerNos?.length ?? 0) > 0 && (
