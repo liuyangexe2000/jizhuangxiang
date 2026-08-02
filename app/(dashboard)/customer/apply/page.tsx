@@ -66,16 +66,23 @@ export default function ApplyPage() {
     (!isProxy || !!customerOrg)
 
   function assertCitiesHaveYards(): boolean {
+    if (yards.length === 0) {
+      toast.error("无法校验堆场数据", {
+        description: "当前账号未能读取堆场列表，请联系管理员开通堆场只读权限后重试",
+      })
+      setQuoted(null)
+      return false
+    }
     if (pickupCity && !citiesWithYard.has(pickupCity)) {
       toast.error("该城市没有堆场，不能申请", {
-        description: `提箱城市「${pickupCity}」暂无可用堆场`,
+        description: `提箱城市「${pickupCity}」暂无启用中的堆场（与库存台账无关）`,
       })
       setQuoted(null)
       return false
     }
     if (returnCity && !citiesWithYard.has(returnCity)) {
       toast.error("该城市没有堆场，不能申请", {
-        description: `还箱城市「${returnCity}」暂无可用堆场`,
+        description: `还箱城市「${returnCity}」暂无启用中的堆场（与库存台账无关）`,
       })
       setQuoted(null)
       return false
