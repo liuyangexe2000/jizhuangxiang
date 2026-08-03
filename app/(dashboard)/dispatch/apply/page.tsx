@@ -142,7 +142,7 @@ export default function DispatchApplyPage() {
       return
     }
     if (mode === "submit" && form.pickupPlace && rules.length === 0) {
-      toast.error("该提箱堆场暂无启用价目方案，请先在调运价目中配置")
+      toast.error("该提箱堆场暂无启用价目方案，请先在「基础配置 → 调运价目」中配置")
       return
     }
     const d = new Date()
@@ -273,7 +273,7 @@ export default function DispatchApplyPage() {
                 </p>
               ) : rules.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-                  该提箱堆场暂无启用价目方案，请联系管理员在调运价目中配置
+                  该提箱堆场暂无启用价目方案，请到「基础配置 → 调运价目」维护
                 </p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

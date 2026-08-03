@@ -34,6 +34,7 @@ const PAGE_RESOURCES: Record<string, ResourceKey[]> = {
   "/supply/suppliers": ["suppliers"],
   "/config/cities": ["cities"],
   "/config/usebox-prices": ["useBoxPriceRules", "cities"],
+  "/config/dispatch-prices": ["dispatchPriceRules", "yards"],
   "/config/agents": ["proxyCompanies"],
   "/config/customers": ["customers"],
   "/yard/yards": ["yards", "inventory", "proxyCompanies", "cities"],

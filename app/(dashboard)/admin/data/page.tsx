@@ -105,6 +105,22 @@ const datasets: DatasetDef[] = [
     ],
   },
   {
+    id: "dispatchPriceRules",
+    resource: "dispatchPriceRules",
+    name: "调运价目",
+    desc: "M02 提箱堆场+还箱范围单价方案",
+    idKey: "id",
+    fields: [
+      { key: "pickupPlace", label: "提箱堆场" },
+      { key: "scope", label: "还箱范围" },
+      { key: "zone", label: "距离带" },
+      { key: "unitPrice", label: "单价" },
+      { key: "suggestTerm", label: "建议用箱期" },
+      { key: "overdue", label: "超期标准" },
+      { key: "enabled", label: "启用" },
+    ],
+  },
+  {
     id: "dispatch",
     resource: "dispatch",
     name: "调运订单",
