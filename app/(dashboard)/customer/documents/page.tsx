@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
   CalendarClock,
@@ -133,6 +133,8 @@ export default function DocumentsPage() {
   const [returnYard, setReturnYard] = useState("")
   const [printTarget, setPrintTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [printTemplateId, setPrintTemplateId] = useState("")
+  const [downloadTarget, setDownloadTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
+  const downloadRootRef = useRef<HTMLDivElement>(null)
   const [bookingTarget, setBookingTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [bookingTime, setBookingTime] = useState(toInputTime(nowLocalStr()))
   const [stuffingTarget, setStuffingTarget] = useState<UseBoxOrder | null>(null)
@@ -681,6 +683,30 @@ export default function DocumentsPage() {
     activePrintTemplates.find((t) => t.id === printTemplateId) ||
     (printTarget?.phase === "return" ? returnTemplate : pickupTemplate) ||
     activePrintTemplates[0]
+  const activeDownloadTemplate =
+    downloadTarget?.phase === "return" ? returnTemplate : pickupTemplate
+
+  useEffect(() => {
+    if (!downloadTarget) return
+    const title = `${downloadTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${downloadTarget.order.orderNo}`
+    let cancelled = false
+    const run = async () => {
+      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+      if (cancelled) return
+      const ok = downloadPrintArea({
+        root: downloadRootRef.current,
+        title,
+        filename: title,
+      })
+      if (ok) toast.success("已开始下载电子版")
+      else toast.error("下载失败，请稍后重试")
+      setDownloadTarget(null)
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [downloadTarget])
 
   const attachmentCount = (order: UseBoxOrder) => attachments.filter((a) => a.refNo === order.orderNo).length
 
@@ -801,6 +827,7 @@ export default function DocumentsPage() {
             }}
             onYard={openYardDialog}
             onPrint={(o) => { setPrintTemplateId(pickupTemplate?.id || ""); setPrintTarget({ order: o, phase: "pickup" }); }}
+            onDownload={(o) => setDownloadTarget({ order: o, phase: "pickup" })}
             onStuffing={openStuffingDialog}
             onException={openExceptionDialog}
           />
@@ -821,6 +848,7 @@ export default function DocumentsPage() {
             }}
             onYard={openYardDialog}
             onPrint={(o) => { setPrintTemplateId(returnTemplate?.id || ""); setPrintTarget({ order: o, phase: "return" }); }}
+            onDownload={(o) => setDownloadTarget({ order: o, phase: "return" })}
             onReturnProof={openReturnProofDialog}
             overdue={overdueProofs}
           />
@@ -1190,6 +1218,20 @@ export default function DocumentsPage() {
         </DialogContent>
       </Dialog>
 
+      {downloadTarget && (
+        <div
+          ref={downloadRootRef}
+          aria-hidden
+          className="pointer-events-none fixed top-0 left-[-10000px] w-[760px] opacity-0"
+        >
+          {downloadTarget.phase === "pickup" ? (
+            <OrderPickupDocument order={downloadTarget.order} template={activeDownloadTemplate} />
+          ) : (
+            <OrderReturnDocument order={downloadTarget.order} template={activeDownloadTemplate} />
+          )}
+        </div>
+      )}
+
       <Dialog open={!!printTarget} onOpenChange={(open) => !open && setPrintTarget(null)}>
         <DialogContent
           showCloseButton={false}
@@ -1296,6 +1338,7 @@ function WorkTable(props: {
   onBook: (o: UseBoxOrder) => void
   onYard: (o: UseBoxOrder) => void
   onPrint: (o: UseBoxOrder) => void
+  onDownload: (o: UseBoxOrder) => void
   onStuffing?: (o: UseBoxOrder) => void
   onException?: (o: UseBoxOrder) => void
   onReturnProof?: (o: UseBoxOrder) => void
@@ -1342,6 +1385,16 @@ function WorkTable(props: {
                       <Button size="sm" variant="outline" disabled={pickup && !shouldReleaseDoc(order)} onClick={() => props.onPrint(order)}>
                         <Printer className="mr-1 size-3" />
                         打印
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={pickup && !shouldReleaseDoc(order)}
+                        onClick={() => props.onDownload(order)}
+                        title="下载提箱单/还箱单电子版"
+                      >
+                        <Download className="mr-1 size-3" />
+                        下载
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger render={<Button size="sm" variant="outline" className="gap-1 px-2" />}>
