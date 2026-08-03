@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { CitySearchSelect } from "@/components/city-search-select"
+import { ProxyCompanySearchSelect } from "@/components/proxy-company-search-select"
 import {
   Select,
   SelectContent,
@@ -62,13 +63,12 @@ const emptyForm: YardForm = {
   factoryCode: "",
 }
 
-const NONE_PROXY = "__none__"
-
 export default function YardsPage() {
   const { cities } = useDictionary()
   const { data: rows, create, update } = useResource<Yard>("yards")
   const { data: inventory, create: createInventory } = useResource<InventoryRow>("inventory")
-  const { data: proxyCompanies } = useResource<ProxyCompany>("proxyCompanies")
+  const { data: proxyCompanies, create: createProxy, mutate: mutateProxies } =
+    useResource<ProxyCompany>("proxyCompanies")
   const [keyword, setKeyword] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Yard | null>(null)
@@ -80,9 +80,16 @@ export default function YardsPage() {
     [proxyCompanies],
   )
 
+  const proxyOptions = useMemo(() => {
+    const list = [...enabledProxies]
+    const sel = proxyCompanies.find((p) => p.id === form.proxyCompanyId)
+    if (sel && !list.some((p) => p.id === sel.id)) list.unshift(sel)
+    return list
+  }, [enabledProxies, proxyCompanies, form.proxyCompanyId])
+
   const selectedProxy = useMemo(
-    () => enabledProxies.find((p) => p.id === form.proxyCompanyId) ?? null,
-    [enabledProxies, form.proxyCompanyId],
+    () => proxyCompanies.find((p) => p.id === form.proxyCompanyId) ?? null,
+    [proxyCompanies, form.proxyCompanyId],
   )
 
   const occupancyByYard = useMemo(() => {
@@ -489,34 +496,30 @@ export default function YardsPage() {
                 placeholder="选择城市"
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label>代管公司</Label>
-              <Select
-                value={form.proxyCompanyId || NONE_PROXY}
-                onValueChange={(v) =>
-                  setForm((f) => ({
-                    ...f,
-                    proxyCompanyId: !v || v === NONE_PROXY ? "" : v,
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择代管公司（可选）" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_PROXY}>不指定</SelectItem>
-                  {enabledProxies.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {enabledProxies.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  暂无启用代管公司，请先在「基础配置 · 代管公司」维护
-                </p>
-              ) : null}
+              <ProxyCompanySearchSelect
+                value={form.proxyCompanyId}
+                onValueChange={(id) => setForm((f) => ({ ...f, proxyCompanyId: id }))}
+                companies={proxyOptions}
+                placeholder="搜索或选择代管公司"
+                onCreate={async (name) => {
+                  const created = await createProxy({
+                    name,
+                    contactUser: "",
+                    phone: "",
+                    email: "",
+                    enabled: true,
+                    __auditAction: "新增",
+                    __auditDetail: `堆场表单快捷新增代管公司「${name}」`,
+                  })
+                  await mutateProxies()
+                  return created
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                支持搜索；输入新名称可直接新增代管公司
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="yard-capacity">容量（TEU）*</Label>
