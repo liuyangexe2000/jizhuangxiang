@@ -814,7 +814,7 @@ export default function AdminDataPage() {
               <TabsTrigger
                 key={g}
                 value={g}
-                className="h-8 flex-none items-center justify-center rounded-lg px-2.5 py-0 text-xs leading-none after:hidden data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
+                className="h-8 flex-none items-center justify-center rounded-lg px-2.5 py-0 text-xs leading-none text-foreground/70 after:hidden hover:!text-amber-200 data-active:!bg-primary data-active:!text-white data-active:shadow-sm data-active:hover:!text-white dark:hover:!text-amber-200 dark:data-active:!text-white"
               >
                 {g.replace(/^M0(\d) /, "M0$1 · ")}
               </TabsTrigger>
@@ -828,7 +828,7 @@ export default function AdminDataPage() {
                 key={d.id}
                 value={d.id}
                 title={d.desc}
-                className="h-8 flex-none items-center justify-center rounded-lg px-3 py-0 text-sm leading-none after:hidden data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
+                className="h-8 flex-none items-center justify-center rounded-lg px-3 py-0 text-sm leading-none text-foreground/70 after:hidden hover:!text-amber-200 data-active:!bg-primary data-active:!text-white data-active:shadow-sm data-active:hover:!text-white dark:hover:!text-amber-200 dark:data-active:!text-white"
               >
                 {d.name}
               </TabsTrigger>
