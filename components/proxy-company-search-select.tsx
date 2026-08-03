@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { findProxyCompanyByName, normalizeProxyCompanyName } from "@/lib/proxy-company"
 import type { ProxyCompany } from "@/lib/types"
 
 export interface ProxyCompanySearchSelectProps {
@@ -14,6 +15,8 @@ export interface ProxyCompanySearchSelectProps {
   value: string
   onValueChange: (id: string) => void
   companies: ProxyCompany[]
+  /** 重名校验范围（含停用）；默认用 companies */
+  allCompanies?: ProxyCompany[]
   /** 录入不存在的名称时创建；返回新建公司（含 id） */
   onCreate?: (name: string) => Promise<ProxyCompany>
   placeholder?: string
@@ -28,6 +31,7 @@ export function ProxyCompanySearchSelect({
   value,
   onValueChange,
   companies,
+  allCompanies,
   onCreate,
   placeholder = "选择代管公司",
   className,
@@ -56,13 +60,14 @@ export function ProxyCompanySearchSelect({
     )
   }, [companies, query])
 
-  const exactMatch = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return null
-    return companies.find((c) => c.name.trim().toLowerCase() === q) ?? null
-  }, [companies, query])
+  const namePool = allCompanies ?? companies
 
-  const canCreate = Boolean(onCreate && query.trim() && !exactMatch)
+  const exactMatch = useMemo(() => {
+    if (!query.trim()) return null
+    return findProxyCompanyByName(namePool, query) ?? null
+  }, [namePool, query])
+
+  const canCreate = Boolean(onCreate && normalizeProxyCompanyName(query) && !exactMatch)
 
   useEffect(() => {
     if (!open) {
@@ -79,8 +84,16 @@ export function ProxyCompanySearchSelect({
   }
 
   async function handleCreate() {
-    if (!onCreate || !canCreate || creating) return
-    const name = query.trim()
+    if (!onCreate || creating) return
+    const name = query.trim().replace(/\s+/g, " ")
+    if (!name) return
+    const dup = findProxyCompanyByName(namePool, name)
+    if (dup) {
+      toast.error(`代管公司「${dup.name}」已存在，请直接选择`)
+      handleSelect(dup.id)
+      return
+    }
+    if (!canCreate) return
     setCreating(true)
     try {
       const created = await onCreate(name)
@@ -167,6 +180,23 @@ export function ProxyCompanySearchSelect({
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">无匹配公司</p>
           ) : null}
         </div>
+        {exactMatch && normalizeProxyCompanyName(query) ? (
+          <div className="border-t p-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-auto w-full justify-start gap-2 whitespace-normal py-2 text-left"
+              onClick={() => handleSelect(exactMatch.id)}
+            >
+              <CheckIcon className="size-4 shrink-0" />
+              <span>
+                「<span className="font-medium">{exactMatch.name}</span>」已存在，点击选择
+                {exactMatch.enabled === false ? "（已停用）" : ""}
+              </span>
+            </Button>
+          </div>
+        ) : null}
         {canCreate ? (
           <div className="border-t p-2">
             <Button

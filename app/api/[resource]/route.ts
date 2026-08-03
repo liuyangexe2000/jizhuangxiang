@@ -96,6 +96,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
     }
   }
 
+  if (resource === "proxyCompanies") {
+    const name = typeof payload.name === "string" ? payload.name.trim().replace(/\s+/g, " ") : ""
+    if (!name) {
+      return NextResponse.json({ error: "请填写代管公司名称" }, { status: 400 })
+    }
+    payload.name = name
+    const { findProxyCompanyByName } = await import("@/lib/proxy-company")
+    const existing = await list("proxyCompanies")
+    const dup = findProxyCompanyByName(existing as { id: string; name: string }[], name)
+    if (dup) {
+      return NextResponse.json({ error: `代管公司「${dup.name}」已存在` }, { status: 409 })
+    }
+  }
+
   const stamped = stampCreatePayload(resource, payload, session)
   // 门户手工提交（含箱管代客）固定为「订舱后新增」；「订舱勾选」仅由订舱平台同步写入
   if (resource === "orders") {

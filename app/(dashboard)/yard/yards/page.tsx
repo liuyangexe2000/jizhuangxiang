@@ -39,6 +39,7 @@ import {
 import { useResource } from "@/lib/api"
 import { useDictionary } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
+import { findProxyCompanyByName } from "@/lib/proxy-company"
 import type { InventoryRow, ProxyCompany, Yard } from "@/lib/types"
 import { Warehouse, MapPin, Mail, Phone, PackageOpen, Pencil, Plus } from "lucide-react"
 import { toast } from "sonner"
@@ -502,10 +503,15 @@ export default function YardsPage() {
                 value={form.proxyCompanyId}
                 onValueChange={(id) => setForm((f) => ({ ...f, proxyCompanyId: id }))}
                 companies={proxyOptions}
+                allCompanies={proxyCompanies}
                 placeholder="搜索或选择代管公司"
                 onCreate={async (name) => {
+                  const dup = findProxyCompanyByName(proxyCompanies, name)
+                  if (dup) {
+                    throw new Error(`代管公司「${dup.name}」已存在，请直接选择`)
+                  }
                   const created = await createProxy({
-                    name,
+                    name: name.trim().replace(/\s+/g, " "),
                     contactUser: "",
                     phone: "",
                     email: "",

@@ -101,6 +101,24 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     patch.passwordHash = hashPassword(password)
   }
 
+  if (resource === "proxyCompanies" && typeof patch.name === "string") {
+    const name = patch.name.trim().replace(/\s+/g, " ")
+    if (!name) {
+      return NextResponse.json({ error: "请填写代管公司名称" }, { status: 400 })
+    }
+    patch.name = name
+    const { findProxyCompanyByName } = await import("@/lib/proxy-company")
+    const all = await list("proxyCompanies")
+    const dup = findProxyCompanyByName(
+      all as { id: string; name: string }[],
+      name,
+      decodeURIComponent(id),
+    )
+    if (dup) {
+      return NextResponse.json({ error: `代管公司「${dup.name}」已存在` }, { status: 409 })
+    }
+  }
+
   // 用箱订单：客户不可自行确认，也不可写堆场/后台备注/放行提箱单/改价
   if (resource === "orders" && session.roleId === "R03") {
     if (patch.status === "已确认") {

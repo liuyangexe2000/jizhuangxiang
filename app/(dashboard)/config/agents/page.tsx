@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog"
 import { useResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
+import { findProxyCompanyByName } from "@/lib/proxy-company"
 import type { ProxyCompany } from "@/lib/types"
 
 type FormState = {
@@ -100,16 +101,14 @@ export default function ProxyAgentsPage() {
   }
 
   function handleSave() {
-    const name = form.name.trim()
+    const name = form.name.trim().replace(/\s+/g, " ")
     if (!name) {
       toast.error("请填写代管公司名称")
       return
     }
-    const dup = rows.find(
-      (r) => r.name.trim().toLowerCase() === name.toLowerCase() && r.id !== editing?.id,
-    )
+    const dup = findProxyCompanyByName(rows, name, editing?.id)
     if (dup) {
-      toast.error(`代管公司「${name}」已存在`)
+      toast.error(`代管公司「${dup.name}」已存在`)
       return
     }
     void (async () => {
