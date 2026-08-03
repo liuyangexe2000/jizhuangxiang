@@ -27,32 +27,56 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { CitySearchSelect } from "@/components/city-search-select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useResource } from "@/lib/api"
+import { useDictionary } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
 import type { InventoryRow, Yard } from "@/lib/types"
-import { Warehouse, MapPin, Mail, Phone, PackageOpen, Pencil } from "lucide-react"
+import { Warehouse, MapPin, Mail, Phone, PackageOpen, Pencil, Plus } from "lucide-react"
 import { toast } from "sonner"
 
-type EditForm = {
+type YardForm = {
   name: string
+  region: "境内" | "境外"
+  city: string
+  agent: string
   capacity: string
   phone: string
   email: string
   address: string
+  contactUser: string
+  factoryCode: string
+}
+
+const emptyForm: YardForm = {
+  name: "",
+  region: "境内",
+  city: "",
+  agent: "",
+  capacity: "",
+  phone: "",
+  email: "",
+  address: "",
+  contactUser: "",
+  factoryCode: "",
 }
 
 export default function YardsPage() {
-  const { data: rows, update } = useResource<Yard>("yards")
-  const { data: inventory } = useResource<InventoryRow>("inventory")
+  const { cities } = useDictionary()
+  const { data: rows, create, update } = useResource<Yard>("yards")
+  const { data: inventory, create: createInventory } = useResource<InventoryRow>("inventory")
   const [keyword, setKeyword] = useState("")
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Yard | null>(null)
-  const [form, setForm] = useState<EditForm>({
-    name: "",
-    capacity: "",
-    phone: "",
-    email: "",
-    address: "",
-  })
+  const [form, setForm] = useState<YardForm>(emptyForm)
+  const isAdd = dialogOpen && !editing
 
   const occupancyByYard = useMemo(() => {
     const map = new Map<string, number>()
@@ -107,40 +131,150 @@ export default function YardsPage() {
     }
   }
 
+  function openAdd() {
+    setEditing(null)
+    setForm(emptyForm)
+    setDialogOpen(true)
+  }
+
   function openEdit(y: Yard) {
     setEditing(y)
     setForm({
       name: y.name,
+      region: y.region === "境外" ? "境外" : "境内",
+      city: y.city,
+      agent: y.agent,
       capacity: String(y.capacity),
       phone: y.phone,
       email: y.email,
       address: y.address,
+      contactUser: y.contactUser,
+      factoryCode: y.factoryCode,
     })
+    setDialogOpen(true)
+  }
+
+  function closeDialog() {
+    setDialogOpen(false)
+    setEditing(null)
+  }
+
+  function onCityChange(cityName: string) {
+    const hit = cities.find((c) => c.name === cityName)
+    setForm((f) => ({
+      ...f,
+      city: cityName,
+      region: hit?.region === "境外" ? "境外" : f.region,
+    }))
   }
 
   async function handleSave() {
-    if (!editing) return
     const capacity = Number(form.capacity)
-    if (!form.name.trim()) {
+    const name = form.name.trim()
+    if (!name) {
       toast.error("请填写堆场名称")
+      return
+    }
+    if (!form.city.trim()) {
+      toast.error("请选择堆场城市")
       return
     }
     if (!Number.isFinite(capacity) || capacity < 0) {
       toast.error("容量须为非负数字")
       return
     }
+    const dup = rows.find(
+      (y) => y.name.trim() === name && y.id !== editing?.id && !y.deleted,
+    )
+    if (dup) {
+      toast.error(`堆场名称「${name}」已存在`)
+      return
+    }
     try {
-      await update(editing.id, {
-        name: form.name.trim(),
-        capacity,
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        address: form.address.trim(),
-        __auditAction: "修改",
-        __auditDetail: `更新堆场「${form.name.trim()}」`,
-      })
-      toast.success(`已更新堆场「${form.name.trim()}」`)
-      setEditing(null)
+      if (editing) {
+        await update(editing.id, {
+          name,
+          region: form.region,
+          city: form.city.trim(),
+          agent: form.agent.trim(),
+          capacity,
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          address: form.address.trim(),
+          contactUser: form.contactUser.trim(),
+          factoryCode: form.factoryCode.trim(),
+          __auditAction: "修改",
+          __auditDetail: `更新堆场「${name}」`,
+        })
+        toast.success(`已更新堆场「${name}」`)
+      } else {
+        const stamp = new Date()
+        const pad = (n: number) => String(n).padStart(2, "0")
+        const factoryNumber = `YF${stamp.getFullYear()}${pad(stamp.getMonth() + 1)}${pad(stamp.getDate())}${String(stamp.getTime()).slice(-6)}`
+        await create({
+          legacyId: 0,
+          factoryId: "",
+          factoryNumber,
+          factoryCode: form.factoryCode.trim(),
+          name,
+          region: form.region,
+          city: form.city.trim(),
+          regionId: null,
+          agent: form.agent.trim(),
+          proxyCompanyId: "",
+          address: form.address.trim(),
+          phone: form.phone.trim(),
+          contactUser: form.contactUser.trim(),
+          email: form.email.trim(),
+          creditCode: "",
+          currencyId: null,
+          dailyExpenses: null,
+          freeDuration: null,
+          boardingFee: null,
+          alightingFee: null,
+          secondaryRemovalFee: null,
+          hasSeal: false,
+          capacity,
+          current: 0,
+          enabled: true,
+          deleted: false,
+          version: null,
+          remark: "",
+          receiveRemark: "",
+          remarkReturnOrder: "",
+          createBy: "",
+          createName: "",
+          createTime: "",
+          updateBy: "",
+          updateName: "",
+          updateTime: "",
+          __auditAction: "新增",
+          __auditDetail: `新增堆场「${name}」`,
+        })
+        const hasInv = inventory.some(
+          (inv) => inv.yard === name && inv.city === form.city.trim(),
+        )
+        if (!hasInv) {
+          try {
+            await createInventory({
+              region: form.region,
+              city: form.city.trim(),
+              yard: name,
+              agent: form.agent.trim(),
+              onSite: 0,
+              available: 0,
+              reserved: 0,
+              incoming: 0,
+              __auditAction: "新增",
+              __auditDetail: `新建堆场同步库存台账「${name}」`,
+            })
+          } catch {
+            // 堆场已创建；库存行失败不阻断
+          }
+        }
+        toast.success(`已新增堆场「${name}」`)
+      }
+      closeDialog()
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -151,6 +285,12 @@ export default function YardsPage() {
       <PageHeader
         title="堆场信息维护"
         description="M04-F03 境内外堆场动态维护 — 含老系统原 id（legacyId）便于跨系统匹配；联系方式、容量、代管公司与启用状态"
+        actions={
+          <Button size="sm" className="gap-1.5" onClick={openAdd}>
+            <Plus className="size-4" />
+            新增堆场
+          </Button>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -161,17 +301,23 @@ export default function YardsPage() {
       </div>
 
       <Card>
-        <CardHeader className="gap-4">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <CardTitle>堆场列表</CardTitle>
             <CardDescription>共 {rows.length} 个境内外堆场 · 在场量 = 库存 onSite 汇总</CardDescription>
           </div>
-          <Input
-            placeholder="搜索堆场 / 原id / 编码 / 城市 / 代管"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            className="sm:max-w-xs"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              placeholder="搜索堆场 / 原id / 编码 / 城市 / 代管"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              className="sm:max-w-xs"
+            />
+            <Button size="sm" className="gap-1.5" onClick={openAdd}>
+              <Plus className="size-4" />
+              新增堆场
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -275,15 +421,17 @@ export default function YardsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => !o && closeDialog()}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>编辑堆场</DialogTitle>
+            <DialogTitle>{isAdd ? "新增堆场" : "编辑堆场"}</DialogTitle>
             <DialogDescription>
-              修改名称、容量与联系信息。原 id / 编码仅作跨系统匹配记录，不可改。在场量由库存汇总。
+              {isAdd
+                ? "填写堆场名称、城市与容量等信息，保存后默认启用，并同步空库存台账行。"
+                : "修改名称、城市、容量与联系信息。原系统 id / 编号仅作跨系统匹配记录。"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+          <div className="grid max-h-[65vh] gap-4 overflow-y-auto py-2">
             {editing && (
               <div className="grid grid-cols-2 gap-3 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
                 <div>原系统 id：<span className="font-mono text-foreground">{editing.legacyId}</span></div>
@@ -293,21 +441,77 @@ export default function YardsPage() {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="yard-name">堆场名称</Label>
+              <Label htmlFor="yard-name">堆场名称 *</Label>
               <Input
                 id="yard-name"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="例如：陆港堆场"
               />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>区域 *</Label>
+                <Select
+                  value={form.region}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, region: v === "境外" ? "境外" : "境内" }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="境内">境内</SelectItem>
+                    <SelectItem value="境外">境外</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>城市 *</Label>
+                <CitySearchSelect
+                  value={form.city}
+                  onValueChange={onCityChange}
+                  cities={cities.filter((c) => c.enabled)}
+                  placeholder="选择城市"
+                />
+              </div>
+            </div>
             <div className="space-y-1.5">
-              <Label htmlFor="yard-capacity">容量（TEU）</Label>
+              <Label htmlFor="yard-agent">代管公司</Label>
               <Input
-                id="yard-capacity"
-                type="number"
-                min={0}
-                value={form.capacity}
-                onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
+                id="yard-agent"
+                value={form.agent}
+                onChange={(e) => setForm((f) => ({ ...f, agent: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="yard-capacity">容量（TEU）*</Label>
+                <Input
+                  id="yard-capacity"
+                  type="number"
+                  min={0}
+                  value={form.capacity}
+                  onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="yard-code">堆场编码</Label>
+                <Input
+                  id="yard-code"
+                  value={form.factoryCode}
+                  onChange={(e) => setForm((f) => ({ ...f, factoryCode: e.target.value }))}
+                  placeholder="可选"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="yard-contact">联系人</Label>
+              <Input
+                id="yard-contact"
+                value={form.contactUser}
+                onChange={(e) => setForm((f) => ({ ...f, contactUser: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
@@ -342,8 +546,8 @@ export default function YardsPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>取消</Button>
-            <Button onClick={handleSave}>保存</Button>
+            <Button variant="outline" onClick={closeDialog}>取消</Button>
+            <Button onClick={handleSave}>{isAdd ? "确认新增" : "保存"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
