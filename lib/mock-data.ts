@@ -65,6 +65,22 @@ export const useBoxOrders: UseBoxOrder[] = [
     returnProofUploaded: true,
     channel: "订舱勾选",
     adminRemark: "已按优惠价确认",
+    pickupGateBy: "陆港值班",
+    pickupGateAt: "2026-06-20 16:20",
+    containerNos: [
+      "CCLU7845101",
+      "CCLU7845102",
+      "CCLU7845103",
+      "CCLU7845104",
+      "CCLU7845105",
+      "CCLU7845106",
+      "CCLU7845107",
+      "CCLU7845108",
+      "CCLU7845109",
+      "CCLU7845110",
+      "CCLU7845111",
+      "CCLU7845112",
+    ],
     pickupDocs: [
       {
         docNo: "REL-UB202606200001-01",
@@ -208,8 +224,17 @@ export const bills: Bill[] = [
     issuedAt: "2026-06-25 09:00",
     confirmDeadline: "2026-06-28 09:00",
     items: [
-      { label: "用箱数量", value: "12 x 40HQ" },
-      { label: "用箱单价", value: "¥3,200" },
+      { label: "箱型", value: "40HQ" },
+      { label: "数量", value: "12" },
+      { label: "单价", value: "¥3,200.00" },
+      { label: "线路", value: "西安→汉堡" },
+      { label: "提箱单号", value: "REL-UB202606200001-01、REL-UB202606200001-02" },
+      {
+        label: "提箱箱号",
+        value:
+          "CCLU7845101、CCLU7845102、CCLU7845103、CCLU7845104、CCLU7845105、CCLU7845106、CCLU7845107、CCLU7845108、CCLU7845109、CCLU7845110、CCLU7845111、CCLU7845112",
+      },
+      { label: "提箱时间", value: "2026-06-20 16:20" },
       { label: "币种", value: "CNY" },
       { label: "汇率（对人民币）", value: "1.0000（本币）" },
       { label: "折合人民币", value: "¥38,400.00" },

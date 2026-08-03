@@ -40,11 +40,11 @@ import { useRole } from "@/lib/role-context"
 import { usePublicSettings } from "@/lib/settings-client"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { applyReserveInventory, cityFromPlace, findInventoryRow, inventoryId, nowLocalStr } from "@/lib/domain/dispatch-ops"
-import { buildUseBoxBill, fmtDeadline } from "@/lib/domain/order-ops"
+import { fmtDeadline } from "@/lib/domain/order-ops"
 import { issuePickupDocSlip } from "@/lib/domain/pickup-doc"
 import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { pushNotification } from "@/lib/domain/notify"
-import type { Bill, Customer, InventoryRow, Notification, UseBoxOrder, Yard } from "@/lib/types"
+import type { Customer, InventoryRow, Notification, UseBoxOrder, Yard } from "@/lib/types"
 
 const statusFilters = ["待确认", "全部", "已确认", "提箱中", "还箱中", "已完成", "已取消", "超时取消"]
 
@@ -52,7 +52,6 @@ export default function OperationsUseboxPage() {
   const { data: orders, update } = useResource<UseBoxOrder>("orders")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
   const { data: yards } = useResource<Yard>("yards")
-  const { data: bills, create: createBill } = useResource<Bill>("bills")
   const { data: customers } = useResource<Customer>("customers")
   const { create: createNotification } = useResource<Notification>("notifications")
   const { user } = useRole()
@@ -179,39 +178,21 @@ export default function OperationsUseboxPage() {
         __auditAction: "修改",
         __auditDetail: `用箱订单预占 ${confirming.orderNo}`,
       })
-      const hasBill = bills.some((bill) => bill.relatedOrderNo === confirming.orderNo && bill.type === "用箱账单")
-      if (!hasBill) {
-        await createBill({
-          ...buildUseBoxBill(nextOrder),
-          __auditAction: "新增",
-          __auditDetail: `用箱订单确认生成账单 ${confirming.orderNo}`,
-        })
-      }
       await pushNotification(createNotification, {
         type: "任务",
         level: "重要",
         title: `用箱订单已确认 · ${confirming.orderNo}`,
-        desc: `${pickupYard}→${returnYard}，已预占 ${confirming.quantity} 箱并生成账单。`,
+        desc: `${pickupYard}→${returnYard}，已预占 ${confirming.quantity} 箱并开具提箱单 ${firstSlip.docNo}；现场完成提箱后生成账单。`,
         module: "M01 订单处理",
         href: "/customer/documents",
         roles: ["R03"],
       })
-      await pushNotification(createNotification, {
-        type: "账单",
-        level: "重要",
-        title: `用箱账单待确认 · ${confirming.orderNo}`,
-        desc: `订单已确认，账单金额 ¥${(price * confirming.quantity).toLocaleString()}。`,
-        module: "M01 订单处理",
-        href: "/customer/bills",
-        roles: ["R01", "R03"],
-      })
       await Promise.all([
         revalidateResource("orders"),
         revalidateResource("inventory"),
-        revalidateResource("bills"),
         revalidateResource("notifications"),
       ])
-      toast.success(`订单 ${confirming.orderNo} 已确认，已预占库存并创建账单`)
+      toast.success(`订单 ${confirming.orderNo} 已确认，已预占库存并开具提箱单`)
       setConfirming(null)
     } catch (error) {
       toast.error((error as Error).message)
@@ -225,7 +206,7 @@ export default function OperationsUseboxPage() {
       <PageHeader
         module="M01 · 客户服务与订舱协同门户"
         title="订单处理"
-        description="确认待处理用箱申请，分配提、还箱堆场和成交价格，同步库存预占、账单与通知。"
+        description="确认待处理用箱申请，分配提、还箱堆场和成交价格，同步库存预占与提箱单；用箱账单在现场完成提箱后生成。"
       />
       <p className="text-sm text-muted-foreground">待确认订单 <span className="font-semibold text-foreground">{pendingCount}</span> 笔</p>
 
@@ -298,14 +279,14 @@ export default function OperationsUseboxPage() {
 
       <Dialog open={!!confirming} onOpenChange={(open) => !open && setConfirming(null)}>
         <DialogContent className="sm:max-w-lg">{confirming && <>
-          <DialogHeader><DialogTitle>确认用箱订单</DialogTitle><DialogDescription>{confirming.orderNo} · 确认后将预占库存、生成账单并通知客户。</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>确认用箱订单</DialogTitle><DialogDescription>{confirming.orderNo} · 确认后将预占库存、开具提箱单并通知客户；账单待现场完成提箱后生成。</DialogDescription></DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2"><Label>提箱堆场</Label><Select value={pickupYard} onValueChange={(value) => setPickupYard(value ?? "")}><SelectTrigger><SelectValue placeholder="选择提箱堆场" /></SelectTrigger><SelectContent>{pickupYards.map((yard) => <SelectItem key={yard.id} value={yard.name}>{yard.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-2"><Label>还箱堆场</Label><Select value={returnYard} onValueChange={(value) => setReturnYard(value ?? "")}><SelectTrigger><SelectValue placeholder="选择还箱堆场" /></SelectTrigger><SelectContent>{returnYards.map((yard) => <SelectItem key={yard.id} value={yard.name}>{yard.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-2"><Label htmlFor="unit-price">成交单价（元 / 箱）</Label><Input id="unit-price" type="number" min="1" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="admin-remark">箱管备注</Label><Textarea id="admin-remark" value={adminRemark} onChange={(event) => setAdminRemark(event.target.value)} placeholder="确认信息将对客户可见" /></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setConfirming(null)} disabled={submitting}>取消</Button><Button onClick={submitConfirm} disabled={submitting}>{submitting ? "确认中..." : "确认并生成账单"}</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setConfirming(null)} disabled={submitting}>取消</Button><Button onClick={submitConfirm} disabled={submitting}>{submitting ? "确认中..." : "确认并预占库存"}</Button></DialogFooter>
         </>}</DialogContent>
       </Dialog>
     </>

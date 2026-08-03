@@ -64,23 +64,13 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
   })
   await expectOk("R01 确认订单", conf, fail)
 
-  const bill = await r03.create("bills", {
-    billNo: `BILL${uid("").slice(0, 8)}`,
-    type: "用箱账单",
-    relatedOrderNo: orderNo,
-    party: "西安国际陆港集团",
-    amount: 6000,
-    status: "待确认",
-    issuedAt: nowStr().slice(0, 10),
-    confirmDeadline: pastDeadline(-3),
-    items: [{ label: "合计", value: "¥6000" }],
-  })
-  await expectOk("确认出账", bill, fail)
-
-  const bills = await r03.list("bills")
+  // 用箱账单须在现场完成提箱后生成，确认订单阶段不应出账
+  const billsBeforePickup = await r03.list("bills")
   assert(
-    bills.ok && (bills.data as any[]).some((b) => b.relatedOrderNo === orderNo && b.type === "用箱账单"),
-    "账单列表应含本单用箱账单",
+    !(billsBeforePickup.data as any[] | null)?.some(
+      (b) => b.relatedOrderNo === orderNo && b.type === "用箱账单",
+    ),
+    "确认订单后不应提前生成用箱账单",
     fail,
   )
 
@@ -110,6 +100,23 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
   const pickedOrder = (afterPickup.data as any[] | null)?.find((o) => o.id === created.data.id)
   assert(pickedOrder?.status === "提箱中", "确认放箱后订单应进入提箱中", fail)
   assert(!!pickedOrder?.pickupGateBy, "应记录放箱确认人 pickupGateBy", fail)
+
+  const bills = await r03.list("bills")
+  const useBoxBill = (bills.data as any[] | null)?.find(
+    (b) => b.relatedOrderNo === orderNo && b.type === "用箱账单",
+  )
+  assert(!!useBoxBill, "提箱完成后应自动生成用箱账单", fail)
+  assert(
+    Array.isArray(useBoxBill?.items) &&
+      useBoxBill.items.some((it: any) => it.label === "提箱箱号" && String(it.value).includes(pickupNos[0]!)),
+    "用箱账单明细应含提箱箱号",
+    fail,
+  )
+  assert(
+    Array.isArray(useBoxBill?.items) && useBoxBill.items.some((it: any) => it.label === "提箱时间"),
+    "用箱账单明细应含提箱时间",
+    fail,
+  )
 
   const gateAfterPickup = await r01.list("gate")
   assert(

@@ -407,7 +407,7 @@ export default function ApplyPage() {
             <CardContent className="space-y-3 p-5 text-xs text-muted-foreground">
               <div className="flex items-start gap-2">
                 <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                <span>提交后由箱管确认并分配提/还箱堆场；确认后方可打印提箱单并生成账单。</span>
+                <span>提交后由箱管确认并分配提/还箱堆场；确认后方可打印提箱单，现场完成提箱后生成账单。</span>
               </div>
               <div className="flex items-start gap-2">
                 <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />

@@ -1,5 +1,6 @@
 import type { Bill, Booking, UseBoxOrder } from "../types"
 import { nowLocalStr } from "./dispatch-ops"
+import { listPickupDocs } from "./pickup-doc"
 import {
   attachBillFx,
   billFxItems,
@@ -44,6 +45,10 @@ export function buildUseBoxBill(o: UseBoxOrder): Omit<Bill, "id"> {
   const currency = orderBillCurrency(o)
   const fx = attachBillFx({ amount: o.unitPrice * o.quantity, currency })
   const issuedAt = nowLocalStr().slice(0, 10)
+  const pickupDocNos = listPickupDocs(o)
+    .map((d) => d.docNo)
+    .filter(Boolean)
+  const containerNos = (o.containerNos || []).map((n) => n.trim()).filter(Boolean)
   return {
     billNo: `BILL${Date.now().toString().slice(-8)}`,
     type: "用箱账单",
@@ -59,6 +64,9 @@ export function buildUseBoxBill(o: UseBoxOrder): Omit<Bill, "id"> {
       { label: "数量", value: String(o.quantity) },
       { label: "单价", value: formatMoney(o.unitPrice, currency) },
       { label: "线路", value: `${o.pickupCity}→${o.returnCity}` },
+      { label: "提箱单号", value: pickupDocNos.length > 0 ? pickupDocNos.join("、") : "—" },
+      { label: "提箱箱号", value: containerNos.length > 0 ? containerNos.join("、") : "—" },
+      { label: "提箱时间", value: o.pickupGateAt || "—" },
       ...billFxItems(fx),
     ],
   }

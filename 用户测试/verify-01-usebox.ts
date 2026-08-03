@@ -92,20 +92,6 @@ async function main() {
     conf.ok ? "箱管确认：堆场+改价+放行提箱单" : `确认失败 ${conf.status}`,
   )
 
-  const bill = await r01.create("bills", {
-    billNo: `BILL${uid("").slice(0, 8)}`,
-    type: "用箱账单",
-    relatedOrderNo: orderNo,
-    party: "西安国际陆港集团",
-    amount: 3200,
-    status: "待确认",
-    issuedAt: nowStr().slice(0, 10),
-    confirmDeadline: pastDeadline(-3),
-    items: [{ label: "合计", value: "¥3200" }],
-  })
-  const billOk = await r03.patch("bills", bill.data.id, { status: "已确认" })
-  mark("UT-UB-01#4", !!billOk.ok, billOk.ok ? "用箱账单已确认（成交价）" : "账单确认失败")
-
   const booking = await r03.create("bookings", {
     bookingNo: `BK${uid("").slice(0, 8)}`,
     type: "提箱预约",
@@ -148,7 +134,7 @@ async function main() {
     uploadedAt: nowStr(),
   })
 
-  // 阶段B：现场（堆场/代管）确认放箱，驱动 提箱中 + 出场 gate + 库存联动
+  // 阶段B：现场（堆场/代管）确认放箱，驱动 提箱中 + 出场 gate + 库存联动 + 用箱账单
   const pickupNos = await ensureOnSiteContainers(r01, {
     count: 1,
     yard: "陆港堆场",
@@ -165,6 +151,25 @@ async function main() {
     "UT-UB-01#7c",
     !!pickupConfirm.ok && pickupConfirm.data?.ok === true,
     pickupConfirm.ok ? "现场确认放箱成功" : `确认放箱失败 ${pickupConfirm.status}`,
+  )
+
+  const billsList = await r03.list("bills")
+  const autoBill = (billsList.data as any[] | null)?.find(
+    (b) => b.relatedOrderNo === orderNo && b.type === "用箱账单",
+  )
+  const billItemsOk =
+    Array.isArray(autoBill?.items) &&
+    autoBill.items.some((it: any) => it.label === "提箱箱号" && String(it.value).includes(pickupNos[0]!)) &&
+    autoBill.items.some((it: any) => it.label === "提箱时间")
+  const billOk = autoBill
+    ? await r03.patch("bills", autoBill.id, { status: "已确认" })
+    : { ok: false }
+  mark(
+    "UT-UB-01#4",
+    !!autoBill && !!billOk.ok && billItemsOk,
+    autoBill && billOk.ok && billItemsOk
+      ? "提箱完成后自动生成用箱账单并确认（含箱号/时间）"
+      : "用箱账单未在提箱后生成或缺少箱号明细",
   )
 
   const returnProof = await r03.patch("orders", created.data.id, { returnProofUploaded: true })
