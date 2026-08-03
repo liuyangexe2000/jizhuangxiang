@@ -66,7 +66,7 @@ export const navGroups: NavGroup[] = [
       { title: "用箱申请", href: "/customer/apply", icon: FilePlus2, roles: ["R01", "R03"], desc: "订舱勾选/新增用箱服务；箱管可代客申请" },
       { title: "订单处理", href: "/operations/usebox", icon: ClipboardList, roles: ["R01"], desc: "待确认申请确认：分配堆场、改价、备注" },
       { title: "我的订单", href: "/customer/orders", icon: ClipboardList, roles: ["R03"], desc: "客户查看订单生命周期与取消" },
-      { title: "单据中心", href: "/customer/documents", icon: FileDown, roles: ["R01", "R03", "R04", "R06"], desc: "提箱/还箱文件与证明上传；R04/R06 现场确认放箱/收箱" },
+      { title: "提还箱作业", href: "/customer/documents", icon: FileDown, roles: ["R01", "R03", "R04", "R06"], desc: "提箱/还箱文件与证明上传；R04/R06 现场确认放箱/收箱" },
       { title: "账单中心", href: "/customer/bills", icon: Receipt, roles: ["R01", "R03"], desc: "用箱账单与异常费用确认" },
     ],
   },
