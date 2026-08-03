@@ -809,12 +809,12 @@ export default function AdminDataPage() {
 
       <div className="space-y-2">
         <Tabs value={moduleTab} onValueChange={(v) => switchModule(v as (typeof DATASET_GROUP_ORDER)[number])}>
-          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl bg-muted p-1">
+          <TabsList className="flex h-auto min-h-10 w-full flex-wrap items-center justify-start gap-1 rounded-xl bg-muted p-1">
             {DATASET_GROUP_ORDER.map((g) => (
               <TabsTrigger
                 key={g}
                 value={g}
-                className="h-8 rounded-lg px-2.5 text-xs data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
+                className="h-8 flex-none items-center justify-center rounded-lg px-2.5 py-0 text-xs leading-none after:hidden data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
               >
                 {g.replace(/^M0(\d) /, "M0$1 · ")}
               </TabsTrigger>
@@ -822,13 +822,13 @@ export default function AdminDataPage() {
           </TabsList>
         </Tabs>
         <Tabs value={active.id} onValueChange={switchDataset}>
-          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border bg-card p-1">
+          <TabsList className="flex h-auto min-h-10 w-full flex-wrap items-center justify-start gap-1 rounded-xl border bg-card p-1">
             {moduleItems.map((d) => (
               <TabsTrigger
                 key={d.id}
                 value={d.id}
                 title={d.desc}
-                className="h-8 rounded-lg px-3 text-sm data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
+                className="h-8 flex-none items-center justify-center rounded-lg px-3 py-0 text-sm leading-none after:hidden data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
               >
                 {d.name}
               </TabsTrigger>
