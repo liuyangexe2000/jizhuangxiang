@@ -33,6 +33,11 @@ import type {
   SystemUser,
   Yard,
 } from "@/lib/types"
+import {
+  formatScopeCities,
+  resolveRuleReturnCities,
+  withOrderScopeFields,
+} from "@/lib/domain/dispatch-scope"
 import { solidTone } from "@/lib/ui-tone"
 
 // BR-09：按调运总价生成审批链（审批人从库内配置 + 用户表解析）
@@ -138,13 +143,19 @@ export default function DispatchApplyPage() {
   async function submit(mode: "draft" | "submit") {
     const required = [form.planTime, form.pickupCity, form.pickupPlace, form.ruleId, form.quantity, form.carrier]
     if (mode === "submit" && required.some((v) => !v)) {
-      toast.error("请完整填写必填项（含城市、提箱堆场与还箱范围方案）后再提交审批")
+      toast.error("请完整填写必填项（含城市、提箱堆场与还箱城市方案）后再提交审批")
       return
     }
     if (mode === "submit" && form.pickupPlace && rules.length === 0) {
       toast.error("该提箱堆场暂无启用价目方案，请先在「基础配置 → 调运价目」中配置")
       return
     }
+    const lockedCities = selectedRule ? resolveRuleReturnCities(selectedRule) : []
+    if (mode === "submit" && lockedCities.length === 0) {
+      toast.error("所选价目未配置允许还箱城市，请先在调运价目中维护")
+      return
+    }
+    const scopeFields = withOrderScopeFields(lockedCities)
     const d = new Date()
     const p = (n: number) => String(n).padStart(2, "0")
     const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`
@@ -156,7 +167,8 @@ export default function DispatchApplyPage() {
         dispatchNo,
         planTime: form.planTime,
         pickupPlace: form.pickupPlace,
-        returnScope: selectedRule?.scope ?? "",
+        ...scopeFields,
+        priceRuleId: selectedRule?.id,
         reason: form.reason,
         unitPrice,
         overdueStandard: selectedRule?.overdue ?? "",
@@ -264,12 +276,12 @@ export default function DispatchApplyPage() {
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5 text-sm">
                 <MapPin className="size-4 text-primary" />
-                还箱范围方案 *
-                <span className="text-xs font-normal text-muted-foreground">（不指定单一还箱点，单价随范围联动）</span>
+                允许还箱城市方案 *
+                <span className="text-xs font-normal text-muted-foreground">（申请时锁定城市集合，还箱执行必须落在范围内）</span>
               </Label>
               {!form.pickupPlace ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-                  请先选择提箱城市与堆场，系统将列出对应的还箱范围与单价方案
+                  请先选择提箱城市与堆场，系统将列出对应的还箱城市与单价方案
                 </p>
               ) : rules.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
@@ -279,6 +291,7 @@ export default function DispatchApplyPage() {
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {rules.map((r) => {
                     const active = r.id === form.ruleId
+                    const cities = resolveRuleReturnCities(r)
                     return (
                       <button
                         key={r.id}
@@ -295,7 +308,9 @@ export default function DispatchApplyPage() {
                             <span className="text-xs font-normal text-muted-foreground">/箱</span>
                           </span>
                         </div>
-                        <p className="text-sm font-medium leading-snug text-foreground">{r.scope}</p>
+                        <p className="text-sm font-medium leading-snug text-foreground">
+                          {formatScopeCities(cities) || r.scope || "—"}
+                        </p>
                         <p className="text-xs text-muted-foreground">超期 {r.overdue} · 建议 {r.suggestTerm} 天</p>
                       </button>
                     )
@@ -345,7 +360,14 @@ export default function DispatchApplyPage() {
             <CardContent className="space-y-3 text-sm">
               <Row label="提箱城市" value={form.pickupCity || "—"} />
               <Row label="提箱堆场" value={form.pickupPlace || "—"} />
-              <Row label="还箱范围" value={selectedRule?.scope ?? "—"} />
+              <Row
+                label="允许还箱城市"
+                value={
+                  selectedRule
+                    ? formatScopeCities(resolveRuleReturnCities(selectedRule)) || selectedRule.scope || "—"
+                    : "—"
+                }
+              />
               <Row label="调运数量" value={`${form.quantity || 0} 箱`} />
               <Row label="联动单价" value={selectedRule ? `¥${unitPrice.toLocaleString()}` : "待选方案"} />
               <Row label="超期费标准" value={selectedRule?.overdue ?? "—"} />
@@ -362,7 +384,7 @@ export default function DispatchApplyPage() {
             <CardContent className="space-y-2 p-4 text-xs text-muted-foreground">
               <p className="flex items-start gap-2">
                 <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                单价随还箱范围联动（BR-11）：选择不同范围方案将自动带出对应单价与超期费标准。
+                单价随允许还箱城市集合联动（BR-11）：选定方案后城市范围锁定到调运单，还箱只能选这些城市。
               </p>
               <p className="flex items-start gap-2">
                 <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-primary" />

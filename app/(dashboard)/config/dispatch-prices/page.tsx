@@ -40,15 +40,21 @@ import { CitySearchSelect } from "@/components/city-search-select"
 import { useDictionary } from "@/lib/dictionary-context"
 import { useResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
+import {
+  formatScopeCities,
+  resolveRuleReturnCities,
+  withRuleScopeFields,
+} from "@/lib/domain/dispatch-scope"
 import type { DispatchPriceRule, Yard } from "@/lib/types"
 import { solidTone } from "@/lib/ui-tone"
+import { Checkbox } from "@/components/ui/checkbox"
 
 const ZONES: DispatchPriceRule["zone"][] = ["近距", "中距", "远距"]
 
 type FormState = {
   pickupCity: string
   pickupPlace: string
-  scope: string
+  returnCities: string[]
   unitPrice: string
   overdue: string
   suggestTerm: string
@@ -59,7 +65,7 @@ type FormState = {
 const emptyForm: FormState = {
   pickupCity: "",
   pickupPlace: "",
-  scope: "",
+  returnCities: [],
   unitPrice: "",
   overdue: "¥100/箱/天",
   suggestTerm: "30",
@@ -68,7 +74,7 @@ const emptyForm: FormState = {
 }
 
 export default function DispatchPricesPage() {
-  const { pickupCities } = useDictionary()
+  const { pickupCities, returnCities } = useDictionary()
   const { data: rows, create, update, remove } = useResource<DispatchPriceRule>("dispatchPriceRules")
   const { data: yards } = useResource<Yard>("yards")
   const [keyword, setKeyword] = useState("")
@@ -76,6 +82,7 @@ export default function DispatchPricesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<DispatchPriceRule | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
+  const [cityQuery, setCityQuery] = useState("")
 
   const enabledYards = useMemo(
     () => yards.filter((y) => y.enabled && !y.deleted),
@@ -85,29 +92,32 @@ export default function DispatchPricesPage() {
   const yardsInCity = useMemo(() => {
     if (!form.pickupCity) return []
     const inCity = enabledYards.filter((y) => y.city === form.pickupCity)
-    // 编辑时若原堆场已停用，仍保留可选
-    if (
-      form.pickupPlace &&
-      !inCity.some((y) => y.name === form.pickupPlace)
-    ) {
+    if (form.pickupPlace && !inCity.some((y) => y.name === form.pickupPlace)) {
       const orphan = yards.find((y) => y.name === form.pickupPlace)
       if (orphan) return [...inCity, orphan]
     }
     return inCity
   }, [enabledYards, yards, form.pickupCity, form.pickupPlace])
 
-  const cityOptions = useMemo(() => {
+  const returnCityOptions = useMemo(() => {
     const fromYards = enabledYards.map((y) => y.city).filter(Boolean)
-    return Array.from(new Set([...pickupCities, ...fromYards])).sort((a, b) => a.localeCompare(b, "zh"))
-  }, [pickupCities, enabledYards])
+    const all = Array.from(
+      new Set([...returnCities.map((c) => c.name), ...fromYards, ...form.returnCities]),
+    ).sort((a, b) => a.localeCompare(b, "zh"))
+    const q = cityQuery.trim().toLowerCase()
+    if (!q) return all
+    return all.filter((c) => c.toLowerCase().includes(q))
+  }, [returnCities, enabledYards, form.returnCities, cityQuery])
 
   const filtered = useMemo(() => {
     const kw = keyword.trim().toLowerCase()
     return rows.filter((r) => {
+      const cities = resolveRuleReturnCities(r)
       const matchKw =
         !kw ||
         r.pickupPlace.toLowerCase().includes(kw) ||
-        r.scope.toLowerCase().includes(kw) ||
+        cities.some((c) => c.toLowerCase().includes(kw)) ||
+        (r.scope || "").toLowerCase().includes(kw) ||
         r.zone.includes(kw) ||
         String(r.unitPrice).includes(kw)
       const matchZone = zoneFilter === "全部" || r.zone === zoneFilter
@@ -137,6 +147,7 @@ export default function DispatchPricesPage() {
   function openAdd() {
     setEditing(null)
     setForm({ ...emptyForm })
+    setCityQuery("")
     setDialogOpen(true)
   }
 
@@ -146,34 +157,50 @@ export default function DispatchPricesPage() {
     setForm({
       pickupCity: yard?.city || "",
       pickupPlace: r.pickupPlace,
-      scope: r.scope,
+      returnCities: resolveRuleReturnCities(r),
       unitPrice: String(r.unitPrice),
       overdue: r.overdue,
       suggestTerm: String(r.suggestTerm),
       zone: r.zone,
       enabled: r.enabled !== false,
     })
+    setCityQuery("")
     setDialogOpen(true)
   }
 
-  function findDuplicate(excludeId?: string) {
-    return rows.find(
-      (r) =>
-        r.id !== excludeId &&
-        r.pickupPlace === form.pickupPlace.trim() &&
-        r.scope.trim() === form.scope.trim(),
-    )
+  function findDuplicate(excludeId?: string, cities?: string[]) {
+    const target = [...(cities || [])].map((c) => c.trim()).filter(Boolean).sort()
+    return rows.find((r) => {
+      if (r.id === excludeId) return false
+      if (r.pickupPlace !== form.pickupPlace.trim()) return false
+      const other = [...resolveRuleReturnCities(r)].sort()
+      return other.length === target.length && other.every((c, i) => c === target[i])
+    })
+  }
+
+  function toggleReturnCity(city: string) {
+    setForm((f) => {
+      const has = f.returnCities.includes(city)
+      return {
+        ...f,
+        returnCities: has ? f.returnCities.filter((c) => c !== city) : [...f.returnCities, city],
+      }
+    })
   }
 
   function handleSave() {
     const pickupPlace = form.pickupPlace.trim()
-    const scope = form.scope.trim()
+    const scopeFields = withRuleScopeFields(form.returnCities)
     if (!form.pickupCity) {
       toast.error("请先选择提箱城市")
       return
     }
-    if (!pickupPlace || !scope) {
-      toast.error("请填写提箱堆场与还箱范围")
+    if (!pickupPlace) {
+      toast.error("请选择提箱堆场")
+      return
+    }
+    if (scopeFields.returnCities.length === 0) {
+      toast.error("请至少勾选一个允许还箱的城市")
       return
     }
     const price = Number(form.unitPrice)
@@ -186,9 +213,9 @@ export default function DispatchPricesPage() {
       toast.error("请填写有效的建议用箱期（天）")
       return
     }
-    if (findDuplicate(editing?.id)) {
-      toast.error("该提箱堆场与还箱范围已存在价目", {
-        description: `${pickupPlace} · ${scope}`,
+    if (findDuplicate(editing?.id, scopeFields.returnCities)) {
+      toast.error("该提箱堆场与还箱城市集合已存在价目", {
+        description: `${pickupPlace} · ${scopeFields.scope}`,
       })
       return
     }
@@ -196,7 +223,7 @@ export default function DispatchPricesPage() {
       try {
         const payload = {
           pickupPlace,
-          scope,
+          ...scopeFields,
           unitPrice: price,
           overdue: form.overdue.trim() || "¥100/箱/天",
           suggestTerm,
@@ -207,14 +234,14 @@ export default function DispatchPricesPage() {
           await update(editing.id, {
             ...payload,
             __auditAction: "修改",
-            __auditDetail: `更新调运价目 ${pickupPlace} · ${scope}`,
+            __auditDetail: `更新调运价目 ${pickupPlace} · ${scopeFields.scope}`,
           })
           toast.success("调运价目已更新")
         } else {
           await create({
             ...payload,
             __auditAction: "新增",
-            __auditDetail: `新增调运价目 ${pickupPlace} · ${scope}`,
+            __auditDetail: `新增调运价目 ${pickupPlace} · ${scopeFields.scope}`,
           })
           toast.success("调运价目已新增")
         }
@@ -229,7 +256,7 @@ export default function DispatchPricesPage() {
     void (async () => {
       try {
         await remove(r.id, {
-          __auditDetail: `删除调运价目 ${r.pickupPlace} · ${r.scope}`,
+          __auditDetail: `删除调运价目 ${r.pickupPlace} · ${resolveRuleReturnCities(r).join("/")}`,
         })
         toast.success("已删除价目")
       } catch (e) {
@@ -243,7 +270,7 @@ export default function DispatchPricesPage() {
       <PageHeader
         module="基础配置 · 基础数据字典"
         title="调运价目"
-        description="按提箱堆场与还箱范围维护调运单价方案（BR-11）；调运申请页按启用方案匹配报价。"
+        description="按提箱堆场 + 可选还箱城市集合维护单价方案。申请时锁定城市范围，还箱执行必须落在该范围内。"
         actions={
           <Button size="sm" className="gap-1.5" onClick={openAdd}>
             <Plus className="size-4" />
@@ -265,7 +292,7 @@ export default function DispatchPricesPage() {
             <div className="relative">
               <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="搜索堆场 / 还箱范围"
+                placeholder="搜索堆场 / 还箱城市"
                 className="w-56 pl-8"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
@@ -292,7 +319,7 @@ export default function DispatchPricesPage() {
               <TableHeader>
                 <TableRow>
                   <SortableTableHead label="提箱堆场" columnKey="pickupPlace" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
-                  <SortableTableHead label="还箱范围" columnKey="scope" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                  <SortableTableHead label="允许还箱城市" columnKey="scope" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="距离带" columnKey="zone" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="单价" columnKey="unitPrice" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} className="text-right" />
                   <SortableTableHead label="建议用箱期" columnKey="suggestTerm" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} className="text-right" />
@@ -312,7 +339,9 @@ export default function DispatchPricesPage() {
                   list.rows.map((r) => (
                     <TableRow key={r.id} className={r.enabled !== false ? "" : "opacity-55"}>
                       <TableCell className="font-medium whitespace-nowrap">{r.pickupPlace}</TableCell>
-                      <TableCell className="max-w-[16rem]">{r.scope}</TableCell>
+                      <TableCell className="max-w-[16rem]">
+                        {resolveRuleReturnCities(r).join("、") || r.scope || "—"}
+                      </TableCell>
                       <TableCell>
                         <Badge className={solidTone[r.zone === "近距" ? "success" : r.zone === "远距" ? "warning" : "primary"]}>
                           {r.zone}
@@ -366,7 +395,9 @@ export default function DispatchPricesPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editing ? "编辑调运价目" : "新增调运价目"}</DialogTitle>
-            <DialogDescription>同一提箱堆场与还箱范围仅允许一条启用方案。</DialogDescription>
+            <DialogDescription>
+              勾选允许还箱的城市；同一提箱堆场 + 同一城市集合仅一条方案。还箱执行时只能选这些城市。
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2 sm:grid-cols-2">
             <div className="space-y-2">
@@ -380,7 +411,7 @@ export default function DispatchPricesPage() {
                     pickupPlace: "",
                   }))
                 }
-                cities={cityOptions}
+                cities={pickupCities}
                 placeholder="选择城市"
               />
             </div>
@@ -404,13 +435,40 @@ export default function DispatchPricesPage() {
               </Select>
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="scope">还箱范围 *</Label>
+              <Label>允许还箱城市 *（可多选）</Label>
               <Input
-                id="scope"
-                value={form.scope}
-                onChange={(e) => setForm((f) => ({ ...f, scope: e.target.value }))}
-                placeholder="例如 杜伊斯堡 / 纽伦堡 / 慕尼黑"
+                className="mb-2"
+                value={cityQuery}
+                onChange={(e) => setCityQuery(e.target.value)}
+                placeholder="搜索城市…"
               />
+              <div className="thin-scrollbar max-h-40 overflow-y-auto rounded-lg border p-2">
+                {returnCityOptions.length === 0 ? (
+                  <p className="px-1 py-3 text-center text-xs text-muted-foreground">无匹配城市</p>
+                ) : (
+                  <div className="grid gap-1 sm:grid-cols-2">
+                    {returnCityOptions.map((city) => {
+                      const checked = form.returnCities.includes(city)
+                      return (
+                        <label
+                          key={city}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                        >
+                          <Checkbox checked={checked} onCheckedChange={() => toggleReturnCity(city)} />
+                          <span>{city}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              {form.returnCities.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  已选 {form.returnCities.length} 城：{formatScopeCities(form.returnCities)}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">请勾选承运商执行还箱时可选择的城市</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>距离带 *</Label>
@@ -471,9 +529,9 @@ export default function DispatchPricesPage() {
                 onCheckedChange={(enabled) => setForm((f) => ({ ...f, enabled }))}
               />
             </div>
-            {form.pickupCity && form.pickupPlace && form.scope ? (
+            {form.pickupCity && form.pickupPlace && form.returnCities.length > 0 ? (
               <div className={`rounded-md px-3 py-2 text-xs sm:col-span-2 ${solidTone.info}`}>
-                方案预览：{form.pickupCity} · {form.pickupPlace} → {form.scope} · {form.zone}
+                方案预览：{form.pickupCity} · {form.pickupPlace} → {formatScopeCities(form.returnCities)} · {form.zone}
                 {form.unitPrice ? ` · ¥${Number(form.unitPrice || 0).toLocaleString()}/箱` : ""}
               </div>
             ) : null}

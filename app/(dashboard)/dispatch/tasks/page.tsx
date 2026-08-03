@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
@@ -52,16 +52,19 @@ import {
   relocateReserved,
 } from "@/lib/domain/dispatch-ops"
 import { isWithinWorkHours } from "@/lib/domain/booking-ops"
+import {
+  formatScopeCities,
+  intersectReturnCities,
+  isReturnCityAllowed,
+  resolveOrderReturnCities,
+} from "@/lib/domain/dispatch-scope"
 import { Truck, PackageOpen, CalendarClock, CheckCircle2, PackageCheck, MapPin } from "lucide-react"
 
-function parseReturnScopeCity(scope: string) {
-  const first = scope.split(/[/／,，]/).map((s) => s.trim()).filter(Boolean)[0] || scope
-  return first.replace(/（.*?）/g, "").replace(/(港|中央)?堆场$/, "").trim() || first
-}
-
-function resolveReturnYardHint(scope: string, yards: Yard[], city: string) {
-  const exact = yards.find((y) => y.name === scope)
-  if (exact) return exact.name
+function resolveReturnYardHint(city: string, yards: Yard[], preferredYard?: string) {
+  if (preferredYard) {
+    const exact = yards.find((y) => y.name === preferredYard && y.city === city)
+    if (exact) return exact.name
+  }
   const inCity = yards.filter((y) => y.enabled && !y.deleted && y.city === city)
   return inCity[0]?.name ?? ""
 }
@@ -195,11 +198,86 @@ export default function TasksPage() {
     [returnCarrier, tasks, bookings, containers],
   )
 
+  const selectedRelatedOrders = useMemo(() => {
+    const nos = new Set(
+      returnCandidates.filter((c) => selectedNos.has(c.containerNo)).map((c) => c.dispatchNo),
+    )
+    return orders.filter((o) => nos.has(o.dispatchNo))
+  }, [returnCandidates, selectedNos, orders])
+
+  const allowedReturnCityNames = useMemo(
+    () => intersectReturnCities(selectedRelatedOrders),
+    [selectedRelatedOrders],
+  )
+
+  const allowedReturnCityItems = useMemo(() => {
+    const set = new Set(allowedReturnCityNames)
+    const fromDict = returnCities.filter((c) => set.has(c.name))
+    // 字典缺项时仍允许展示已锁定城市名
+    const missing = allowedReturnCityNames.filter((n) => !fromDict.some((c) => c.name === n))
+    return [
+      ...fromDict,
+      ...missing.map(
+        (name) =>
+          ({
+            id: `locked-${name}`,
+            name,
+            code: name,
+            region: "境外" as const,
+            country: "",
+            province: "",
+            sort: 9999,
+            enabled: true,
+            usableAsPickup: false,
+            usableAsReturn: true,
+          }) satisfies (typeof returnCities)[number],
+      ),
+    ]
+  }, [returnCities, allowedReturnCityNames])
+
+  const yardEditAllowedCities = useMemo(() => {
+    if (!yardTarget) return returnCities
+    const names = new Set(resolveOrderReturnCities(yardTarget))
+    const fromDict = returnCities.filter((c) => names.has(c.name))
+    const missing = [...names].filter((n) => !fromDict.some((c) => c.name === n))
+    return [
+      ...fromDict,
+      ...missing.map(
+        (name) =>
+          ({
+            id: `locked-${name}`,
+            name,
+            code: name,
+            region: "境外" as const,
+            country: "",
+            province: "",
+            sort: 9999,
+            enabled: true,
+            usableAsPickup: false,
+            usableAsReturn: true,
+          }) satisfies (typeof returnCities)[number],
+      ),
+    ]
+  }, [yardTarget, returnCities])
+
+  useEffect(() => {
+    if (!returnOpen) return
+    if (
+      returnCity &&
+      allowedReturnCityNames.length > 0 &&
+      !isReturnCityAllowed(returnCity, allowedReturnCityNames)
+    ) {
+      setReturnCity("")
+      setReturnYard("")
+    }
+  }, [returnOpen, returnCity, allowedReturnCityNames])
+
   function openReturnDialog(o: DispatchOrder) {
-    const city = parseReturnScopeCity(o.returnScope)
+    const cities = resolveOrderReturnCities(o)
+    const city = cities[0] || ""
     setReturnCarrier(o.carrier)
     setReturnCity(city)
-    setReturnYard(resolveReturnYardHint(o.returnScope, enabledYards, city))
+    setReturnYard(city ? resolveReturnYardHint(city, enabledYards) : "")
     const cands = collectReturnCandidates(tasks, o.carrier, bookings, containers)
     const mine = cands.filter((c) => c.dispatchNo === o.dispatchNo).map((c) => c.containerNo)
     setSelectedNos(new Set(mine))
@@ -223,6 +301,16 @@ export default function TasksPage() {
     }
     if (nos.length === 0) {
       toast.error("请至少勾选一个还箱箱号")
+      return
+    }
+    if (allowedReturnCityNames.length === 0) {
+      toast.error("所选箱号对应调运单的允许还箱城市无交集，无法合并还箱")
+      return
+    }
+    if (!isReturnCityAllowed(returnCity, allowedReturnCityNames)) {
+      toast.error(`还箱城市「${returnCity}」不在允许范围内`, {
+        description: `允许：${formatScopeCities(allowedReturnCityNames)}`,
+      })
       return
     }
     const relatedDispatchNos = [
@@ -339,9 +427,10 @@ export default function TasksPage() {
     const pickupCity = cityFromPlace(o.pickupPlace, yards) || ""
     setPickupCityEdit(pickupCity)
     setPickupYardEdit(o.pickupPlace)
-    const retCity = parseReturnScopeCity(o.returnScope)
+    const cities = resolveOrderReturnCities(o)
+    const retCity = cities[0] || ""
     setReturnCityEdit(retCity)
-    setReturnYardEdit(resolveReturnYardHint(o.returnScope, enabledYards, retCity))
+    setReturnYardEdit(retCity ? resolveReturnYardHint(retCity, enabledYards) : "")
   }
 
   async function saveYardChange() {
@@ -351,6 +440,13 @@ export default function TasksPage() {
     const newReturnYard = returnYardEdit.trim()
     if (!pickupCityEdit || !returnCityEdit || !newPickup || !newReturnYard) {
       toast.error("请选择提箱/还箱城市与堆场")
+      return
+    }
+    const allowed = resolveOrderReturnCities(o)
+    if (allowed.length > 0 && !isReturnCityAllowed(returnCityEdit, allowed)) {
+      toast.error(`还箱城市「${returnCityEdit}」不在本单允许范围内`, {
+        description: `允许：${formatScopeCities(allowed)}`,
+      })
       return
     }
     try {
@@ -375,7 +471,8 @@ export default function TasksPage() {
         }
       }
 
-      const oldReturn = resolveReturnYardHint(o.returnScope, enabledYards, parseReturnScopeCity(o.returnScope))
+      const oldReturnCity = resolveOrderReturnCities(o)[0] || ""
+      const oldReturn = oldReturnCity ? resolveReturnYardHint(oldReturnCity, enabledYards) : ""
       if (oldReturn && newReturnYard !== oldReturn && qtyInTransit > 0) {
         const from = findInventoryRow(inventory, { yard: oldReturn, city: cityFromPlace(oldReturn, yards) })
         const to = findInventoryRow(inventory, { yard: newReturnYard, city: cityFromPlace(newReturnYard, yards) || returnCityEdit })
@@ -394,11 +491,11 @@ export default function TasksPage() {
         }
       }
 
+      // BR-16：只改执行堆场；不覆盖合同还箱城市范围 returnScope / returnCities
       await update(o.id, {
         pickupPlace: newPickup,
-        returnScope: newReturnYard.includes("/") ? o.returnScope : newReturnYard,
         __auditAction: "修改",
-        __auditDetail: `BR-16 改堆场 ${o.dispatchNo}：提 ${newPickup} / 还 ${newReturnYard}`,
+        __auditDetail: `BR-16 改堆场 ${o.dispatchNo}：提 ${newPickup} / 还 ${newReturnYard}（城市 ${returnCityEdit}）`,
       })
       await Promise.all([revalidateResource("dispatch"), revalidateResource("inventory")])
       toast.success("堆场已更新并联动库存分桶")
@@ -451,7 +548,7 @@ export default function TasksPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <Info label="提箱地" value={o.pickupPlace} />
-                  <Info label="还箱范围" value={o.returnScope} />
+                  <Info label="允许还箱城市" value={o.returnScope || formatScopeCities(resolveOrderReturnCities(o)) || "—"} />
                   <Info label="计划时间" value={o.planTime} />
                   <Info label="用箱期" value={`${o.useTerm} 天`} />
                 </div>
@@ -514,7 +611,12 @@ export default function TasksPage() {
           <DialogHeader>
             <DialogTitle>发起还箱申请（可跨调运单）</DialogTitle>
             <DialogDescription>
-              承运商 {returnCarrier} · 勾选同承运商下已提未还箱号
+              承运商 {returnCarrier} · 勾选同承运商下已提未还箱号；还箱城市仅限所选调运单允许范围
+              {allowedReturnCityNames.length > 0
+                ? `（${formatScopeCities(allowedReturnCityNames)}）`
+                : selectedNos.size > 0
+                  ? "（当前勾选无城市交集）"
+                  : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -527,8 +629,15 @@ export default function TasksPage() {
                   setReturnCity(city)
                   setReturnYard("")
                 }}
-                cities={returnCities}
-                placeholder="选择还箱城市"
+                cities={allowedReturnCityItems}
+                placeholder={
+                  selectedNos.size === 0
+                    ? "请先勾选箱号"
+                    : allowedReturnCityNames.length === 0
+                      ? "无可用城市交集"
+                      : "选择允许的还箱城市"
+                }
+                disabled={allowedReturnCityNames.length === 0}
               />
             </div>
             <div className="space-y-1.5">
@@ -614,14 +723,14 @@ export default function TasksPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>还箱城市</Label>
+              <Label>还箱城市（限本单允许范围）</Label>
               <CitySearchSelect
                 value={returnCityEdit}
                 onValueChange={(city) => {
                   setReturnCityEdit(city)
                   setReturnYardEdit("")
                 }}
-                cities={returnCities}
+                cities={yardEditAllowedCities}
                 placeholder="选择城市"
               />
             </div>

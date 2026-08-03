@@ -131,11 +131,14 @@ export interface UseBoxPriceRule {
   enabled: boolean
 }
 
-/** 调运单价方案（按提箱地 + 还箱范围） */
+/** 调运单价方案（按提箱堆场 + 可选还箱城市集合） */
 export interface DispatchPriceRule {
   id: string
   pickupPlace: string
+  /** 展示用：由 returnCities 拼接，兼容旧数据 */
   scope: string
+  /** 允许还箱的城市列表（结构化） */
+  returnCities: string[]
   unitPrice: number
   overdue: string
   suggestTerm: number
@@ -163,7 +166,12 @@ export interface DispatchOrder {
   dispatchNo: string
   planTime: string
   pickupPlace: string
+  /** 合同还箱范围展示文案（由 returnCities 拼接） */
   returnScope: string
+  /** 允许还箱城市（申请时锁定，执行时校验） */
+  returnCities?: string[]
+  /** 选用的价目方案 id（可选追溯） */
+  priceRuleId?: string
   reason: string
   unitPrice: number
   overdueStandard: string

@@ -52,6 +52,10 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   if (resource === "bills") {
     await ensureBillFxColumns()
   }
+  if (resource === "dispatch" || resource === "dispatchPriceRules") {
+    const { ensureDispatchScopeColumns } = await import("@/lib/ensure-dispatch-scope-schema")
+    await ensureDispatchScopeColumns()
+  }
   if (resource === "orders") {
     const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
     await ensureOrdersContainerNosColumn()
@@ -83,6 +87,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
   if (resource === "bills") {
     await ensureBillFxColumns()
+  }
+  if (resource === "dispatch" || resource === "dispatchPriceRules") {
+    const { ensureDispatchScopeColumns } = await import("@/lib/ensure-dispatch-scope-schema")
+    await ensureDispatchScopeColumns()
   }
   if (resource === "orders") {
     const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")

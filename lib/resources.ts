@@ -23,7 +23,7 @@ export interface ResourceConfig {
 export const RESOURCES = {
   orders: { table: "use_box_orders", id: "id", json: ["containerNos"], bool: ["releaseDocReady", "stuffingListUploaded", "returnProofUploaded"], seed: "useBoxOrders", module: "M01 客户门户", label: "用箱订单" },
   bills: { table: "bills", id: "id", json: ["items"], bool: [], seed: "bills", module: "M01 账单中心", label: "账单" },
-  dispatch: { table: "dispatch_orders", id: "id", json: ["approvals"], bool: [], seed: "dispatchOrders", module: "M02 调运管理", label: "调运订单" },
+  dispatch: { table: "dispatch_orders", id: "id", json: ["approvals", "returnCities"], bool: [], seed: "dispatchOrders", module: "M02 调运管理", label: "调运订单" },
   returns: { table: "return_applications", id: "id", json: ["containerNos", "relatedDispatchNos"], bool: [], seed: "returnApplications", module: "M02 还箱审核", label: "还箱申请" },
   inventory: { table: "inventory_rows", id: "id", json: [], bool: [], seed: "inventoryRows", module: "M03 库存管理", label: "库存台账" },
   gate: { table: "gate_records", id: "id", json: [], bool: [], seed: "gateRecords", module: "M03 进出场", label: "进出场记录" },
@@ -98,7 +98,7 @@ export const RESOURCES = {
   dispatchPriceRules: {
     table: "dispatch_price_rules",
     id: "id",
-    json: [],
+    json: ["returnCities"],
     bool: ["enabled"],
     seed: "dispatchPriceRules",
     module: "M02 调运管理",
