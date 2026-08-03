@@ -90,7 +90,6 @@ export default function OperationsUseboxPage() {
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
     getSortValue: (order, key) => {
-      if (key === "route") return `${order.pickupCity}→${order.returnCity}`
       if (key === "qty") return order.quantity
       if (key === "price") return order.unitPrice * order.quantity
       return getFieldValue(order, key)
@@ -232,7 +231,8 @@ export default function OperationsUseboxPage() {
               <TableHeader><TableRow>
                 <SortableTableHead label="订单号" columnKey="orderNo" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="客户" columnKey="customer" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
-                <SortableTableHead label="线路" columnKey="route" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                <SortableTableHead label="提箱城市" columnKey="pickupCity" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                <SortableTableHead label="还箱城市" columnKey="returnCity" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="箱型 / 数量" columnKey="qty" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="金额" columnKey="price" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="状态" columnKey="status" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
@@ -244,7 +244,8 @@ export default function OperationsUseboxPage() {
                   <TableRow key={order.id}>
                     <TableCell className="font-mono text-xs">{order.orderNo}</TableCell>
                     <TableCell>{order.customer}</TableCell>
-                    <TableCell className="text-muted-foreground">{order.pickupCity}→{order.returnCity}</TableCell>
+                    <TableCell>{order.pickupCity}</TableCell>
+                    <TableCell>{order.returnCity}</TableCell>
                     <TableCell>{order.containerType} × {order.quantity}</TableCell>
                     <TableCell>¥{(order.unitPrice * order.quantity).toLocaleString()}</TableCell>
                     <TableCell><StatusBadge status={order.status} /></TableCell>
@@ -255,7 +256,7 @@ export default function OperationsUseboxPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {list.total === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">未找到匹配的用箱订单</TableCell></TableRow>}
+                {list.total === 0 && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">未找到匹配的用箱订单</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
