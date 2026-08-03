@@ -185,6 +185,26 @@
   background: rgb(255 255 255 / 0.4);
 }
 
+/* 弹层/内容区：细条半透明滚动条（浅色背景） */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(15 23 42 / 0.28) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(15 23 42 / 0.22);
+  border-radius: 9999px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(15 23 42 / 0.4);
+}
+
 /* 成品单据打印兜底（优先使用 lib/print-document.ts 独立窗口） */
 @media print {
   @page {

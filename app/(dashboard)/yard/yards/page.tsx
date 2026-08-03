@@ -422,7 +422,7 @@ export default function YardsPage() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{isAdd ? "新增堆场" : "编辑堆场"}</DialogTitle>
             <DialogDescription>
@@ -431,16 +431,16 @@ export default function YardsPage() {
                 : "修改名称、城市、容量与联系信息。原系统 id / 编号仅作跨系统匹配记录。"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid max-h-[65vh] gap-4 overflow-y-auto py-2">
+          <div className="thin-scrollbar grid max-h-[65vh] grid-cols-1 gap-4 overflow-y-auto py-2 pr-1 sm:grid-cols-3">
             {editing && (
-              <div className="grid grid-cols-2 gap-3 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <div className="col-span-full grid grid-cols-2 gap-3 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground sm:grid-cols-4">
                 <div>原系统 id：<span className="font-mono text-foreground">{editing.legacyId}</span></div>
                 <div>编码：<span className="font-mono text-foreground">{editing.factoryCode || "—"}</span></div>
                 <div>编号：<span className="font-mono text-foreground">{editing.factoryNumber || "—"}</span></div>
                 <div>uuid：<span className="font-mono text-foreground truncate">{editing.factoryId || "—"}</span></div>
               </div>
             )}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 sm:col-span-1">
               <Label htmlFor="yard-name">堆场名称 *</Label>
               <Input
                 id="yard-name"
@@ -449,33 +449,31 @@ export default function YardsPage() {
                 placeholder="例如：陆港堆场"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>区域 *</Label>
-                <Select
-                  value={form.region}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, region: v === "境外" ? "境外" : "境内" }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="境内">境内</SelectItem>
-                    <SelectItem value="境外">境外</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>城市 *</Label>
-                <CitySearchSelect
-                  value={form.city}
-                  onValueChange={onCityChange}
-                  cities={cities.filter((c) => c.enabled)}
-                  placeholder="选择城市"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label>区域 *</Label>
+              <Select
+                value={form.region}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, region: v === "境外" ? "境外" : "境内" }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="境内">境内</SelectItem>
+                  <SelectItem value="境外">境外</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>城市 *</Label>
+              <CitySearchSelect
+                value={form.city}
+                onValueChange={onCityChange}
+                cities={cities.filter((c) => c.enabled)}
+                placeholder="选择城市"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="yard-agent">代管公司</Label>
@@ -485,26 +483,24 @@ export default function YardsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, agent: e.target.value }))}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="yard-capacity">容量（TEU）*</Label>
-                <Input
-                  id="yard-capacity"
-                  type="number"
-                  min={0}
-                  value={form.capacity}
-                  onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="yard-code">堆场编码</Label>
-                <Input
-                  id="yard-code"
-                  value={form.factoryCode}
-                  onChange={(e) => setForm((f) => ({ ...f, factoryCode: e.target.value }))}
-                  placeholder="可选"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="yard-capacity">容量（TEU）*</Label>
+              <Input
+                id="yard-capacity"
+                type="number"
+                min={0}
+                value={form.capacity}
+                onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="yard-code">堆场编码</Label>
+              <Input
+                id="yard-code"
+                value={form.factoryCode}
+                onChange={(e) => setForm((f) => ({ ...f, factoryCode: e.target.value }))}
+                placeholder="可选"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="yard-contact">联系人</Label>
@@ -531,7 +527,7 @@ export default function YardsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 sm:col-span-3">
               <Label htmlFor="yard-address">地址</Label>
               <Input
                 id="yard-address"
@@ -540,7 +536,7 @@ export default function YardsPage() {
               />
             </div>
             {editing && (
-              <p className="text-xs text-muted-foreground">
+              <p className="col-span-full text-xs text-muted-foreground">
                 当前在场（库存汇总）：{occupancyOf(editing)} / 容量 {form.capacity || editing.capacity}
               </p>
             )}
