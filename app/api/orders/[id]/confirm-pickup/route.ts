@@ -15,6 +15,7 @@ import {
 } from "@/lib/domain/dispatch-ops"
 import { ensureOrdersContainerNosColumn } from "@/lib/ensure-orders-schema"
 import { buildUseBoxBill } from "@/lib/domain/order-ops"
+import { parseOptionalContainerNos } from "@/lib/domain/pickup-containers"
 import type { Bill, ContainerMaster, InventoryRow, UseBoxOrder } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -30,25 +31,10 @@ async function hasBillOfType(orderNo: string, type: Bill["type"]) {
   return bills.some((b) => b.relatedOrderNo === orderNo && b.type === type)
 }
 
-function parseContainerNos(body: unknown, expectQty: number): string[] | { error: string } {
-  const raw = (body as { containerNos?: unknown })?.containerNos
-  if (!Array.isArray(raw) || raw.length === 0) {
-    return { error: `请选择 ${expectQty} 个真实箱号后再确认放箱` }
-  }
-  const nos = Array.from(
-    new Set(
-      raw
-        .map((x) => (typeof x === "string" ? x.trim().toUpperCase() : ""))
-        .filter(Boolean),
-    ),
-  )
-  if (nos.length !== expectQty) {
-    return { error: `须恰好选择 ${expectQty} 个箱号（当前 ${nos.length} 个）` }
-  }
-  return nos
-}
-
-/** 现场角色（堆场/代管）确认放箱：验箱 + 出场Gate + 库存联动，驱动订单->提箱中；异常则挂修箱不改状态 */
+/**
+ * 现场确认放箱：验箱通过后订单→提箱中、库存按量出场。
+ * 业务上箱号随机出场，默认事后由堆场「登记箱号」补录；若一并传入箱号则立即联动主档/gate/账单（兼容路径）。
+ */
 export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const session = await getSession()
@@ -121,8 +107,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ ok: true, conditionCheck, orderStatus: order.status })
   }
 
-  const parsed = parseContainerNos(body, order.quantity)
-  if ("error" in parsed) {
+  const parsed = parseOptionalContainerNos(body, order.quantity)
+  if (parsed && typeof parsed === "object" && "error" in parsed) {
     return NextResponse.json({ error: parsed.error }, { status: 400 })
   }
   const containerNos = parsed
@@ -130,19 +116,26 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const yard = order.pickupYard || `${order.pickupCity}堆场`
   const city = cityFromPlace(yard, yards as { name: string; city: string }[]) || order.pickupCity
   const containers = (await list("containers")) as ContainerMaster[]
-  const available = listAvailableUseboxContainers(containers, {
-    yard,
-    city,
-    containerType: order.containerType,
-  })
-  const availSet = new Set(available.map((c) => c.containerNo.toUpperCase()))
-  for (const no of containerNos) {
-    if (!availSet.has(no)) {
-      return NextResponse.json(
-        { error: `箱号 ${no} 不可用：须为提箱堆场「${yard}」在场且箱型 ${order.containerType}` },
-        { status: 400 },
-      )
+
+  let resolvedNos: string[] | undefined
+  if (containerNos) {
+    const available = listAvailableUseboxContainers(containers, {
+      yard,
+      city,
+      containerType: order.containerType,
+    })
+    const availSet = new Set(available.map((c) => c.containerNo.toUpperCase()))
+    for (const no of containerNos) {
+      if (!availSet.has(no)) {
+        return NextResponse.json(
+          { error: `箱号 ${no} 不可用：须为提箱堆场「${yard}」在场且箱型 ${order.containerType}` },
+          { status: 400 },
+        )
+      }
     }
+    resolvedNos = containerNos.map(
+      (no) => containers.find((c) => c.containerNo.toUpperCase() === no)!.containerNo,
+    )
   }
 
   const inventory = (await list("inventory")) as InventoryRow[]
@@ -151,59 +144,51 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     await update("inventory", inventoryId(inv), applyPickupInventory(inv, order.quantity))
   }
 
-  for (const no of containerNos) {
-    const master = containers.find((c) => c.containerNo.toUpperCase() === no)!
-    await create(
-      "gate",
-      buildUseBoxGate(order, "出场", yard, city, master.ownership || "自有箱", master.containerNo),
-    )
-    await update("containers", master.containerNo, patchContainerOnPickup(master, order.orderNo))
+  if (resolvedNos) {
+    for (const no of resolvedNos) {
+      const master = containers.find((c) => c.containerNo === no)!
+      await create(
+        "gate",
+        buildUseBoxGate(order, "出场", yard, city, master.ownership || "自有箱", master.containerNo),
+      )
+      await update("containers", master.containerNo, patchContainerOnPickup(master, order.orderNo))
+    }
   }
 
-  const resolvedNos = containerNos.map(
-    (no) => containers.find((c) => c.containerNo.toUpperCase() === no)!.containerNo,
-  )
-  const orderForBill: UseBoxOrder = {
-    ...order,
+  const orderPatch: Partial<UseBoxOrder> = {
     status: "提箱中",
     conditionCheck: "通过",
     conditionNote,
     pickupGateBy: actedBy,
     pickupGateAt: actedAt,
-    containerNos: resolvedNos,
+    ...(resolvedNos ? { containerNos: resolvedNos } : {}),
   }
-
-  await update("orders", order.id, {
-    status: "提箱中",
-    conditionCheck: "通过",
-    conditionNote,
-    pickupGateBy: actedBy,
-    pickupGateAt: actedAt,
-    containerNos: resolvedNos,
-  })
+  await update("orders", order.id, orderPatch)
 
   let useBoxBillNo: string | undefined
-  try {
-    if (!(await hasBillOfType(order.orderNo, "用箱账单"))) {
-      const bill = buildUseBoxBill(orderForBill)
-      const created = (await create("bills", bill)) as Bill
-      useBoxBillNo = created.billNo
-      await create("notifications", {
-        id: `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
-        type: "账单",
-        level: "重要",
-        title: `用箱账单待确认 · ${order.orderNo}`,
-        desc: `现场已完成提箱，账单 ${created.billNo} 金额 ${bill.amount.toLocaleString()}（含箱号/提箱单号），请核对确认。`,
-        module: "M01 提还箱作业",
-        href: "/customer/bills",
-        roles: ["R01", "R03"],
-        actionable: true,
-        read: false,
-        createdAt: actedAt,
-      })
+  if (resolvedNos) {
+    try {
+      if (!(await hasBillOfType(order.orderNo, "用箱账单"))) {
+        const bill = buildUseBoxBill({ ...order, ...orderPatch, containerNos: resolvedNos })
+        const created = (await create("bills", bill)) as Bill
+        useBoxBillNo = created.billNo
+        await create("notifications", {
+          id: `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+          type: "账单",
+          level: "重要",
+          title: `用箱账单待确认 · ${order.orderNo}`,
+          desc: `现场已完成提箱并登记箱号，账单 ${created.billNo} 金额 ${bill.amount.toLocaleString()}，请核对确认。`,
+          module: "M01 提还箱作业",
+          href: "/customer/bills",
+          roles: ["R01", "R03"],
+          actionable: true,
+          read: false,
+          createdAt: actedAt,
+        })
+      }
+    } catch (e) {
+      console.warn("[v0] confirm-pickup usebox bill skipped:", (e as Error).message)
     }
-  } catch (e) {
-    console.warn("[v0] confirm-pickup usebox bill skipped:", (e as Error).message)
   }
 
   await create("notifications", {
@@ -211,13 +196,15 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     type: "任务",
     level: "普通",
     title: `已确认放箱 · ${order.orderNo}`,
-    desc: `${yard} · ${actedBy} 确认放箱（${resolvedNos.join("、")}），订单进入提箱中${
-      useBoxBillNo ? `，已生成用箱账单 ${useBoxBillNo}` : ""
-    }。`,
+    desc: resolvedNos
+      ? `${yard} · ${actedBy} 确认放箱（${resolvedNos.join("、")}），订单进入提箱中${
+          useBoxBillNo ? `，已生成用箱账单 ${useBoxBillNo}` : ""
+        }。`
+      : `${yard} · ${actedBy} 确认放箱，订单进入提箱中；箱号随机出场，请堆场事后登记提箱箱号与时间。`,
     module: "M01 提还箱作业",
     href: "/customer/documents",
-    roles: ["R01", "R03"],
-    actionable: false,
+    roles: ["R01", "R03", "R04", "R06"],
+    actionable: !resolvedNos,
     read: false,
     createdAt: actedAt,
   })
@@ -227,9 +214,11 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     action: "修改",
     module: "M01 提还箱作业",
     target: order.orderNo,
-    detail: useBoxBillNo
-      ? `现场确认放箱（${yard}），箱号 ${resolvedNos.join(",")}，库存联动出场，生成用箱账单 ${useBoxBillNo}`
-      : `现场确认放箱（${yard}），箱号 ${resolvedNos.join(",")}，库存联动出场`,
+    detail: resolvedNos
+      ? `现场确认放箱（${yard}），箱号 ${resolvedNos.join(",")}，库存联动出场${
+          useBoxBillNo ? `，生成用箱账单 ${useBoxBillNo}` : ""
+        }`
+      : `现场确认放箱（${yard}），库存按量出场；箱号待事后登记`,
     ip: clientIp(req),
   })
 
@@ -238,7 +227,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     conditionCheck,
     actedBy,
     actedAt,
-    containerNos: resolvedNos,
+    containerNos: resolvedNos ?? [],
+    pendingContainerRegister: !resolvedNos,
     useBoxBillNo,
   })
 }

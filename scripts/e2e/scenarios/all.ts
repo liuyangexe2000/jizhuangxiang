@@ -92,20 +92,46 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
   const pickupConfirm = await r01.api(
     "POST",
     `/api/orders/${encodeURIComponent(created.data.id)}/confirm-pickup`,
-    { conditionCheck: "通过", containerNos: pickupNos },
+    { conditionCheck: "通过" },
   )
-  await expectOk("现场（R01代）确认放箱", pickupConfirm, fail)
+  await expectOk("现场（R01代）确认放箱（不选箱号）", pickupConfirm, fail)
+  assert(pickupConfirm.data?.pendingContainerRegister === true, "确认放箱后应提示待登记箱号", fail)
 
   const afterPickup = await r01.list("orders")
   const pickedOrder = (afterPickup.data as any[] | null)?.find((o) => o.id === created.data.id)
   assert(pickedOrder?.status === "提箱中", "确认放箱后订单应进入提箱中", fail)
   assert(!!pickedOrder?.pickupGateBy, "应记录放箱确认人 pickupGateBy", fail)
+  assert(!(pickedOrder?.containerNos?.length > 0), "确认放箱时尚无真实箱号", fail)
+
+  const billsBeforeRegister = await r03.list("bills")
+  assert(
+    !(billsBeforeRegister.data as any[] | null)?.some(
+      (b) => b.relatedOrderNo === orderNo && b.type === "用箱账单",
+    ),
+    "登记箱号前不应生成用箱账单",
+    fail,
+  )
+
+  const register = await r01.api(
+    "POST",
+    `/api/orders/${encodeURIComponent(created.data.id)}/register-pickup-containers`,
+    { containerNos: pickupNos, pickupGateAt: nowStr().slice(0, 16) },
+  )
+  await expectOk("堆场登记提箱箱号", register, fail)
+
+  const afterRegister = await r01.list("orders")
+  const registered = (afterRegister.data as any[] | null)?.find((o) => o.id === created.data.id)
+  assert(
+    Array.isArray(registered?.containerNos) && registered.containerNos.length === 2,
+    "登记后订单应写入提箱箱号",
+    fail,
+  )
 
   const bills = await r03.list("bills")
   const useBoxBill = (bills.data as any[] | null)?.find(
     (b) => b.relatedOrderNo === orderNo && b.type === "用箱账单",
   )
-  assert(!!useBoxBill, "提箱完成后应自动生成用箱账单", fail)
+  assert(!!useBoxBill, "登记箱号后应自动生成用箱账单", fail)
   assert(
     Array.isArray(useBoxBill?.items) &&
       useBoxBill.items.some((it: any) => it.label === "提箱箱号" && String(it.value).includes(pickupNos[0]!)),
@@ -121,7 +147,7 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
   const gateAfterPickup = await r01.list("gate")
   assert(
     (gateAfterPickup.data as any[] | null)?.some((g) => g.relatedOrderNo === orderNo && g.type === "出场"),
-    "应生成出场 gate 记录",
+    "登记箱号后应生成出场 gate 记录",
     fail,
   )
 

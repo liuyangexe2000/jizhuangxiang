@@ -288,7 +288,7 @@ export default function BillsPage() {
       <PageHeader
         module="M01 · 客户服务与订舱协同门户"
         title="账单中心"
-        description="M01-F04 账单核对与结算 — 用箱账单在现场完成提箱后自动生成，明细含提箱单号、箱号与提箱时间；展示原币、汇率与折合人民币；3 天内确认，超时自动确认（BR-07）。"
+        description="M01-F04 账单核对与结算 — 用箱账单在堆场登记提箱箱号后自动生成，明细含提箱单号、箱号与提箱时间；展示原币、汇率与折合人民币；3 天内确认，超时自动确认（BR-07）。"
       />
 
       <div className="grid gap-4 sm:grid-cols-3">

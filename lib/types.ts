@@ -66,7 +66,7 @@ export interface UseBoxOrder {
   /** 现场确认收箱人/时间（R04/R06） */
   returnGateBy?: string
   returnGateAt?: string
-  /** 放箱时选定的真实箱号（数量应等于 quantity） */
+  /** 放箱后由堆场登记的真实箱号（随机出场事后补录；数量应等于 quantity） */
   containerNos?: string[]
   /**
    * 提箱单列表（一单可多张：分批/多车次）。

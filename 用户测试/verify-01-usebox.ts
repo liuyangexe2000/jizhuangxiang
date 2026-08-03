@@ -134,7 +134,7 @@ async function main() {
     uploadedAt: nowStr(),
   })
 
-  // 阶段B：现场（堆场/代管）确认放箱，驱动 提箱中 + 出场 gate + 库存联动 + 用箱账单
+  // 阶段B：现场确认放箱（不选箱号）→ 事后登记箱号 → 生成用箱账单
   const pickupNos = await ensureOnSiteContainers(r01, {
     count: 1,
     yard: "陆港堆场",
@@ -145,12 +145,23 @@ async function main() {
   const pickupConfirm = await r01.api(
     "POST",
     `/api/orders/${encodeURIComponent(created.data.id)}/confirm-pickup`,
-    { conditionCheck: "通过", containerNos: pickupNos },
+    { conditionCheck: "通过" },
   )
   mark(
     "UT-UB-01#7c",
-    !!pickupConfirm.ok && pickupConfirm.data?.ok === true,
-    pickupConfirm.ok ? "现场确认放箱成功" : `确认放箱失败 ${pickupConfirm.status}`,
+    !!pickupConfirm.ok && pickupConfirm.data?.ok === true && pickupConfirm.data?.pendingContainerRegister === true,
+    pickupConfirm.ok ? "现场确认放箱成功（待登记箱号）" : `确认放箱失败 ${pickupConfirm.status}`,
+  )
+
+  const register = await r01.api(
+    "POST",
+    `/api/orders/${encodeURIComponent(created.data.id)}/register-pickup-containers`,
+    { containerNos: pickupNos, pickupGateAt: nowStr().slice(0, 16) },
+  )
+  mark(
+    "UT-UB-01#7d",
+    !!register.ok && Array.isArray(register.data?.containerNos),
+    register.ok ? "堆场登记提箱箱号成功" : `登记箱号失败 ${register.status}`,
   )
 
   const billsList = await r03.list("bills")
@@ -168,8 +179,8 @@ async function main() {
     "UT-UB-01#4",
     !!autoBill && !!billOk.ok && billItemsOk,
     autoBill && billOk.ok && billItemsOk
-      ? "提箱完成后自动生成用箱账单并确认（含箱号/时间）"
-      : "用箱账单未在提箱后生成或缺少箱号明细",
+      ? "登记箱号后自动生成用箱账单并确认（含箱号/时间）"
+      : "用箱账单未在登记箱号后生成或缺少箱号明细",
   )
 
   const returnProof = await r03.patch("orders", created.data.id, { returnProofUploaded: true })
