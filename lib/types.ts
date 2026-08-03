@@ -351,6 +351,16 @@ export interface Booking {
   confirmedAt?: string
 }
 
+/** 代管公司主档（堆场所属代理公司） */
+export interface ProxyCompany {
+  id: string
+  name: string
+  contactUser: string
+  phone: string
+  email: string
+  enabled: boolean
+}
+
 export interface Yard {
   id: string
   /** 老系统 base_container_factory.id，仅作匹配记录，非本表主键 */

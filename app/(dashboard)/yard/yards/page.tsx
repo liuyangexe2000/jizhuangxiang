@@ -38,7 +38,7 @@ import {
 import { useResource } from "@/lib/api"
 import { useDictionary } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
-import type { InventoryRow, Yard } from "@/lib/types"
+import type { InventoryRow, ProxyCompany, Yard } from "@/lib/types"
 import { Warehouse, MapPin, Mail, Phone, PackageOpen, Pencil, Plus } from "lucide-react"
 import { toast } from "sonner"
 
@@ -46,12 +46,9 @@ type YardForm = {
   name: string
   region: "境内" | "境外"
   city: string
-  agent: string
+  proxyCompanyId: string
   capacity: string
-  phone: string
-  email: string
   address: string
-  contactUser: string
   factoryCode: string
 }
 
@@ -59,24 +56,34 @@ const emptyForm: YardForm = {
   name: "",
   region: "境内",
   city: "",
-  agent: "",
+  proxyCompanyId: "",
   capacity: "",
-  phone: "",
-  email: "",
   address: "",
-  contactUser: "",
   factoryCode: "",
 }
+
+const NONE_PROXY = "__none__"
 
 export default function YardsPage() {
   const { cities } = useDictionary()
   const { data: rows, create, update } = useResource<Yard>("yards")
   const { data: inventory, create: createInventory } = useResource<InventoryRow>("inventory")
+  const { data: proxyCompanies } = useResource<ProxyCompany>("proxyCompanies")
   const [keyword, setKeyword] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Yard | null>(null)
   const [form, setForm] = useState<YardForm>(emptyForm)
   const isAdd = dialogOpen && !editing
+
+  const enabledProxies = useMemo(
+    () => proxyCompanies.filter((p) => p.enabled !== false),
+    [proxyCompanies],
+  )
+
+  const selectedProxy = useMemo(
+    () => enabledProxies.find((p) => p.id === form.proxyCompanyId) ?? null,
+    [enabledProxies, form.proxyCompanyId],
+  )
 
   const occupancyByYard = useMemo(() => {
     const map = new Map<string, number>()
@@ -139,16 +146,15 @@ export default function YardsPage() {
 
   function openEdit(y: Yard) {
     setEditing(y)
+    const byId = proxyCompanies.find((p) => p.id === y.proxyCompanyId)
+    const byName = proxyCompanies.find((p) => p.name === y.agent)
     setForm({
       name: y.name,
       region: y.region === "境外" ? "境外" : "境内",
       city: y.city,
-      agent: y.agent,
+      proxyCompanyId: byId?.id || byName?.id || "",
       capacity: String(y.capacity),
-      phone: y.phone,
-      email: y.email,
       address: y.address,
-      contactUser: y.contactUser,
       factoryCode: y.factoryCode,
     })
     setDialogOpen(true)
@@ -190,18 +196,26 @@ export default function YardsPage() {
       toast.error(`堆场名称「${name}」已存在`)
       return
     }
+    const proxy = selectedProxy
+    const agentName = proxy?.name ?? ""
+    const contactUser = proxy?.contactUser ?? ""
+    const phone = proxy?.phone ?? ""
+    const email = proxy?.email ?? ""
+    const proxyCompanyId = proxy?.id ?? ""
+
     try {
       if (editing) {
         await update(editing.id, {
           name,
           region: form.region,
           city: form.city.trim(),
-          agent: form.agent.trim(),
+          agent: agentName,
+          proxyCompanyId,
           capacity,
-          phone: form.phone.trim(),
-          email: form.email.trim(),
+          phone,
+          email,
           address: form.address.trim(),
-          contactUser: form.contactUser.trim(),
+          contactUser,
           factoryCode: form.factoryCode.trim(),
           __auditAction: "修改",
           __auditDetail: `更新堆场「${name}」`,
@@ -220,12 +234,12 @@ export default function YardsPage() {
           region: form.region,
           city: form.city.trim(),
           regionId: null,
-          agent: form.agent.trim(),
-          proxyCompanyId: "",
+          agent: agentName,
+          proxyCompanyId,
           address: form.address.trim(),
-          phone: form.phone.trim(),
-          contactUser: form.contactUser.trim(),
-          email: form.email.trim(),
+          phone,
+          contactUser,
+          email,
           creditCode: "",
           currencyId: null,
           dailyExpenses: null,
@@ -260,7 +274,7 @@ export default function YardsPage() {
               region: form.region,
               city: form.city.trim(),
               yard: name,
-              agent: form.agent.trim(),
+              agent: agentName,
               onSite: 0,
               available: 0,
               reserved: 0,
@@ -476,12 +490,33 @@ export default function YardsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="yard-agent">代管公司</Label>
-              <Input
-                id="yard-agent"
-                value={form.agent}
-                onChange={(e) => setForm((f) => ({ ...f, agent: e.target.value }))}
-              />
+              <Label>代管公司</Label>
+              <Select
+                value={form.proxyCompanyId || NONE_PROXY}
+                onValueChange={(v) =>
+                  setForm((f) => ({
+                    ...f,
+                    proxyCompanyId: !v || v === NONE_PROXY ? "" : v,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="选择代管公司（可选）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_PROXY}>不指定</SelectItem>
+                  {enabledProxies.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {enabledProxies.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  暂无启用代管公司，请先在「基础配置 · 代管公司」维护
+                </p>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="yard-capacity">容量（TEU）*</Label>
@@ -502,30 +537,22 @@ export default function YardsPage() {
                 placeholder="可选"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="yard-contact">联系人</Label>
-              <Input
-                id="yard-contact"
-                value={form.contactUser}
-                onChange={(e) => setForm((f) => ({ ...f, contactUser: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="yard-phone">电话</Label>
-              <Input
-                id="yard-phone"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="yard-email">邮箱</Label>
-              <Input
-                id="yard-email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              />
+            <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2 sm:col-span-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">代管公司联系人（随所选公司自动带出）</p>
+              <div className="grid gap-2 text-sm sm:grid-cols-3">
+                <div>
+                  <span className="text-muted-foreground">联系人：</span>
+                  {selectedProxy?.contactUser || "—"}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">电话：</span>
+                  {selectedProxy?.phone || "—"}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">邮箱：</span>
+                  {selectedProxy?.email || "—"}
+                </div>
+              </div>
             </div>
             <div className="space-y-1.5 sm:col-span-3">
               <Label htmlFor="yard-address">地址</Label>

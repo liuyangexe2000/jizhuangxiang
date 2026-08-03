@@ -24,7 +24,9 @@ import type {
   Carrier,
   DispatchApprovalLevel,
   ContainerType,
+  ProxyCompany,
 } from "./types"
+import { yardsSeed } from "./data/yards.seed"
 import {
   defaultPickupLayout,
   defaultPickupOpsLayout,
@@ -621,6 +623,26 @@ export const bookings: Booking[] = [
 
 /** 堆场：源自 old sql/base_container_factory.sql（见 scripts/import-base-container-factory.ts） */
 export { yardsSeed as yards } from "./data/yards.seed"
+
+/** 代管公司：由堆场 agent 去重生成（附带该堆场联系人快照） */
+export const proxyCompanies: ProxyCompany[] = (() => {
+  const map = new Map<string, ProxyCompany>()
+  let seq = 0
+  for (const y of yardsSeed) {
+    const name = (y.agent || "").trim()
+    if (!name || map.has(name)) continue
+    seq += 1
+    map.set(name, {
+      id: `pc_${seq}`,
+      name,
+      contactUser: y.contactUser || "",
+      phone: y.phone || "",
+      email: y.email || "",
+      enabled: true,
+    })
+  }
+  return Array.from(map.values())
+})()
 
 /** 客户：源自 old sql/base_custom.sql（见 scripts/import-base-custom.ts） */
 export { customersSeed as customers } from "./data/customers-list.seed"

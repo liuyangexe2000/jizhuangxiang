@@ -54,6 +54,10 @@ export const defaultResourceAcl: Record<ResourceKey, Access> = {
     read: roles(["R00", "R01", "R03", "R04", "R05", "R06"]),
     write: roles(["R00", "R01", "R03", "R04", "R05", "R06"]),
   },
+  proxyCompanies: {
+    read: roles(["R00", "R01", "R04", "R06"]),
+    write: roles(["R00", "R01"]),
+  },
   yards: {
     // R03 用箱申请需按城市判断是否有启用堆场；无读权限时前端会拿到空列表并误报「没有堆场」
     read: roles(["R00", "R01", "R03", "R04", "R06"]),

@@ -261,6 +261,19 @@ CREATE TABLE `bookings` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------- M04 代管公司 ----------
+DROP TABLE IF EXISTS `proxy_companies`;
+CREATE TABLE `proxy_companies` (
+  `id` VARCHAR(32) NOT NULL,
+  `name` VARCHAR(120) NOT NULL,
+  `contactUser` VARCHAR(100) NOT NULL DEFAULT '',
+  `phone` VARCHAR(120) NOT NULL DEFAULT '',
+  `email` VARCHAR(200) NOT NULL DEFAULT '',
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_proxy_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------- M04 堆场 ----------
 DROP TABLE IF EXISTS `yards`;
 CREATE TABLE `yards` (

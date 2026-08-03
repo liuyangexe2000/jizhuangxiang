@@ -213,6 +213,20 @@ const datasets: DatasetDef[] = [
     ],
   },
   {
+    id: "proxyCompanies",
+    resource: "proxyCompanies",
+    name: "代管公司",
+    desc: "M04 堆场代管公司主档",
+    idKey: "id",
+    fields: [
+      { key: "name", label: "公司名称" },
+      { key: "contactUser", label: "联系人" },
+      { key: "phone", label: "电话" },
+      { key: "email", label: "邮箱" },
+      { key: "enabled", label: "启用" },
+    ],
+  },
+  {
     id: "yards",
     resource: "yards",
     name: "堆场",
@@ -473,6 +487,7 @@ function datasetGroup(d: DatasetDef): (typeof DATASET_GROUP_ORDER)[number] {
     case "masters":
     case "discrepancy":
       return "M03 库存资产"
+    case "proxyCompanies":
     case "yards":
     case "bookings":
     case "templates":
