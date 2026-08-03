@@ -59,7 +59,11 @@ import {
   relocateReserved,
 } from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
-import { downloadPrintArea, printPrintArea } from "@/lib/print-document"
+import {
+  downloadPrintAreaAs,
+  printPrintArea,
+  type PrintDownloadFormat,
+} from "@/lib/print-document"
 import { DOC_UPLOAD_ACCEPT, validateDocUploadFile } from "@/lib/doc-upload"
 import type {
   AttachmentMeta,
@@ -133,7 +137,12 @@ export default function DocumentsPage() {
   const [returnYard, setReturnYard] = useState("")
   const [printTarget, setPrintTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [printTemplateId, setPrintTemplateId] = useState("")
-  const [downloadTarget, setDownloadTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
+  const [downloadTarget, setDownloadTarget] = useState<{
+    order: UseBoxOrder
+    phase: Phase
+    format: PrintDownloadFormat
+  } | null>(null)
+  const [downloadingDoc, setDownloadingDoc] = useState(false)
   const downloadRootRef = useRef<HTMLDivElement>(null)
   const [bookingTarget, setBookingTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [bookingTime, setBookingTime] = useState(toInputTime(nowLocalStr()))
@@ -689,18 +698,27 @@ export default function DocumentsPage() {
   useEffect(() => {
     if (!downloadTarget) return
     const title = `${downloadTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${downloadTarget.order.orderNo}`
+    const format = downloadTarget.format
     let cancelled = false
     const run = async () => {
-      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
-      if (cancelled) return
-      const ok = downloadPrintArea({
-        root: downloadRootRef.current,
-        title,
-        filename: title,
-      })
-      if (ok) toast.success("已开始下载电子版")
-      else toast.error("下载失败，请稍后重试")
-      setDownloadTarget(null)
+      setDownloadingDoc(true)
+      try {
+        await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+        if (cancelled) return
+        const ok = await downloadPrintAreaAs(format, {
+          root: downloadRootRef.current,
+          title,
+          filename: title,
+        })
+        if (cancelled) return
+        if (ok) toast.success(format === "pdf" ? "已开始下载 PDF" : "已开始下载 HTML")
+        else toast.error("下载失败，请稍后重试")
+      } finally {
+        if (!cancelled) {
+          setDownloadTarget(null)
+          setDownloadingDoc(false)
+        }
+      }
     }
     void run()
     return () => {
@@ -827,7 +845,8 @@ export default function DocumentsPage() {
             }}
             onYard={openYardDialog}
             onPrint={(o) => { setPrintTemplateId(pickupTemplate?.id || ""); setPrintTarget({ order: o, phase: "pickup" }); }}
-            onDownload={(o) => setDownloadTarget({ order: o, phase: "pickup" })}
+            onDownload={(o, format) => setDownloadTarget({ order: o, phase: "pickup", format })}
+            downloading={downloadingDoc}
             onStuffing={openStuffingDialog}
             onException={openExceptionDialog}
           />
@@ -848,7 +867,8 @@ export default function DocumentsPage() {
             }}
             onYard={openYardDialog}
             onPrint={(o) => { setPrintTemplateId(returnTemplate?.id || ""); setPrintTarget({ order: o, phase: "return" }); }}
-            onDownload={(o) => setDownloadTarget({ order: o, phase: "return" })}
+            onDownload={(o, format) => setDownloadTarget({ order: o, phase: "return", format })}
+            downloading={downloadingDoc}
             onReturnProof={openReturnProofDialog}
             overdue={overdueProofs}
           />
@@ -1270,21 +1290,54 @@ export default function DocumentsPage() {
             <Button variant="outline" onClick={() => setPrintTarget(null)}>
               关闭
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                const title = printTarget
-                  ? `${printTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${printTarget.order.orderNo}`
-                  : "单据"
-                const ok = downloadPrintArea({ title, filename: title })
-                if (ok) toast.success("已开始下载电子版")
-                else toast.error("未找到可下载的单据内容")
-              }}
-            >
-              <Download className="mr-1 size-4" />
-              下载电子版
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="outline" disabled={downloadingDoc}>
+                    <Download className="mr-1 size-4" />
+                    {downloadingDoc ? "下载中…" : "下载电子版"}
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="min-w-36">
+                <DropdownMenuItem
+                  disabled={downloadingDoc}
+                  onClick={async () => {
+                    const title = printTarget
+                      ? `${printTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${printTarget.order.orderNo}`
+                      : "单据"
+                    setDownloadingDoc(true)
+                    try {
+                      const ok = await downloadPrintAreaAs("html", { title, filename: title })
+                      if (ok) toast.success("已开始下载 HTML")
+                      else toast.error("未找到可下载的单据内容")
+                    } finally {
+                      setDownloadingDoc(false)
+                    }
+                  }}
+                >
+                  下载 HTML
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={downloadingDoc}
+                  onClick={async () => {
+                    const title = printTarget
+                      ? `${printTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${printTarget.order.orderNo}`
+                      : "单据"
+                    setDownloadingDoc(true)
+                    try {
+                      const ok = await downloadPrintAreaAs("pdf", { title, filename: title })
+                      if (ok) toast.success("已开始下载 PDF")
+                      else toast.error("PDF 生成失败，请稍后重试")
+                    } finally {
+                      setDownloadingDoc(false)
+                    }
+                  }}
+                >
+                  下载 PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               type="button"
               onClick={() =>
@@ -1338,7 +1391,8 @@ function WorkTable(props: {
   onBook: (o: UseBoxOrder) => void
   onYard: (o: UseBoxOrder) => void
   onPrint: (o: UseBoxOrder) => void
-  onDownload: (o: UseBoxOrder) => void
+  onDownload: (o: UseBoxOrder, format: PrintDownloadFormat) => void
+  downloading?: boolean
   onStuffing?: (o: UseBoxOrder) => void
   onException?: (o: UseBoxOrder) => void
   onReturnProof?: (o: UseBoxOrder) => void
@@ -1386,16 +1440,35 @@ function WorkTable(props: {
                         <Printer className="mr-1 size-3" />
                         打印
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={pickup && !shouldReleaseDoc(order)}
-                        onClick={() => props.onDownload(order)}
-                        title="下载提箱单/还箱单电子版"
-                      >
-                        <Download className="mr-1 size-3" />
-                        下载
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={(pickup && !shouldReleaseDoc(order)) || !!props.downloading}
+                              title="下载提箱单/还箱单电子版"
+                            />
+                          }
+                        >
+                          <Download className="mr-1 size-3" />
+                          {props.downloading ? "下载中…" : "下载"}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-36">
+                          <DropdownMenuItem
+                            disabled={!!props.downloading}
+                            onClick={() => props.onDownload(order, "html")}
+                          >
+                            下载 HTML
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!!props.downloading}
+                            onClick={() => props.onDownload(order, "pdf")}
+                          >
+                            下载 PDF
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <DropdownMenu>
                         <DropdownMenuTrigger render={<Button size="sm" variant="outline" className="gap-1 px-2" />}>
                           更多

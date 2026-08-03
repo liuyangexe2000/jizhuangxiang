@@ -210,33 +210,16 @@ export function printPrintArea(opts?: {
   return true
 }
 
-/**
- * 下载与打印相同内容的电子版（自包含 HTML，可用浏览器打开/另存为 PDF）。
- * @returns 是否成功触发下载
- */
-export function downloadPrintArea(opts?: {
-  title?: string
-  filename?: string
-  root?: ParentNode | null
-}): boolean {
-  if (typeof window === "undefined" || typeof document === "undefined") return false
+export type PrintDownloadFormat = "html" | "pdf"
 
-  const scope = opts?.root ?? document
-  const area = scope.querySelector(".print-area") as HTMLElement | null
-  if (!area) {
-    console.warn("[download] 未找到 .print-area")
-    return false
-  }
-
-  const title = opts?.title || "单据"
-  const html = buildDocumentHtml(area, title)
-  const safeName = (opts?.filename || title)
+function safeDownloadBaseName(name: string): string {
+  return name
     .replace(/[\\/:*?"<>|]+/g, "-")
     .replace(/\s+/g, " ")
     .trim()
-  const filename = safeName.toLowerCase().endsWith(".html") ? safeName : `${safeName}.html`
+}
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+function triggerBlobDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
   a.href = url
@@ -246,5 +229,132 @@ export function downloadPrintArea(opts?: {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 2000)
+}
+
+function resolvePrintArea(root?: ParentNode | null): HTMLElement | null {
+  if (typeof window === "undefined" || typeof document === "undefined") return null
+  const scope = root ?? document
+  return scope.querySelector(".print-area") as HTMLElement | null
+}
+
+/**
+ * 下载与打印相同内容的电子版 HTML。
+ */
+export function downloadPrintArea(opts?: {
+  title?: string
+  filename?: string
+  root?: ParentNode | null
+}): boolean {
+  const area = resolvePrintArea(opts?.root)
+  if (!area) {
+    console.warn("[download] 未找到 .print-area")
+    return false
+  }
+
+  const title = opts?.title || "单据"
+  const html = buildDocumentHtml(area, title)
+  const base = safeDownloadBaseName(opts?.filename || title)
+  const filename = /\.html$/i.test(base) ? base : `${base}.html`
+  triggerBlobDownload(new Blob([html], { type: "text/html;charset=utf-8" }), filename)
   return true
+}
+
+/**
+ * 下载与打印相同内容的 PDF（A4）。
+ */
+export async function downloadPrintAreaPdf(opts?: {
+  title?: string
+  filename?: string
+  root?: ParentNode | null
+}): Promise<boolean> {
+  const area = resolvePrintArea(opts?.root)
+  if (!area) {
+    console.warn("[download-pdf] 未找到 .print-area")
+    return false
+  }
+
+  const title = opts?.title || "单据"
+  const html = buildDocumentHtml(area, title)
+  const base = safeDownloadBaseName(opts?.filename || title).replace(/\.pdf$/i, "")
+  const filename = `${base}.pdf`
+
+  const iframe = document.createElement("iframe")
+  iframe.setAttribute("title", "pdf-frame")
+  iframe.style.cssText =
+    "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;opacity:0;pointer-events:none;"
+  document.body.appendChild(iframe)
+
+  const frameWin = iframe.contentWindow
+  const frameDoc = iframe.contentDocument
+  if (!frameWin || !frameDoc) {
+    iframe.remove()
+    console.warn("[download-pdf] 无法创建渲染帧")
+    return false
+  }
+
+  frameDoc.open()
+  frameDoc.write(html)
+  frameDoc.close()
+
+  try {
+    await waitForImages(frameDoc)
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+
+    const target = (frameDoc.querySelector(".print-area") as HTMLElement | null) || frameDoc.body
+    const html2canvas = (await import("html2canvas")).default
+    const { jsPDF } = await import("jspdf")
+
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      windowWidth: target.scrollWidth,
+      windowHeight: target.scrollHeight,
+    })
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const margin = 10
+    const contentWidth = pageWidth - margin * 2
+    const contentHeight = pageHeight - margin * 2
+    const imgHeight = (canvas.height * contentWidth) / canvas.width
+    const imgData = canvas.toDataURL("image/jpeg", 0.92)
+
+    if (imgHeight <= contentHeight) {
+      pdf.addImage(imgData, "JPEG", margin, margin, contentWidth, imgHeight)
+    } else {
+      let heightLeft = imgHeight
+      let offsetY = 0
+      while (heightLeft > 0) {
+        if (offsetY > 0) pdf.addPage()
+        pdf.addImage(imgData, "JPEG", margin, margin - offsetY, contentWidth, imgHeight)
+        offsetY += contentHeight
+        heightLeft -= contentHeight
+      }
+    }
+
+    pdf.save(filename)
+    return true
+  } catch (e) {
+    console.warn("[download-pdf] 生成失败", e)
+    return false
+  } finally {
+    try {
+      iframe.remove()
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/** 按格式下载电子版（html / pdf） */
+export async function downloadPrintAreaAs(
+  format: PrintDownloadFormat,
+  opts?: { title?: string; filename?: string; root?: ParentNode | null },
+): Promise<boolean> {
+  if (format === "pdf") return downloadPrintAreaPdf(opts)
+  return downloadPrintArea(opts)
 }
