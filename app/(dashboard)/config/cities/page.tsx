@@ -39,7 +39,7 @@ import {
 import { useDictionary, type CityInput } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
 import { downloadCsv, parseCsv } from "@/lib/csv"
-import { CITY_CSV_HEADERS, cityToCsvRow, parseCityCsvRows } from "@/lib/domain/city-csv"
+import { CITY_CSV_HEADERS, CITY_CSV_TEMPLATE_ROWS, cityToCsvRow, parseCityCsvRows } from "@/lib/domain/city-csv"
 import type { CityDictItem, CityRegion } from "@/lib/types"
 import { solidTone } from "@/lib/ui-tone"
 
@@ -167,6 +167,13 @@ export default function CityDictPage() {
     })
   }
 
+  function handleDownloadTemplate() {
+    downloadCsv("城市字典_导入模板.csv", [...CITY_CSV_HEADERS], CITY_CSV_TEMPLATE_ROWS)
+    toast.success("已下载导入模板", {
+      description: "按表头填写；「是/否」表示开关；编码唯一，导入时按编码新增或更新",
+    })
+  }
+
   async function handleImportFile(file: File) {
     setImporting(true)
     try {
@@ -223,7 +230,11 @@ export default function CityDictPage() {
         title="城市字典"
         description="维护提箱/还箱城市字典，支持 CSV 导入导出（UTF-8）；变更实时同步至用箱申请、调运申请等下拉选择。"
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5 bg-transparent" onClick={handleDownloadTemplate}>
+              <Download className="size-4" />
+              下载模板
+            </Button>
             <Button variant="outline" size="sm" className="gap-1.5 bg-transparent" onClick={handleExport}>
               <Download className="size-4" />
               导出

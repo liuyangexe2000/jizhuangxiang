@@ -18,6 +18,13 @@ export const CITY_CSV_HEADERS = [
   "启用",
 ] as const
 
+/** 导入模板示例行（可删改后导入；编码唯一） */
+export const CITY_CSV_TEMPLATE_ROWS: string[][] = [
+  ["XA", "西安", "陕西省", "境内", "中国", "是", "是", "10", "是"],
+  ["HAM", "汉堡", "汉堡州", "境外", "德国", "是", "是", "20", "是"],
+  ["DUI", "杜伊斯堡", "北威州", "境外", "德国", "否", "是", "30", "是"],
+]
+
 const HEADER_ALIASES: Record<string, (typeof CITY_CSV_HEADERS)[number]> = {
   编码: "编码",
   code: "编码",
