@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -772,16 +773,24 @@ function DatasetTable({ def }: { def: DatasetDef }) {
 export default function AdminDataPage() {
   const [activeId, setActiveId] = useState(datasets[0].id)
   const active = datasets.find((d) => d.id === activeId) ?? datasets[0]
+  const [moduleTab, setModuleTab] = useState<(typeof DATASET_GROUP_ORDER)[number]>(datasetGroup(datasets[0]))
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, DatasetDef[]>()
-    for (const g of DATASET_GROUP_ORDER) map.set(g, [])
-    for (const d of datasets) {
-      const g = datasetGroup(d)
-      map.get(g)!.push(d)
-    }
-    return DATASET_GROUP_ORDER.map((g) => [g, map.get(g)!] as const).filter(([, items]) => items.length > 0)
-  }, [])
+  const moduleItems = useMemo(
+    () => datasets.filter((d) => datasetGroup(d) === moduleTab),
+    [moduleTab],
+  )
+
+  function switchModule(next: (typeof DATASET_GROUP_ORDER)[number]) {
+    setModuleTab(next)
+    const first = datasets.find((d) => datasetGroup(d) === next)
+    if (first) setActiveId(first.id)
+  }
+
+  function switchDataset(id: string) {
+    setActiveId(id)
+    const d = datasets.find((x) => x.id === id)
+    if (d) setModuleTab(datasetGroup(d))
+  }
 
   return (
     <>
@@ -798,46 +807,35 @@ export default function AdminDataPage() {
         <StatCard label="数据来源" value="实时数据库" icon={Database} />
       </div>
 
-      <Card>
-        <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold text-foreground">选择数据集</p>
-              <p className="text-xs text-muted-foreground">按业务模块分组，点击切换下方台账</p>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              当前：<span className="font-medium text-foreground">{active.name}</span>
-            </p>
-          </div>
-          <div className="space-y-4">
-            {grouped.map(([group, items]) => (
-              <div key={group} className="space-y-2">
-                <p className="text-xs font-semibold tracking-wide text-muted-foreground">{group}</p>
-                <div className="flex flex-wrap gap-2">
-                  {items.map((d) => {
-                    const selected = d.id === active.id
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => setActiveId(d.id)}
-                        title={d.desc}
-                        className={
-                          selected
-                            ? "rounded-lg border-2 border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm"
-                            : "rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/45 hover:bg-muted/50"
-                        }
-                      >
-                        {d.name}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+      <div className="space-y-2">
+        <Tabs value={moduleTab} onValueChange={(v) => switchModule(v as (typeof DATASET_GROUP_ORDER)[number])}>
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl bg-muted p-1">
+            {DATASET_GROUP_ORDER.map((g) => (
+              <TabsTrigger
+                key={g}
+                value={g}
+                className="h-8 rounded-lg px-2.5 text-xs data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
+              >
+                {g.replace(/^M0(\d) /, "M0$1 · ")}
+              </TabsTrigger>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </TabsList>
+        </Tabs>
+        <Tabs value={active.id} onValueChange={switchDataset}>
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border bg-card p-1">
+            {moduleItems.map((d) => (
+              <TabsTrigger
+                key={d.id}
+                value={d.id}
+                title={d.desc}
+                className="h-8 rounded-lg px-3 text-sm data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
+              >
+                {d.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
 
       <DatasetTable key={active.id} def={active} />
     </>
