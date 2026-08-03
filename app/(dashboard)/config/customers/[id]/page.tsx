@@ -1,9 +1,10 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Building2, FileText, Receipt, CalendarClock, GitCompareArrows } from "lucide-react"
+import { toast } from "sonner"
+import { ArrowLeft, Building2, FileText, Receipt, CalendarClock, GitCompareArrows, Pencil } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { LifecycleTimeline } from "@/components/lifecycle-timeline"
@@ -12,7 +13,17 @@ import { PageSpinner } from "@/components/navigation-loading"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Table,
   TableBody,
@@ -27,6 +38,11 @@ import {
   customerMatchesOrg,
   getCustomerLifecycle,
 } from "@/lib/domain/customer-lifecycle"
+import {
+  formatContractPeriod,
+  getCustomerContractStatus,
+  normalizeContractDate,
+} from "@/lib/domain/customer-contract"
 import type {
   AttachmentMeta,
   Bill,
@@ -43,15 +59,20 @@ export default function CustomerLifecyclePage() {
   const id = decodeURIComponent(String(params.id ?? ""))
   const { roleId, user, loading: roleLoading } = useRole()
 
-  const { data: customers, isLoading: loadingCustomers } = useResource<Customer>("customers")
+  const { data: customers, isLoading: loadingCustomers, update } = useResource<Customer>("customers")
   const { data: orders, isLoading: loadingOrders } = useResource<UseBoxOrder>("orders")
   const { data: bills, isLoading: loadingBills } = useResource<Bill>("bills")
   const { data: bookings } = useResource<Booking>("bookings")
   const { data: gate } = useResource<GateRecord>("gate")
   const { data: attachments } = useResource<AttachmentMeta>("attachments")
   const { data: users } = useResource<SystemUser>("users")
+  const [contractOpen, setContractOpen] = useState(false)
+  const [contractForm, setContractForm] = useState({ contractStart: "", contractEnd: "" })
 
   const customer = useMemo(() => customers.find((c) => c.id === id), [customers, id])
+
+  const contractStatus = customer ? getCustomerContractStatus(customer) : "未配置"
+  const canEditContract = roleId === "R00" || roleId === "R01"
 
   const allowed = useMemo(() => {
     if (roleId === "R00" || roleId === "R01") return true
@@ -102,6 +123,37 @@ export default function CustomerLifecyclePage() {
   }
 
   const { summary, events, nameKeys } = lifecycle!
+
+  function openContractEdit() {
+    if (!customer) return
+    setContractForm({
+      contractStart: normalizeContractDate(customer.contractStart),
+      contractEnd: normalizeContractDate(customer.contractEnd),
+    })
+    setContractOpen(true)
+  }
+
+  async function saveContract() {
+    if (!customer) return
+    const contractStart = normalizeContractDate(contractForm.contractStart)
+    const contractEnd = normalizeContractDate(contractForm.contractEnd)
+    if (contractStart && contractEnd && contractStart > contractEnd) {
+      toast.error("合同开始日不能晚于结束日")
+      return
+    }
+    try {
+      await update(customer.id, {
+        contractStart,
+        contractEnd,
+        __auditAction: "修改",
+        __auditDetail: `更新客户合同有效期 ${customer.name}：${contractStart || "—"} ~ ${contractEnd || "—"}`,
+      })
+      toast.success("合同有效期已保存")
+      setContractOpen(false)
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
 
   return (
     <>
@@ -158,6 +210,27 @@ export default function CustomerLifecyclePage() {
             <div>
               <div className="text-xs text-muted-foreground">信用代码</div>
               <div className="font-mono text-xs">{customer.creditCode || "—"}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">用箱合同有效期</div>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <span>{formatContractPeriod(customer)}</span>
+                <Badge variant={contractStatus === "有效" ? "secondary" : "outline"}>
+                  {contractStatus}
+                </Badge>
+                {canEditContract && (
+                  <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2" onClick={openContractEdit}>
+                    <Pencil className="size-3.5" />
+                    维护
+                  </Button>
+                )}
+              </div>
+              {(contractStatus === "已到期" || contractStatus === "已停用") && (
+                <p className="mt-1 text-xs text-destructive">该客户当前不可提交用箱申请</p>
+              )}
+              {contractStatus === "未配置" && (
+                <p className="mt-1 text-xs text-muted-foreground">未配置结束日时暂不按合同期拦截申请</p>
+              )}
             </div>
             <div className="flex flex-wrap gap-1">
               <Badge variant={customer.enabled ? "secondary" : "outline"}>
@@ -235,6 +308,43 @@ export default function CustomerLifecyclePage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Dialog open={contractOpen} onOpenChange={setContractOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>维护合同有效期</DialogTitle>
+            <DialogDescription>
+              {customer.name} · 到期或停用后不可再提交用箱申请
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>合同开始日</Label>
+              <Input
+                type="date"
+                value={contractForm.contractStart}
+                onChange={(e) => setContractForm((f) => ({ ...f, contractStart: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>合同结束日</Label>
+              <Input
+                type="date"
+                value={contractForm.contractEnd}
+                onChange={(e) => setContractForm((f) => ({ ...f, contractEnd: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setContractOpen(false)}>
+              取消
+            </Button>
+            <Button type="button" onClick={() => void saveContract()}>
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

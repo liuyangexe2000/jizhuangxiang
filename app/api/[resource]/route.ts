@@ -50,6 +50,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ res
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
   }
+  if (resource === "customers" || resource === "orders") {
+    const { ensureCustomerContractColumns } = await import("@/lib/ensure-customer-contract-schema")
+    await ensureCustomerContractColumns()
+  }
   if (resource === "bills") {
     await ensureBillFxColumns()
   }
@@ -82,6 +86,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
   }
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
+  }
+  if (resource === "customers" || resource === "orders") {
+    const { ensureCustomerContractColumns } = await import("@/lib/ensure-customer-contract-schema")
+    await ensureCustomerContractColumns()
   }
   if (resource === "bills") {
     await ensureBillFxColumns()
@@ -145,9 +153,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
     const existing = await list("orders")
     const existingNos = existing.map((o) => String((o as { orderNo?: string }).orderNo ?? ""))
     stamped.orderNo = resolveUseBoxOrderNo(stamped.orderNo, existingNos)
+    const customers = (await list("customers")) as Customer[]
     if (!stamped.customerId) {
-      const customers = (await list("customers")) as Customer[]
       stamped.customerId = resolveCustomerId(String(stamped.customer ?? ""), customers)
+    }
+    const master = customers.find((c) => c.id === stamped.customerId)
+    if (master) {
+      const { assertCustomerCanApply } = await import("@/lib/domain/customer-contract")
+      const gate = assertCustomerCanApply(master)
+      if (!gate.ok) {
+        return NextResponse.json(
+          { error: gate.message, description: gate.description },
+          { status: 403 },
+        )
+      }
     }
   }
   const created = await create(resource, stamped)

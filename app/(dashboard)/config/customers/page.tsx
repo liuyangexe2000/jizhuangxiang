@@ -32,6 +32,11 @@ import {
 } from "@/components/ui/dialog"
 import { useResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
+import {
+  formatContractPeriod,
+  getCustomerContractStatus,
+  normalizeContractDate,
+} from "@/lib/domain/customer-contract"
 import type { Customer } from "@/lib/types"
 
 export default function CustomersPage() {
@@ -44,6 +49,8 @@ export default function CustomersPage() {
     contactPhone: "",
     email: "",
     address: "",
+    contractStart: "",
+    contractEnd: "",
   })
 
   const pool = useMemo(() => rows.filter((c) => !c.deleted), [rows])
@@ -72,7 +79,8 @@ export default function CustomersPage() {
 
   const stats = useMemo(() => {
     const enabled = pool.filter((c) => c.enabled).length
-    return { total: pool.length, enabled, disabled: pool.length - enabled }
+    const expired = pool.filter((c) => getCustomerContractStatus(c) === "已到期").length
+    return { total: pool.length, enabled, disabled: pool.length - enabled, expired }
   }, [pool])
 
   function openEdit(c: Customer) {
@@ -83,6 +91,8 @@ export default function CustomersPage() {
       contactPhone: c.contactPhone,
       email: c.email,
       address: c.address,
+      contractStart: normalizeContractDate(c.contractStart),
+      contractEnd: normalizeContractDate(c.contractEnd),
     })
   }
 
@@ -101,6 +111,12 @@ export default function CustomersPage() {
 
   async function saveEdit() {
     if (!editing) return
+    const contractStart = normalizeContractDate(form.contractStart)
+    const contractEnd = normalizeContractDate(form.contractEnd)
+    if (contractStart && contractEnd && contractStart > contractEnd) {
+      toast.error("合同开始日不能晚于结束日")
+      return
+    }
     try {
       await update(editing.id, {
         abbreviation: form.abbreviation.trim(),
@@ -108,6 +124,8 @@ export default function CustomersPage() {
         contactPhone: form.contactPhone.trim(),
         email: form.email.trim(),
         address: form.address.trim(),
+        contractStart,
+        contractEnd,
         __auditAction: "修改",
         __auditDetail: `更新客户资料 ${editing.name}`,
       })
@@ -123,13 +141,14 @@ export default function CustomersPage() {
       <PageHeader
         module="基础配置"
         title="客户主档"
-        description="客户名称、联系人与信用代码等主数据；可打开生命周期档案汇总用箱订单与账单轨迹。legacyId / customId 用于与旧系统数据匹配。"
+        description="客户名称、联系人、信用代码与用箱合同有效期；到期或停用客户不可再提交用箱申请。可打开生命周期档案汇总订单与账单。"
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="客户总数" value={stats.total} icon={Building2} tone="primary" />
         <StatCard label="已启用" value={stats.enabled} icon={Building2} tone="success" />
         <StatCard label="已停用" value={stats.disabled} icon={Building2} tone="warning" />
+        <StatCard label="合同已到期" value={stats.expired} icon={Building2} tone="danger" />
       </div>
 
       <Card>
@@ -155,13 +174,15 @@ export default function CustomersPage() {
                   <SortableTableHead label="简称" columnKey="abbreviation" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="联系人" columnKey="contactUser" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <TableHead>电话</TableHead>
-                  <TableHead>邮箱</TableHead>
+                  <TableHead>合同有效期</TableHead>
                   <SortableTableHead label="启用" columnKey="enabled" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} className="text-center" />
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.rows.map((c) => (
+                {list.rows.map((c) => {
+                  const contractStatus = getCustomerContractStatus(c)
+                  return (
                   <TableRow key={c.id} className={c.enabled ? "" : "opacity-55"}>
                     <TableCell className="font-mono text-xs text-muted-foreground">{c.legacyId}</TableCell>
                     <TableCell className="max-w-[220px]">
@@ -177,8 +198,14 @@ export default function CustomersPage() {
                     <TableCell className="text-sm">{c.abbreviation || "—"}</TableCell>
                     <TableCell className="text-sm">{c.contactUser || "—"}</TableCell>
                     <TableCell className="font-mono text-xs">{c.contactPhone || "—"}</TableCell>
-                    <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground" title={c.email}>
-                      {c.email || "—"}
+                    <TableCell className="text-xs">
+                      <div>{formatContractPeriod(c)}</div>
+                      <Badge
+                        variant={contractStatus === "有效" ? "secondary" : "outline"}
+                        className="mt-1 h-5 text-[10px]"
+                      >
+                        {contractStatus}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Switch checked={c.enabled} onCheckedChange={(v) => void toggleEnabled(c, !!v)} />
@@ -203,10 +230,11 @@ export default function CustomersPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
                 {list.rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
                       暂无客户数据
                     </TableCell>
                   </TableRow>
@@ -257,6 +285,27 @@ export default function CustomersPage() {
               <Label>地址</Label>
               <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>合同开始日</Label>
+                <Input
+                  type="date"
+                  value={form.contractStart}
+                  onChange={(e) => setForm((f) => ({ ...f, contractStart: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>合同结束日</Label>
+                <Input
+                  type="date"
+                  value={form.contractEnd}
+                  onChange={(e) => setForm((f) => ({ ...f, contractEnd: e.target.value }))}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              填写结束日后，到期将禁止该客户提交用箱申请；留空则暂不按合同期拦截。
+            </p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditing(null)}>

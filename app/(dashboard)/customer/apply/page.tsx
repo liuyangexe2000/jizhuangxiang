@@ -21,9 +21,12 @@ import { useDictionary } from "@/lib/dictionary-context"
 import { useResource, revalidateResource } from "@/lib/api"
 import { useRole } from "@/lib/role-context"
 import { pushNotification } from "@/lib/domain/notify"
+import { resolveCustomerId } from "@/lib/domain/resolve-customer"
+import { assertCustomerCanApply } from "@/lib/domain/customer-contract"
 import { CONTAINER_TYPES, DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
 import type {
   ContainerType,
+  Customer,
   Notification,
   SystemUser,
   UseBoxOrder,
@@ -36,6 +39,7 @@ export default function ApplyPage() {
   const { create } = useResource<UseBoxOrder>("orders")
   const { create: createNotif } = useResource<Notification>("notifications")
   const { data: users } = useResource<SystemUser>("users")
+  const { data: customerMasters } = useResource<Customer>("customers")
   const { data: yards } = useResource<Yard>("yards")
   const { data: priceRules } = useResource<UseBoxPriceRule>("useBoxPriceRules")
   const { user, roleId } = useRole()
@@ -88,6 +92,25 @@ export default function ApplyPage() {
     )
   }
 
+  function resolveApplyCustomerName() {
+    return isProxy ? customerOrg : user?.org || user?.name || "客户"
+  }
+
+  function assertContractAllowsApply(): boolean {
+    const name = resolveApplyCustomerName()
+    const id = resolveCustomerId(name, customerMasters)
+    const master = customerMasters.find((c) => c.id === id)
+    if (!master) return true
+    const gate = assertCustomerCanApply(master)
+    if (!gate.ok) {
+      toast.error(gate.message, { description: gate.description })
+      setQuoted(null)
+      setQuotedUnit(null)
+      return false
+    }
+    return true
+  }
+
   function assertCitiesHaveYards(): boolean {
     if (yards.length === 0) {
       toast.error("无法校验堆场数据", {
@@ -125,6 +148,7 @@ export default function ApplyPage() {
       )
       return
     }
+    if (!assertContractAllowsApply()) return
     if (!assertCitiesHaveYards()) return
     const rule = findPriceRule()
     if (!rule) {
@@ -143,6 +167,7 @@ export default function ApplyPage() {
 
   async function handleSubmit() {
     if (quoted == null || quotedUnit == null) return
+    if (!assertContractAllowsApply()) return
     if (!assertCitiesHaveYards()) return
     const rule = findPriceRule()
     if (!rule || Number(rule.unitPrice) !== quotedUnit) {
@@ -160,7 +185,7 @@ export default function ApplyPage() {
     const fmt = (d: Date) =>
       `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     const unit = quotedUnit
-    const customer = isProxy ? customerOrg : user?.org || user?.name || "客户"
+    const customer = resolveApplyCustomerName()
     try {
       const created = await create({
         customer,

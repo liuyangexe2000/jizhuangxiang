@@ -581,6 +581,10 @@ export interface Customer {
   updateTime: string
   identityCard: string
   email: string
+  /** 用箱合同开始日 YYYY-MM-DD；空表示未配置 */
+  contractStart?: string
+  /** 用箱合同结束日 YYYY-MM-DD；配置后到期不可再申请用箱 */
+  contractEnd?: string
 }
 
 // ---------- 统一待办与通知中心 ----------

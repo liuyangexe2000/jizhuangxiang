@@ -364,6 +364,8 @@ CREATE TABLE `customers` (
   `updateTime` VARCHAR(32) NOT NULL DEFAULT '',
   `identityCard` VARCHAR(150) NOT NULL DEFAULT '',
   `email` VARCHAR(200) NOT NULL DEFAULT '',
+  `contractStart` VARCHAR(16) NOT NULL DEFAULT '',
+  `contractEnd` VARCHAR(16) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_customers_legacyId` (`legacyId`),
   KEY `idx_customers_customId` (`customId`),

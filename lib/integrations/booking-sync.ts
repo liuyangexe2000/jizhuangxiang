@@ -5,7 +5,9 @@ import type { Customer, UseBoxOrder } from "@/lib/types"
 import { DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
 import { resolveUseBoxOrderNo, isValidUseBoxOrderNo } from "@/lib/domain/usebox-order-no"
 import { resolveCustomerId } from "@/lib/domain/resolve-customer"
+import { assertCustomerCanApply } from "@/lib/domain/customer-contract"
 import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
+import { ensureCustomerContractColumns } from "@/lib/ensure-customer-contract-schema"
 
 export type BookingFeedItem = {
   externalId?: string
@@ -99,6 +101,7 @@ export async function syncBookingOrdersFromApi(): Promise<BookingSyncResult> {
     }
   }
   await ensureCustomerIdColumns()
+  await ensureCustomerContractColumns()
   const existing = await list("orders")
   const existingNos = new Set(existing.map((o) => String(o.orderNo)))
   const customers = (await list("customers")) as Customer[]
@@ -112,12 +115,21 @@ export async function syncBookingOrdersFromApi(): Promise<BookingSyncResult> {
       skipped += 1
       continue
     }
+    const customerId = resolveCustomerId(item.customer, customers)
+    const master = customers.find((c) => c.id === customerId)
+    if (master) {
+      const gate = assertCustomerCanApply(master)
+      if (!gate.ok) {
+        skipped += 1
+        continue
+      }
+    }
     const qty = Math.max(1, Number(item.quantity) || 1)
     const unitPrice = Number(item.unitPrice) || 3000
     await create("orders", {
       orderNo,
       customer: item.customer,
-      customerId: resolveCustomerId(item.customer, customers),
+      customerId,
       customerType: item.customerType ?? "班列客户",
       pickupCity: item.pickupCity,
       returnCity: item.returnCity,

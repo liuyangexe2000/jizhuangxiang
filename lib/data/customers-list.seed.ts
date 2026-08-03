@@ -27,7 +27,9 @@ export const customersSeed: Customer[] = [
     "createName": "jyniu@xaport.net",
     "updateName": "",
     "identityCard": "612628196911190012",
-    "email": "1719251886@qq.com"
+    "email": "1719251886@qq.com",
+    "contractStart": "2024-01-01",
+    "contractEnd": "2026-06-30"
   },
   {
     "id": "cu_8",
