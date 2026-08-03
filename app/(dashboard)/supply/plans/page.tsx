@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { ClipboardCheck, Plus, Search, ShoppingCart, KeySquare, CircleDollarSign, CheckCircle2, XCircle, FileText } from "lucide-react"
+import { ClipboardCheck, Plus, Search, ShoppingCart, KeySquare, CircleDollarSign, CheckCircle2, XCircle, FileText, Truck } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { StatusBadge } from "@/components/status-badge"
@@ -42,6 +42,7 @@ import { useResource, revalidateResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
 import { useDictionary } from "@/lib/dictionary-context"
 import { useRole } from "@/lib/role-context"
+import { contractPrefixForPlan, supplierTypeForPlan } from "@/lib/domain/supply-supplier"
 import { CONTAINER_TYPES, DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
 import type { SupplyPlan, SupplyPlanType, SupplyPlanStatus, SupplyContract, Supplier, ContainerType } from "@/lib/types"
 
@@ -95,11 +96,18 @@ export default function SupplyPlansPage() {
   const stats = useMemo(() => {
     const purchasing = plans.filter((p) => p.type === "采购")
     const leasing = plans.filter((p) => p.type === "租赁")
+    const dispatching = plans.filter((p) => p.type === "调运")
     const pending = plans.filter((p) => p.status === "审批中").length
     const totalQty = plans
       .filter((p) => p.status !== "已驳回" && p.status !== "草稿")
       .reduce((s, p) => s + p.quantity, 0)
-    return { purchase: purchasing.length, lease: leasing.length, pending, totalQty }
+    return {
+      purchase: purchasing.length,
+      lease: leasing.length,
+      dispatch: dispatching.length,
+      pending,
+      totalQty,
+    }
   }, [plans])
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
@@ -162,12 +170,12 @@ export default function SupplyPlansPage() {
       const existing = contracts.find((c) => c.relatedPlanNo === p.planNo)
       let createdNo: string | undefined
       if (!existing) {
-        const wantType = p.type === "采购" ? "制造商" : "租赁商"
+        const wantType = supplierTypeForPlan(p.type)
         const supplier =
           suppliers.find((s) => s.enabled && s.type === wantType)?.name ??
           suppliers.find((s) => s.enabled)?.name ??
           "待指定供应商"
-        const prefix = p.type === "采购" ? "PC" : "LC"
+        const prefix = contractPrefixForPlan(p.type)
         const contractNo = `${prefix}2026-${String(contracts.length + 1).padStart(4, "0")}`
         const today = new Date().toISOString().slice(0, 10)
         createdNo = contractNo
@@ -212,7 +220,7 @@ export default function SupplyPlansPage() {
       <PageHeader
         module="M05 · 集装箱供应计划管理"
         title="供应计划"
-        description="编制集装箱采购/租赁计划，经审批后转入执行，并跟踪到箱进度。计划金额由数量与预估单价自动计算。"
+        description="编制集装箱采购/租赁/调运服务计划，经审批后转入执行。调运计划对应调运供应商合同。"
         actions={
           <Button size="sm" className="gap-1.5" onClick={openCreate}>
             <Plus className="size-4" />
@@ -221,9 +229,10 @@ export default function SupplyPlansPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="采购计划" value={stats.purchase} icon={ShoppingCart} />
         <StatCard label="租赁计划" value={stats.lease} icon={KeySquare} />
+        <StatCard label="调运计划" value={stats.dispatch} icon={Truck} />
         <StatCard label="待审批" value={stats.pending} icon={ClipboardCheck} tone="warning" />
         <StatCard label="在途计划箱量" value={stats.totalQty} unit="TEU" icon={CircleDollarSign} tone="success" />
       </div>
@@ -237,6 +246,7 @@ export default function SupplyPlansPage() {
                 <TabsTrigger value="全部">全部</TabsTrigger>
                 <TabsTrigger value="采购">采购</TabsTrigger>
                 <TabsTrigger value="租赁">租赁</TabsTrigger>
+                <TabsTrigger value="调运">调运</TabsTrigger>
               </TabsList>
             </Tabs>
             <div className="relative">
@@ -272,15 +282,19 @@ export default function SupplyPlansPage() {
                   <TableRow key={p.id}>
                     <TableCell className="font-mono text-xs font-medium">{p.planNo}</TableCell>
                     <TableCell>
-                      <span className={p.type === "采购" ? "text-primary" : "text-foreground"}>{p.type}</span>
+                      <span className={p.type === "采购" || p.type === "调运" ? "text-primary" : "text-foreground"}>{p.type}</span>
                     </TableCell>
                     <TableCell>{p.containerType}</TableCell>
                     <TableCell className="text-right">{p.quantity}</TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {p.type === "采购" ? `¥${p.estUnitPrice.toLocaleString()}` : `$${p.estUnitPrice}/天`}
+                      {p.type === "租赁"
+                        ? `$${p.estUnitPrice}/天`
+                        : `¥${p.estUnitPrice.toLocaleString()}`}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {p.type === "采购" ? `¥${p.estAmount.toLocaleString()}` : `$${p.estAmount.toLocaleString()}`}
+                      {p.type === "租赁"
+                        ? `$${p.estAmount.toLocaleString()}`
+                        : `¥${p.estAmount.toLocaleString()}`}
                     </TableCell>
                     <TableCell>{p.demandCity}</TableCell>
                     <TableCell className="text-muted-foreground">{p.expectArrival}</TableCell>
@@ -344,7 +358,7 @@ export default function SupplyPlansPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>新建供应计划</DialogTitle>
-            <DialogDescription>编制集装箱采购或租赁计划，提交后进入审批流程。</DialogDescription>
+            <DialogDescription>编制集装箱采购、租赁或调运服务计划，提交后进入审批流程。</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-4">
@@ -355,6 +369,7 @@ export default function SupplyPlansPage() {
                   <SelectContent>
                     <SelectItem value="采购">采购</SelectItem>
                     <SelectItem value="租赁">租赁</SelectItem>
+                    <SelectItem value="调运">调运</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -374,14 +389,20 @@ export default function SupplyPlansPage() {
                 <Input id="qty" type="number" min={1} value={form.quantity} onChange={(e) => set("quantity", Number(e.target.value))} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="price">{form.type === "采购" ? "预估单价(¥/箱)" : "预估租金($/天/箱)"}</Label>
+                <Label htmlFor="price">
+                  {form.type === "采购"
+                    ? "预估单价(¥/箱)"
+                    : form.type === "租赁"
+                      ? "预估租金($/天/箱)"
+                      : "预估调运单价(¥/箱)"}
+                </Label>
                 <Input id="price" type="number" min={0} value={form.estUnitPrice} onChange={(e) => set("estUnitPrice", Number(e.target.value))} />
               </div>
             </div>
             <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
               预估金额：
               <span className="ml-1 font-semibold text-foreground">
-                {form.type === "采购" ? "¥" : "$"}
+                {form.type === "租赁" ? "$" : "¥"}
                 {(form.quantity * form.estUnitPrice).toLocaleString()}
               </span>
             </div>

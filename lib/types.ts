@@ -426,7 +426,7 @@ export interface Yard {
 
 // ---------- 集装箱供应计划（采购/租赁） ----------
 
-export type SupplierType = "自营" | "制造商" | "租赁商"
+export type SupplierType = "自营" | "制造商" | "租赁商" | "调运供应商"
 
 export interface Supplier {
   id: string
@@ -441,7 +441,7 @@ export interface Supplier {
   enabled: boolean
 }
 
-export type SupplyPlanType = "采购" | "租赁"
+export type SupplyPlanType = "采购" | "租赁" | "调运"
 export type SupplyPlanStatus = "草稿" | "审批中" | "已批准" | "执行中" | "已完成" | "已驳回"
 
 export interface SupplyPlan {

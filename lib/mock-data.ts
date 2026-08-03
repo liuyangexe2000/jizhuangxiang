@@ -719,6 +719,10 @@ export const suppliers: Supplier[] = [
   { id: "s4", name: "Textainer Group", type: "租赁商", contact: "Sarah Wong", phone: "+1 415 658 8200", email: "rent@textainer.com", country: "美国", rating: "B", cooperationSince: "2021-01", enabled: true },
   { id: "s5", name: "Seaco Global", type: "租赁商", contact: "David Kim", phone: "+65 6403 2600", email: "asia@seacoglobal.com", country: "新加坡", rating: "B", cooperationSince: "2022-04", enabled: true },
   { id: "s6", name: "新华昌集装箱", type: "制造商", contact: "王经理", phone: "0512-5836 6666", email: "sales@cxic.com.cn", country: "中国", rating: "C", cooperationSince: "2023-07", enabled: false },
+  { id: "sd-c1", name: "中远海运欧洲承运", type: "调运供应商", contact: "调运业务对接", phone: "+49 40 3000 100", email: "dispatch@cosco-eu.example", country: "德国", rating: "A", cooperationSince: "2020-01", enabled: true },
+  { id: "sd-c2", name: "波兰联运物流", type: "调运供应商", contact: "Piotr Nowak", phone: "+48 601 223 445", email: "ops@pllogistics.pl", country: "波兰", rating: "A", cooperationSince: "2021-03", enabled: true },
+  { id: "sd-c3", name: "德铁货运代理", type: "调运供应商", contact: "调运业务对接", phone: "+49 30 2970 0", email: "rail@dbcargo.example", country: "德国", rating: "B", cooperationSince: "2022-06", enabled: true },
+  { id: "sd-c4", name: "中欧陆桥物流", type: "调运供应商", contact: "调运业务对接", phone: "029-8900 8800", email: "bridge@crexpress.example", country: "中国", rating: "A", cooperationSince: "2019-08", enabled: true },
 ]
 
 // ---------- 供应计划：采购/租赁计划 ----------
@@ -729,6 +733,7 @@ export const supplyPlans: SupplyPlan[] = [
   { id: "sp4", planNo: "SP2026060005", type: "租赁", containerType: "40HQ", quantity: 80, estUnitPrice: 52, estAmount: 124800, demandCity: "重庆", expectArrival: "2026-07-20", reason: "境外返程箱短缺补充", status: "已完成", createdBy: "张伟(集装箱管理部)", createdAt: "2026-06-01 11:00" },
   { id: "sp5", planNo: "SP2026070003", type: "采购", containerType: "45HQ", quantity: 50, estUnitPrice: 28000, estAmount: 1400000, demandCity: "武汉", expectArrival: "2026-10-31", reason: "特种箱业务拓展", status: "草稿", createdBy: "张伟(集装箱管理部)", createdAt: "2026-07-03 08:45" },
   { id: "sp6", planNo: "SP2026060012", type: "采购", containerType: "40GP", quantity: 120, estUnitPrice: 23000, estAmount: 2760000, demandCity: "西安", expectArrival: "2026-09-15", reason: "运力扩张需求评估不足", status: "已驳回", createdBy: "张伟(集装箱管理部)", createdAt: "2026-06-15 16:00" },
+  { id: "sp7", planNo: "SP2026070004", type: "调运", containerType: "40HQ", quantity: 40, estUnitPrice: 850, estAmount: 34000, demandCity: "汉堡", expectArrival: "2026-07-20", reason: "境外空箱返调，签订调运服务合同", status: "已批准", createdBy: "张伟(集装箱管理部)", createdAt: "2026-07-02 11:00" },
 ]
 
 // ---------- 供应计划：采购/租赁合同 ----------
@@ -738,6 +743,7 @@ export const supplyContracts: SupplyContract[] = [
   { id: "sc3", contractNo: "LC2026-0009", type: "租赁", relatedPlanNo: "SP2026060005", supplier: "Textainer Group", containerType: "40HQ", quantity: 80, unitPrice: 52, amount: 124800, currency: "USD", signedAt: "2026-06-05", startDate: "2026-06-10", endDate: "2026-12-10", deliveredQty: 80, status: "已完成" },
   { id: "sc4", contractNo: "PC2025-0088", type: "采购", relatedPlanNo: "SP2025120021", supplier: "胜狮货柜（Singamas）", containerType: "40HQ", quantity: 180, unitPrice: 23500, amount: 4230000, currency: "CNY", signedAt: "2025-12-20", startDate: "2025-12-20", endDate: "2026-03-31", deliveredQty: 180, status: "已完成" },
   { id: "sc5", contractNo: "LC2025-0044", type: "租赁", relatedPlanNo: "SP2025110015", supplier: "Seaco Global", containerType: "20GP", quantity: 60, unitPrice: 38, amount: 82080, currency: "USD", signedAt: "2025-11-10", startDate: "2025-11-15", endDate: "2026-05-15", deliveredQty: 60, status: "已到期" },
+  { id: "sc6", contractNo: "DC2026-0001", type: "调运", relatedPlanNo: "SP2026070004", supplier: "中远海运欧洲承运", containerType: "40HQ", quantity: 40, unitPrice: 850, amount: 34000, currency: "CNY", signedAt: "2026-07-02", startDate: "2026-07-02", endDate: "2026-08-31", deliveredQty: 0, status: "履行中" },
 ]
 
 // ---------- 集装箱维修管理：修箱工单 ----------

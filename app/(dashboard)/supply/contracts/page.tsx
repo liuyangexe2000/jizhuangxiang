@@ -86,6 +86,12 @@ export default function SupplyContractsPage() {
   }, [contracts])
 
   async function receive(c: SupplyContract) {
+    if (c.type === "调运") {
+      toast.info("调运服务合同无需登记到箱", {
+        description: "请在调运任务页执行提还箱；本页仅管理调运供应商合同履约信息",
+      })
+      return
+    }
     const step = Math.max(1, Math.ceil(c.quantity / 5))
     const increment = Math.min(step, c.quantity - c.deliveredQty)
     if (increment <= 0) return
@@ -188,7 +194,7 @@ export default function SupplyContractsPage() {
       <PageHeader
         module="M05 · 集装箱供应计划管理"
         title="供应合同"
-        description="管理由供应计划转化的采购/租赁合同，跟踪合同履行与集装箱到箱进度。"
+        description="管理采购/租赁/调运服务合同：采购与租赁跟踪到箱；调运合同对接调运供应商（承运商）。"
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -207,6 +213,7 @@ export default function SupplyContractsPage() {
                 <TabsTrigger value="全部">全部</TabsTrigger>
                 <TabsTrigger value="采购">采购</TabsTrigger>
                 <TabsTrigger value="租赁">租赁</TabsTrigger>
+                <TabsTrigger value="调运">调运</TabsTrigger>
               </TabsList>
             </Tabs>
             <div className="relative">
@@ -243,7 +250,17 @@ export default function SupplyContractsPage() {
                     <TableRow key={c.id}>
                       <TableCell className="font-mono text-xs font-medium">{c.contractNo}</TableCell>
                       <TableCell>
-                        <span className={c.type === "采购" ? "text-primary" : "text-foreground"}>{c.type}</span>
+                        <span
+                          className={
+                            c.type === "采购"
+                              ? "text-primary"
+                              : c.type === "调运"
+                                ? "text-primary/80"
+                                : "text-foreground"
+                          }
+                        >
+                          {c.type}
+                        </span>
                       </TableCell>
                       <TableCell className="max-w-40 truncate">{c.supplier}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{c.relatedPlanNo}</TableCell>
@@ -251,20 +268,24 @@ export default function SupplyContractsPage() {
                         {symbol(c.currency)}{c.amount.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">{c.deliveredQty}/{c.quantity} 箱</span>
-                            <span className="font-medium">{pct}%</span>
+                        {c.type === "调运" ? (
+                          <span className="text-xs text-muted-foreground">服务合同 · 无到箱进度</span>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">{c.deliveredQty}/{c.quantity} 箱</span>
+                              <span className="font-medium">{pct}%</span>
+                            </div>
+                            <Progress value={pct} />
                           </div>
-                          <Progress value={pct} />
-                        </div>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {c.startDate} ~ {c.endDate}
                       </TableCell>
                       <TableCell><StatusBadge status={c.status} /></TableCell>
                       <TableCell className="text-right">
-                        {c.status === "履行中" && c.deliveredQty < c.quantity ? (
+                        {c.type !== "调运" && c.status === "履行中" && c.deliveredQty < c.quantity ? (
                           <Button size="sm" variant="outline" className="gap-1" onClick={() => receive(c)}>
                             <PackageCheck className="size-3.5" />
                             登记到箱

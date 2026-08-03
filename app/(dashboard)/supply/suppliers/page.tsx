@@ -69,7 +69,7 @@ const emptyForm: FormState = {
   enabled: true,
 }
 
-const TYPE_OPTIONS: Array<"全部" | SupplierType> = ["全部", "自营", "制造商", "租赁商"]
+const TYPE_OPTIONS: Array<"全部" | SupplierType> = ["全部", "自营", "制造商", "租赁商", "调运供应商"]
 
 export default function SuppliersPage() {
   const { data: suppliers, create, update, remove } = useResource<Supplier>("suppliers")
@@ -112,6 +112,7 @@ export default function SuppliersPage() {
       selfOp: suppliers.filter((s) => s.type === "自营").length,
       maker: suppliers.filter((s) => s.type === "制造商").length,
       lessor: suppliers.filter((s) => s.type === "租赁商").length,
+      dispatch: suppliers.filter((s) => s.type === "调运供应商").length,
       gradeA: suppliers.filter((s) => s.rating === "A").length,
     }),
     [suppliers],
@@ -200,7 +201,7 @@ export default function SuppliersPage() {
       <PageHeader
         module="M05 · 集装箱供应计划管理"
         title="供应商台账"
-        description="以自营为主、外采为辅：自营主体对应自有箱档案；制造商/租赁商用于采购与租赁合同。"
+        description="以自营为主、外采为辅：含制造商、租赁商与调运供应商；自有箱档案见库存总表。"
         actions={
           <Button size="sm" className="gap-1.5" onClick={openAdd}>
             <Plus className="size-4" />
@@ -209,11 +210,12 @@ export default function SuppliersPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard label="供应商总数" value={stats.total} icon={Users} />
         <StatCard label="自营" value={stats.selfOp} icon={Building2} tone="primary" />
         <StatCard label="制造商" value={stats.maker} icon={Factory} />
         <StatCard label="租赁商" value={stats.lessor} icon={KeySquare} />
+        <StatCard label="调运供应商" value={stats.dispatch} icon={Boxes} />
         <StatCard label="A 级供应商" value={stats.gradeA} icon={Star} tone="success" />
       </div>
 
@@ -355,7 +357,16 @@ export default function SuppliersPage() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={s.type === "自营" ? "default" : s.type === "制造商" ? "secondary" : "outline"}
+                          variant={
+                            s.type === "自营"
+                              ? "default"
+                              : s.type === "制造商"
+                                ? "secondary"
+                                : s.type === "调运供应商"
+                                  ? "outline"
+                                  : "outline"
+                          }
+                          className={s.type === "调运供应商" ? "border-primary/40 text-primary" : undefined}
                         >
                           {s.type}
                         </Badge>
@@ -424,7 +435,7 @@ export default function SuppliersPage() {
             <DialogDescription>
               {editing && isSelfOpSupplier(editing)
                 ? "自营主体类型固定，可维护联系信息；箱档案请到集装箱总表查看。"
-                : "维护自营/制造商/租赁商基本信息与合作评级。"}
+                : "维护自营/制造商/租赁商/调运供应商基本信息与合作评级。"}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
@@ -452,6 +463,7 @@ export default function SuppliersPage() {
                     <SelectItem value="自营">自营</SelectItem>
                     <SelectItem value="制造商">制造商</SelectItem>
                     <SelectItem value="租赁商">租赁商</SelectItem>
+                    <SelectItem value="调运供应商">调运供应商</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
