@@ -7,6 +7,7 @@ import {
   defaultReturnLayout,
   interpolateDocText,
   resolveDocField,
+  sanitizePickupLayout,
   type DocFieldKey,
   type DocTemplateLayout,
 } from "@/lib/domain/doc-template-layout"
@@ -142,7 +143,7 @@ export function OrderPickupDocument({
   templateName?: string
   extras?: Partial<Record<DocFieldKey, string>>
 }) {
-  const layout = asLayout(template?.layout, defaultPickupLayout())
+  const layout = sanitizePickupLayout(asLayout(template?.layout, defaultPickupLayout()))
   const fakeTemplate =
     template ??
     (templateName

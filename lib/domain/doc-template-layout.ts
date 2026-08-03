@@ -52,9 +52,9 @@ export const DOC_FIELD_CATALOG: DocFieldDef[] = [
   { key: "customer", label: "客户", kinds: ["pickup", "return", "dispatch_approval", "business_entrust", "other"] },
   { key: "customerType", label: "客户类型", kinds: ["pickup", "return", "other"] },
   { key: "pickupCity", label: "提箱城市", kinds: ["pickup", "return", "dispatch_approval", "other"] },
-  { key: "returnCity", label: "还箱城市", kinds: ["pickup", "return", "dispatch_approval", "other"] },
+  { key: "returnCity", label: "还箱城市", kinds: ["return", "dispatch_approval", "other"] },
   { key: "pickupYard", label: "提箱堆场", kinds: ["pickup", "return", "other"] },
-  { key: "returnYard", label: "还箱堆场", kinds: ["pickup", "return", "other"] },
+  { key: "returnYard", label: "还箱堆场", kinds: ["return", "other"] },
   { key: "containerType", label: "箱型", kinds: ["pickup", "return", "overdue_bill", "dispatch_bill", "other"] },
   { key: "quantity", label: "数量", kinds: ["pickup", "return", "dispatch_approval", "dispatch_bill", "other"] },
   { key: "adminRemark", label: "备注", kinds: ["pickup", "return", "dispatch_approval", "business_entrust", "overdue_bill", "dispatch_bill", "other"] },
@@ -126,13 +126,7 @@ export function defaultPickupLayout(title = "提 箱 单"): DocTemplateLayout {
       {
         cells: [
           { key: "pickupCity", label: "提箱城市" },
-          { key: "returnCity", label: "还箱城市" },
-        ],
-      },
-      {
-        cells: [
           { key: "pickupYard", label: "提箱堆场" },
-          { key: "returnYard", label: "还箱堆场" },
         ],
       },
       {
@@ -173,12 +167,6 @@ export function defaultPickupOpsLayout(): DocTemplateLayout {
           { key: "pickupBooking", label: "预约提箱时间" },
         ],
       },
-      {
-        cells: [
-          { key: "returnCity", label: "还箱城市" },
-          { key: "returnYard", label: "还箱堆场" },
-        ],
-      },
       { cells: [{ key: "conditionNote", label: "箱况备注" }] },
       { cells: [{ key: "adminRemark", label: "箱管备注" }] },
     ],
@@ -204,10 +192,7 @@ export function defaultPickupSimpleLayout(): DocTemplateLayout {
         ],
       },
       {
-        cells: [
-          { key: "pickupCity", label: "提箱城市" },
-          { key: "returnCity", label: "还箱城市" },
-        ],
+        cells: [{ key: "pickupCity", label: "提箱城市" }],
       },
     ],
     notice: "请凭本单前往「{{pickupYard}}」办理提箱。",
@@ -463,4 +448,14 @@ export function builtInSealDataUrl(label = "箱管部"): string {
 export function fieldsFromLayout(layout: { rows: { cells: { label: string }[] }[] }): string[] {
   const labels = layout.rows.flatMap((r) => r.cells.map((c) => c.label))
   return Array.from(new Set(labels))
+}
+
+/** 提箱单不展示还箱城市（兼容库内旧模板布局） */
+export function sanitizePickupLayout(layout: DocTemplateLayout): DocTemplateLayout {
+  const rows = layout.rows
+    .map((row) => ({
+      cells: row.cells.filter((c) => c.key !== "returnCity" && c.label !== "还箱城市"),
+    }))
+    .filter((row) => row.cells.length > 0)
+  return { ...layout, rows: rows.length > 0 ? rows : layout.rows }
 }
