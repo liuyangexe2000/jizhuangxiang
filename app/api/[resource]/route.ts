@@ -10,6 +10,7 @@ import { filterRowsByTenant, stampCreatePayload } from "@/lib/tenant"
 import { resolveUseBoxOrderNo } from "@/lib/domain/usebox-order-no"
 import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
+import { ensureBillFxColumns } from "@/lib/ensure-bill-fx-schema"
 import type { Customer } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -49,6 +50,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ res
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
   }
+  if (resource === "bills") {
+    await ensureBillFxColumns()
+  }
   if (resource === "orders") {
     const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
     await ensureOrdersContainerNosColumn()
@@ -74,6 +78,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
   }
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
+  }
+  if (resource === "bills") {
+    await ensureBillFxColumns()
   }
   if (resource === "orders") {
     const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
@@ -108,6 +115,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
     if (dup) {
       return NextResponse.json({ error: `代管公司「${dup.name}」已存在` }, { status: 409 })
     }
+  }
+
+  if (resource === "bills") {
+    const { attachBillFx } = await import("@/lib/domain/money")
+    const fx = attachBillFx({
+      amount: Number(payload.amount) || 0,
+      currency: typeof payload.currency === "string" ? payload.currency : "CNY",
+      exchangeRate: typeof payload.exchangeRate === "number" ? payload.exchangeRate : undefined,
+    })
+    payload.amount = fx.amount
+    payload.currency = fx.currency
+    payload.exchangeRate = fx.exchangeRate
+    payload.amountCny = fx.amountCny
   }
 
   const stamped = stampCreatePayload(resource, payload, session)

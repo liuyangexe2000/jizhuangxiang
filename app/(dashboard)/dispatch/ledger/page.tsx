@@ -27,6 +27,7 @@ import { useResource, revalidateResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
 import type { Bill, BillStatus, DispatchOrder, OutboundEvent } from "@/lib/types"
 import { nowLocalStr } from "@/lib/domain/dispatch-ops"
+import { attachBillFx, billFxItems, formatMoney } from "@/lib/domain/money"
 import { enqueueOutbound } from "@/lib/domain/outbound"
 import { downloadCsv } from "@/lib/csv"
 import { BookOpenCheck, Wallet, AlertTriangle, Download, CheckCircle2, Printer } from "lucide-react"
@@ -195,20 +196,22 @@ export default function LedgerPage() {
     const issuedAt = nowLocalStr().slice(0, 10)
     try {
       if (e.type === "调运费账单") {
+        const fx = attachBillFx({ amount: o.totalPrice, currency: "CNY" })
         await createBill({
           billNo: `BILL-DISP-${Date.now().toString().slice(-8)}`,
           type: "调运费账单",
           relatedOrderNo: o.dispatchNo,
           party: o.carrier,
-          amount: o.totalPrice,
+          ...fx,
           status: "待确认",
           issuedAt,
           confirmDeadline: confirmDeadline(3),
           items: [
-            { label: "单价", value: `¥${o.unitPrice}` },
+            { label: "单价", value: formatMoney(o.unitPrice, "CNY") },
             { label: "箱量", value: `${o.quantity}` },
             { label: "线路", value: `${o.pickupPlace}→${o.returnScope}` },
-            { label: "合计", value: currency(o.totalPrice) },
+            ...billFxItems(fx),
+            { label: "合计", value: formatMoney(fx.amount, "CNY") },
           ],
           __auditAction: "新增",
           __auditDetail: `生成调运费账单 ${o.dispatchNo}`,
@@ -218,20 +221,22 @@ export default function LedgerPage() {
         const days = e.estimateDays ?? estimateOverdueDays(o)
         const qty = e.quantity
         const amount = qty * rate * days
+        const fx = attachBillFx({ amount, currency: "CNY" })
         await createBill({
           billNo: `BILL-OD-${Date.now().toString().slice(-8)}`,
           type: "超期费账单",
           relatedOrderNo: o.dispatchNo,
           party: o.carrier,
-          amount,
+          ...fx,
           status: "待确认",
           issuedAt,
           confirmDeadline: confirmDeadline(3),
           items: [
             { label: "超期箱量", value: `${qty}` },
-            { label: "超期标准", value: `¥${rate}/箱/天` },
+            { label: "超期标准", value: `${formatMoney(rate, "CNY")}/箱/天` },
             { label: "估算天数", value: `${days}` },
-            { label: "合计", value: currency(amount) },
+            ...billFxItems(fx),
+            { label: "合计", value: formatMoney(fx.amount, "CNY") },
           ],
           __auditAction: "新增",
           __auditDetail: `生成超期费账单 ${o.dispatchNo}`,

@@ -72,6 +72,7 @@ export interface UseBoxOrder {
 
 export type BillType = "用箱账单" | "超期费账单" | "箱损费账单" | "用箱变更费账单" | "调运费账单"
 export type BillStatus = "待确认" | "已确认" | "有异议" | "已支付" | "超时默认确认"
+export type BillCurrency = "CNY" | "USD" | "EUR"
 
 export interface Bill {
   id: string
@@ -81,7 +82,14 @@ export interface Bill {
   party: string
   /** 客户主档 id（可选） */
   customerId?: string
+  /** 原币应付金额 */
   amount: number
+  /** 账单币种（缺省按 CNY） */
+  currency?: BillCurrency
+  /** 对人民币汇率（CNY=1） */
+  exchangeRate?: number
+  /** 折合人民币金额 */
+  amountCny?: number
   status: BillStatus
   issuedAt: string
   confirmDeadline: string

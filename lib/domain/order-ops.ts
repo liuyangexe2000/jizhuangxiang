@@ -1,5 +1,12 @@
 import type { Bill, Booking, UseBoxOrder } from "../types"
 import { nowLocalStr } from "./dispatch-ops"
+import {
+  attachBillFx,
+  billFxItems,
+  formatMoney,
+  inferBillCurrency,
+  type BillCurrency,
+} from "./money"
 
 export function fmtDeadline(from = new Date(), hours = 24) {
   const d = new Date(from.getTime() + hours * 3600 * 1000)
@@ -28,8 +35,14 @@ export function shouldReleaseDoc(o: UseBoxOrder) {
   return false
 }
 
+function orderBillCurrency(o: UseBoxOrder): BillCurrency {
+  // 用箱价目以平台报价为主，提箱地在境内按人民币，境外线路按欧元结算示意
+  return inferBillCurrency({ city: o.pickupCity })
+}
+
 export function buildUseBoxBill(o: UseBoxOrder): Omit<Bill, "id"> {
-  const amount = o.unitPrice * o.quantity
+  const currency = orderBillCurrency(o)
+  const fx = attachBillFx({ amount: o.unitPrice * o.quantity, currency })
   const issuedAt = nowLocalStr().slice(0, 10)
   return {
     billNo: `BILL${Date.now().toString().slice(-8)}`,
@@ -37,21 +50,23 @@ export function buildUseBoxBill(o: UseBoxOrder): Omit<Bill, "id"> {
     relatedOrderNo: o.orderNo,
     party: o.customer,
     customerId: o.customerId,
-    amount,
+    ...fx,
     status: "待确认",
     issuedAt,
     confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
     items: [
       { label: "箱型", value: o.containerType },
       { label: "数量", value: String(o.quantity) },
-      { label: "单价", value: `¥${o.unitPrice}` },
+      { label: "单价", value: formatMoney(o.unitPrice, currency) },
       { label: "线路", value: `${o.pickupCity}→${o.returnCity}` },
+      ...billFxItems(fx),
     ],
   }
 }
 
 export function buildCancelFeeBill(o: UseBoxOrder): Omit<Bill, "id"> {
-  const amount = Math.round(o.unitPrice * o.quantity * 0.2)
+  const currency = orderBillCurrency(o)
+  const fx = attachBillFx({ amount: Math.round(o.unitPrice * o.quantity * 0.2), currency })
   const issuedAt = nowLocalStr().slice(0, 10)
   return {
     billNo: `BILL${Date.now().toString().slice(-8)}`,
@@ -59,14 +74,15 @@ export function buildCancelFeeBill(o: UseBoxOrder): Omit<Bill, "id"> {
     relatedOrderNo: o.orderNo,
     party: o.customer,
     customerId: o.customerId,
-    amount,
+    ...fx,
     status: "待确认",
     issuedAt,
     confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
     items: [
       { label: "费用类型", value: "超时取消取消费（20%）" },
       { label: "关联订单", value: o.orderNo },
-      { label: "原金额", value: `¥${o.unitPrice * o.quantity}` },
+      { label: "原金额", value: formatMoney(o.unitPrice * o.quantity, currency) },
+      ...billFxItems(fx),
     ],
   }
 }
@@ -90,7 +106,9 @@ export function buildOverdueFeeBill(
 ): Omit<Bill, "id"> | null {
   const days = opts.days ?? calcUseboxOverdueDays(o, opts.freeDays)
   if (days <= 0 || opts.dailyRate <= 0) return null
-  const amount = Math.round(days * opts.dailyRate * o.quantity)
+  // 超期费按还箱地币种（境外堆场常见欧元日费率）
+  const currency = inferBillCurrency({ city: o.returnCity || o.pickupCity })
+  const fx = attachBillFx({ amount: Math.round(days * opts.dailyRate * o.quantity), currency })
   const issuedAt = nowLocalStr().slice(0, 10)
   return {
     billNo: `BILL${Date.now().toString().slice(-8)}`,
@@ -98,7 +116,7 @@ export function buildOverdueFeeBill(
     relatedOrderNo: o.orderNo,
     party: o.customer,
     customerId: o.customerId,
-    amount,
+    ...fx,
     status: "待确认",
     issuedAt,
     confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
@@ -106,9 +124,10 @@ export function buildOverdueFeeBill(
       { label: "费用类型", value: "用箱超期费" },
       { label: "免租天数", value: String(opts.freeDays) },
       { label: "超期天数", value: String(days) },
-      { label: "日费率", value: `¥${opts.dailyRate}/箱/天` },
+      { label: "日费率", value: `${formatMoney(opts.dailyRate, currency)}/箱/天` },
       { label: "箱量", value: String(o.quantity) },
       { label: "关联订单", value: o.orderNo },
+      ...billFxItems(fx),
     ],
   }
 }
@@ -117,7 +136,8 @@ export function buildDamageFeeBill(
   o: UseBoxOrder,
   opts: { amount: number; note?: string },
 ): Omit<Bill, "id"> {
-  const amount = Math.max(0, Math.round(opts.amount))
+  const currency = orderBillCurrency(o)
+  const fx = attachBillFx({ amount: Math.max(0, Math.round(opts.amount)), currency })
   const issuedAt = nowLocalStr().slice(0, 10)
   return {
     billNo: `BILL${Date.now().toString().slice(-8)}`,
@@ -125,7 +145,7 @@ export function buildDamageFeeBill(
     relatedOrderNo: o.orderNo,
     party: o.customer,
     customerId: o.customerId,
-    amount,
+    ...fx,
     status: "待确认",
     issuedAt,
     confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
@@ -134,6 +154,7 @@ export function buildDamageFeeBill(
       { label: "关联订单", value: o.orderNo },
       { label: "箱型×量", value: `${o.containerType}×${o.quantity}` },
       ...(opts.note ? [{ label: "异常说明", value: opts.note }] : []),
+      ...billFxItems(fx),
     ],
   }
 }

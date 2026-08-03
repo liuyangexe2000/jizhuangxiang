@@ -39,14 +39,27 @@ import { useListQuery } from "@/lib/list-query"
 import { useRole } from "@/lib/role-context"
 import type { Bill, Notification, OutboundEvent } from "@/lib/types"
 import { fmtDeadline, isBillOverdue } from "@/lib/domain/order-ops"
+import {
+  attachBillFx,
+  billFxItems,
+  formatExchangeRate,
+  formatMoney,
+  normalizeBillCurrency,
+  toCnyAmount,
+} from "@/lib/domain/money"
 import { enqueueOutbound } from "@/lib/domain/outbound"
 import { pushNotification } from "@/lib/domain/notify"
 import { printPrintArea } from "@/lib/print-document"
 import { toast } from "sonner"
 import { Wallet, FileWarning, CheckCircle2, Receipt, Printer, PencilLine, Search } from "lucide-react"
 
-const currency = (n: number) =>
-  `¥${n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function billFx(b: Bill) {
+  return attachBillFx({
+    amount: b.amount,
+    currency: b.currency || "CNY",
+    exchangeRate: b.exchangeRate,
+  })
+}
 
 const statusFilters = ["全部", "待确认", "已确认", "有异议", "已支付", "超时默认确认"]
 
@@ -111,7 +124,9 @@ export default function BillsPage() {
   }, [bills, update])
 
   const pending = bills.filter((b) => b.status === "待确认").length
-  const totalDue = bills.filter((b) => b.status !== "已支付").reduce((s, b) => s + b.amount, 0)
+  const totalDue = bills
+    .filter((b) => b.status !== "已支付")
+    .reduce((s, b) => s + (b.amountCny ?? toCnyAmount(b.amount, normalizeBillCurrency(b.currency), b.exchangeRate)), 0)
   const paid = bills.filter((b) => b.status === "已支付").length
 
   async function confirmBill(id: string) {
@@ -127,6 +142,9 @@ export default function BillsPage() {
             billNo: bill.billNo,
             relatedOrderNo: bill.relatedOrderNo,
             amount: bill.amount,
+            currency: bill.currency || "CNY",
+            exchangeRate: bill.exchangeRate ?? 1,
+            amountCny: bill.amountCny ?? bill.amount,
             status: "已确认",
             party: bill.party,
           },
@@ -158,6 +176,9 @@ export default function BillsPage() {
             billNo: bill.billNo,
             relatedOrderNo: bill.relatedOrderNo,
             amount: bill.amount,
+            currency: bill.currency || "CNY",
+            exchangeRate: bill.exchangeRate ?? 1,
+            amountCny: bill.amountCny ?? bill.amount,
             status: "已支付",
             party: bill.party,
           },
@@ -218,24 +239,38 @@ export default function BillsPage() {
     }
     const adjustedBy = user?.name || user?.account || "箱管"
     try {
+      const currency = normalizeBillCurrency(adjustFor.currency)
+      const fx = attachBillFx({ amount, currency, exchangeRate: adjustFor.exchangeRate })
       const nextItems = [
-        ...adjustFor.items.filter((it) => it.label !== "箱管调整说明"),
-        { label: "箱管调整说明", value: adjustNote.trim() || `金额由 ¥${adjustFor.amount} 调整为 ¥${amount}` },
+        ...adjustFor.items.filter(
+          (it) =>
+            !["箱管调整说明", "币种", "汇率（对人民币）", "折合人民币"].includes(it.label),
+        ),
+        ...billFxItems(fx),
+        {
+          label: "箱管调整说明",
+          value:
+            adjustNote.trim() ||
+            `金额由 ${formatMoney(adjustFor.amount, currency)} 调整为 ${formatMoney(amount, currency)}`,
+        },
       ]
       await update(adjustFor.id, {
-        amount,
+        amount: fx.amount,
+        currency: fx.currency,
+        exchangeRate: fx.exchangeRate,
+        amountCny: fx.amountCny,
         items: nextItems,
         status: "待确认",
         adjustedBy,
         confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
         __auditAction: "修改",
-        __auditDetail: `BR-22 箱管调整账单 ${adjustFor.billNo}：¥${adjustFor.amount}→¥${amount}`,
+        __auditDetail: `BR-22 箱管调整账单 ${adjustFor.billNo}：${formatMoney(adjustFor.amount, currency)}→${formatMoney(amount, currency)}（折合 ${formatMoney(fx.amountCny, "CNY")}）`,
       })
       await pushNotification(createNotif, {
         type: "账单",
         level: "重要",
         title: `账单已调整，待再次确认 · ${adjustFor.billNo}`,
-        desc: `${adjustedBy} 已调整为 ¥${amount.toLocaleString()}，请在 3 天内重新确认。`,
+        desc: `${adjustedBy} 已调整为 ${formatMoney(amount, currency)}（折合 ${formatMoney(fx.amountCny, "CNY")}），请在 3 天内重新确认。`,
         module: "M01 账单中心",
         href: "/customer/bills",
         roles: ["R03"],
@@ -253,12 +288,12 @@ export default function BillsPage() {
       <PageHeader
         module="M01 · 客户服务与订舱协同门户"
         title="账单中心"
-        description="M01-F04 账单核对与结算 — 核对用箱/调运等费用，3 天内确认，超时自动确认（BR-07）。"
+        description="M01-F04 账单核对与结算 — 展示原币、汇率与折合人民币；3 天内确认，超时自动确认（BR-07）。"
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="待核对账单" value={pending} icon={FileWarning} hint="超时默认确认" tone="warning" />
-        <StatCard label="应付金额" value={currency(totalDue)} icon={Wallet} tone="primary" />
+        <StatCard label="应付折合人民币" value={formatMoney(totalDue, "CNY")} icon={Wallet} tone="primary" />
         <StatCard label="已支付账单" value={paid} icon={CheckCircle2} tone="success" />
       </div>
 
@@ -306,7 +341,10 @@ export default function BillsPage() {
                   <SortableTableHead label="类型" columnKey="type" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="关联单号" columnKey="relatedOrderNo" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="对方" columnKey="party" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
-                  <SortableTableHead label="金额" columnKey="amount" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                  <SortableTableHead label="币种" columnKey="currency" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                  <SortableTableHead label="原币金额" columnKey="amount" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                  <SortableTableHead label="汇率" columnKey="exchangeRate" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                  <SortableTableHead label="折合人民币" columnKey="amountCny" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="开具时间" columnKey="issuedAt" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="截止" columnKey="confirmDeadline" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="状态" columnKey="status" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
@@ -314,13 +352,20 @@ export default function BillsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.rows.map((b) => (
+                {list.rows.map((b) => {
+                  const fx = billFx(b)
+                  return (
                   <TableRow key={b.id}>
                     <TableCell className="font-mono text-xs">{b.billNo}</TableCell>
                     <TableCell>{b.type}</TableCell>
                     <TableCell className="font-mono text-xs">{b.relatedOrderNo}</TableCell>
                     <TableCell>{b.party}</TableCell>
-                    <TableCell>{currency(b.amount)}</TableCell>
+                    <TableCell className="font-mono text-xs">{fx.currency}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatMoney(fx.amount, fx.currency)}</TableCell>
+                    <TableCell className="max-w-[9rem] text-xs text-muted-foreground">
+                      {formatExchangeRate(fx.exchangeRate, fx.currency)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap font-medium">{formatMoney(fx.amountCny, "CNY")}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{b.issuedAt}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{b.confirmDeadline}</TableCell>
                     <TableCell><StatusBadge status={b.status} /></TableCell>
@@ -355,10 +400,11 @@ export default function BillsPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
                 {list.total === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
                       未找到匹配的账单
                     </TableCell>
                   </TableRow>
@@ -432,10 +478,24 @@ export default function BillsPage() {
                     </tr>
                     <tr>
                       <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
-                        应付金额
+                        币种 / 汇率
                       </th>
-                      <td className="border border-zinc-300 px-3 py-2 font-semibold" colSpan={3}>
-                        {currency(detail.amount)}
+                      <td className="border border-zinc-300 px-3 py-2" colSpan={3}>
+                        {billFx(detail).currency} · {formatExchangeRate(billFx(detail).exchangeRate, billFx(detail).currency)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        原币金额
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2 font-semibold">
+                        {formatMoney(billFx(detail).amount, billFx(detail).currency)}
+                      </td>
+                      <th className="border border-zinc-300 bg-zinc-50 px-3 py-2 text-left font-medium">
+                        折合人民币
+                      </th>
+                      <td className="border border-zinc-300 px-3 py-2 font-semibold">
+                        {formatMoney(billFx(detail).amountCny, "CNY")}
                       </td>
                     </tr>
                   </tbody>
@@ -521,7 +581,12 @@ export default function BillsPage() {
                 value={adjustAmount}
                 onChange={(e) => setAdjustAmount(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">原金额 {adjustFor ? currency(adjustFor.amount) : ""}</p>
+              <p className="text-xs text-muted-foreground">
+                原金额{" "}
+                {adjustFor
+                  ? `${formatMoney(billFx(adjustFor).amount, billFx(adjustFor).currency)} · ${formatExchangeRate(billFx(adjustFor).exchangeRate, billFx(adjustFor).currency)} · 折合 ${formatMoney(billFx(adjustFor).amountCny, "CNY")}`
+                  : ""}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="adjustNote">调整说明</Label>

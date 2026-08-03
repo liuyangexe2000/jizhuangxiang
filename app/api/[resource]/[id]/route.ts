@@ -8,6 +8,7 @@ import { ensureAclRuntime } from "@/lib/acl-runtime"
 import { hashPassword } from "@/lib/password"
 import { canReadRow, canWriteRow } from "@/lib/tenant"
 import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
+import { ensureBillFxColumns } from "@/lib/ensure-bill-fx-schema"
 
 export const dynamic = "force-dynamic"
 
@@ -48,6 +49,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
   }
+  if (resource === "bills") {
+    await ensureBillFxColumns()
+  }
   if (resource === "orders") {
     const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
     await ensureOrdersContainerNosColumn()
@@ -76,6 +80,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
   if (resource === "orders" || resource === "bills") {
     await ensureCustomerIdColumns()
+  }
+  if (resource === "bills") {
+    await ensureBillFxColumns()
   }
   if (resource === "orders") {
     const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
