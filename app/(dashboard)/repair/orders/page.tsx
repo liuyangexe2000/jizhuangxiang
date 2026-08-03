@@ -18,9 +18,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { CitySearchSelect } from "@/components/city-search-select"
+import { InYardContainerSelect } from "@/components/in-yard-container-select"
 import { useResource, revalidateResource } from "@/lib/api"
 import { CONTAINER_TYPES } from "@/lib/container-types"
-import { findInventoryRow, inventoryId, nowLocalStr } from "@/lib/domain/dispatch-ops"
+import { validateIso6346ContainerNo } from "@/lib/domain/container-no"
+import { findInventoryRow, inventoryId, listInYardContainers, nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { compressImageToMaxWidth, revokePreviewUrls } from "@/lib/image-compress"
 import { useDictionary } from "@/lib/dictionary-context"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
@@ -94,7 +96,7 @@ export default function RepairOrdersPage() {
   const actor = user?.name || user?.account || "系统用户"
   const { data: orders, create: createRepair, update: updateRepair } = useResource<RepairOrder>("repair")
   const { data: yards } = useResource<Yard>("yards")
-  const { data: containers, create: createContainer, update: updateContainer } = useResource<ContainerMaster>("containers")
+  const { data: containers, update: updateContainer } = useResource<ContainerMaster>("containers")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
   const { data: attachments } = useResource<AttachmentMeta>("attachments")
   const [keyword, setKeyword] = useState("")
@@ -155,6 +157,11 @@ export default function RepairOrdersPage() {
   const yardsInCity = useMemo(
     () => (form.city ? enabledYards.filter((yard) => yard.city === form.city) : []),
     [enabledYards, form.city],
+  )
+
+  const inYardContainers = useMemo(
+    () => listInYardContainers(containers, { yard: form.yard }),
+    [containers, form.yard],
   )
 
   async function refresh() {
@@ -238,32 +245,25 @@ export default function RepairOrdersPage() {
 
   async function enterRepair(order: Pick<RepairOrder, "repairNo" | "containerNo" | "containerType" | "ownership" | "yard" | "city">) {
     const container = containers.find((item) => item.containerNo === order.containerNo)
-    const wasInRepair = container?.status === "维修中" && container.relatedOrderNo === order.repairNo
-    if (container) {
-      await updateContainer(container.containerNo, {
-        status: "维修中",
-        currentYard: order.yard,
-        currentCity: order.city,
-        relatedOrderNo: order.repairNo,
-        lastGateTime: nowLocalStr(),
-        __auditAction: "修改",
-        __auditDetail: "修箱入场、箱状态设为维修中",
-      })
-    } else {
-      await createContainer({
-        containerNo: order.containerNo,
-        type: order.containerType,
-        ownership: order.ownership,
-        currentYard: order.yard,
-        currentCity: order.city,
-        status: "维修中",
-        lastGateTime: nowLocalStr(),
-        storageDays: 0,
-        relatedOrderNo: order.repairNo,
-        __auditAction: "新增",
-        __auditDetail: "报修创建箱主档",
-      })
+    if (!container) {
+      throw new Error(`箱主档不存在：${order.containerNo}`)
     }
+    if (container.status !== "在场" && !(container.status === "维修中" && container.relatedOrderNo === order.repairNo)) {
+      throw new Error(`箱 ${order.containerNo} 当前状态为「${container.status}」，仅在场箱可报修`)
+    }
+    if (container.currentYard !== order.yard) {
+      throw new Error(`箱 ${order.containerNo} 不在堆场「${order.yard}」在场（当前：${container.currentYard || "未知"}）`)
+    }
+    const wasInRepair = container.status === "维修中" && container.relatedOrderNo === order.repairNo
+    await updateContainer(container.containerNo, {
+      status: "维修中",
+      currentYard: order.yard,
+      currentCity: order.city,
+      relatedOrderNo: order.repairNo,
+      lastGateTime: nowLocalStr(),
+      __auditAction: "修改",
+      __auditDetail: "修箱入场、箱状态设为维修中",
+    })
     const row = findInventoryRow(inventory, { yard: order.yard, city: order.city })
     if (row && !wasInRepair) {
       await updateInventory(inventoryId(row), {
@@ -275,8 +275,26 @@ export default function RepairOrdersPage() {
   }
 
   async function handleCreate() {
-    if (!form.containerNo.trim() || !form.city || !form.yard || !form.damageDesc.trim()) {
+    if (!form.city || !form.yard || !form.damageDesc.trim()) {
       toast.error("请填写箱号、城市、堆场和损坏描述")
+      return
+    }
+    const iso = validateIso6346ContainerNo(form.containerNo)
+    if (!iso.ok) {
+      toast.error(iso.error)
+      return
+    }
+    const containerNo = iso.containerNo
+    const onSite = listInYardContainers(containers, { yard: form.yard }).find((c) => c.containerNo === containerNo)
+    if (!onSite) {
+      toast.error(`箱号 ${containerNo} 不在堆场「${form.yard}」的在场箱清单中，请从列表选择或核对堆场`)
+      return
+    }
+    const busy = orders.find(
+      (o) => o.containerNo === containerNo && !["已完工", "已报废"].includes(o.status),
+    )
+    if (busy) {
+      toast.error(`箱号 ${containerNo} 已有未完结修箱工单 ${busy.repairNo}`)
       return
     }
     const sequence = String(orders.filter((item) => item.repairNo.startsWith("RP2026")).length + 1).padStart(4, "0")
@@ -296,9 +314,9 @@ export default function RepairOrdersPage() {
     }
     const order: Omit<RepairOrder, "id"> = {
       repairNo: "RP2026" + sequence,
-      containerNo: form.containerNo.trim().toUpperCase(),
-      containerType: form.containerType,
-      ownership: form.ownership as RepairOrder["ownership"],
+      containerNo,
+      containerType: onSite.type || form.containerType,
+      ownership: (onSite.ownership || form.ownership) as RepairOrder["ownership"],
       yard: form.yard,
       city: form.city || yards.find((item) => item.name === form.yard)?.city || form.yard.slice(0, 4),
       damageDesc: form.damageDesc.trim(),
@@ -645,29 +663,11 @@ export default function RepairOrdersPage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>新建修箱报修</DialogTitle>
-            <DialogDescription>提交后工单进入待报修状态并同步箱主档和库存；损坏照片将压缩至宽 1440px。</DialogDescription>
+            <DialogDescription>
+              箱号须符合 ISO 6346，且必须是所选堆场当前在场箱。提交后进入待报修并同步箱主档与库存；照片压缩至宽 1440px。
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="箱号">
-              <Input value={form.containerNo} onChange={(event) => setForm({ ...form, containerNo: event.target.value })} />
-            </Field>
-            <Field label="箱型">
-              <Select
-                value={form.containerType}
-                onValueChange={(value) => setForm({ ...form, containerType: (value ?? "") as RepairOrder["containerType"] })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTAINER_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
             <Field label="城市">
               <CitySearchSelect
                 value={form.city}
@@ -676,6 +676,7 @@ export default function RepairOrdersPage() {
                     ...form,
                     city: value,
                     yard: "",
+                    containerNo: "",
                   })
                 }
                 cities={pickupCities}
@@ -686,7 +687,13 @@ export default function RepairOrdersPage() {
               <Select
                 value={form.yard}
                 disabled={!form.city}
-                onValueChange={(value) => setForm({ ...form, yard: value ?? "" })}
+                onValueChange={(value) =>
+                  setForm({
+                    ...form,
+                    yard: value ?? "",
+                    containerNo: "",
+                  })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder={form.city ? "选择该城市堆场" : "请先选择城市"} />
@@ -695,6 +702,42 @@ export default function RepairOrdersPage() {
                   {yardsInCity.map((yard) => (
                     <SelectItem key={yard.id} value={yard.name}>
                       {yard.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <div className="sm:col-span-2">
+              <Field label={`箱号（该堆场在场 ${inYardContainers.length}）`}>
+                <InYardContainerSelect
+                  value={form.containerNo}
+                  disabled={!form.yard}
+                  containers={inYardContainers}
+                  placeholder={form.yard ? "搜索或选择在场箱号" : "请先选择堆场"}
+                  onValueChange={(containerNo, matched) =>
+                    setForm({
+                      ...form,
+                      containerNo,
+                      containerType: matched?.type || form.containerType,
+                      ownership: (matched?.ownership as RepairOrder["ownership"]) || form.ownership,
+                    })
+                  }
+                />
+              </Field>
+            </div>
+            <Field label="箱型（随在场箱带出）">
+              <Select
+                value={form.containerType}
+                disabled={!form.containerNo}
+                onValueChange={(value) => setForm({ ...form, containerType: (value ?? "") as RepairOrder["containerType"] })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="选择箱号后自动带出" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTAINER_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
                     </SelectItem>
                   ))}
                 </SelectContent>

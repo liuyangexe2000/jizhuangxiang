@@ -118,6 +118,25 @@ export function listAvailableUseboxContainers(
   )
 }
 
+/** 指定堆场当前在场箱（修箱报修等场景；可选按箱型筛） */
+export function listInYardContainers(
+  containers: ContainerMaster[],
+  opts: { yard: string; containerType?: string },
+): ContainerMaster[] {
+  const yard = opts.yard.trim()
+  if (!yard) return []
+  return containers
+    .filter(
+      (c) =>
+        !c.deleted &&
+        c.status === "在场" &&
+        c.currentYard === yard &&
+        (!opts.containerType || c.type === opts.containerType),
+    )
+    .slice()
+    .sort((a, b) => a.containerNo.localeCompare(b.containerNo))
+}
+
 export function buildPickupGate(
   o: DispatchOrder,
   index: number,
