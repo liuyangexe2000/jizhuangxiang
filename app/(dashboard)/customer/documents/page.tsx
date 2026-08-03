@@ -120,6 +120,7 @@ export default function DocumentsPage() {
   const { create: createRepair } = useResource<RepairOrder>("repair")
 
   const [keyword, setKeyword] = useState("")
+  const [workPhase, setWorkPhase] = useState<"pickup" | "return">("pickup")
   const [conditionTarget, setConditionTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
   const [conditionCheck, setConditionCheck] = useState<"通过" | "异常">("通过")
   const [conditionNote, setConditionNote] = useState("")
@@ -703,49 +704,85 @@ export default function DocumentsPage() {
           </div>
         </CardContent>
       </Card>
-      <Tabs defaultValue="pickup" className="gap-4">
-        <Card className="border-primary/25 bg-gradient-to-r from-primary/[0.06] to-transparent">
+      <Tabs value={workPhase} onValueChange={(v) => setWorkPhase(v as "pickup" | "return")} className="gap-4">
+        <Card>
           <CardContent className="space-y-3 p-4">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold text-foreground">作业阶段切换</p>
-                <p className="text-xs text-muted-foreground">
-                  提箱与还箱分两步办理；还箱请点右侧「还箱作业」
-                </p>
-              </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">作业阶段切换</p>
+              <p className="text-xs text-muted-foreground">
+                提箱与还箱分两步办理；需要还箱时请切换到「还箱作业」
+              </p>
             </div>
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1.5 rounded-xl bg-background/80 p-1.5 shadow-sm ring-1 ring-border">
-              <TabsTrigger
-                value="pickup"
-                className="h-auto flex-col items-stretch gap-1 rounded-lg px-3 py-3 text-left data-active:bg-primary data-active:text-primary-foreground data-active:shadow-md"
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="tablist" aria-label="作业阶段">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={workPhase === "pickup"}
+                onClick={() => setWorkPhase("pickup")}
+                className={
+                  workPhase === "pickup"
+                    ? "flex w-full flex-col gap-1 rounded-xl border-2 border-primary bg-primary px-4 py-3.5 text-left text-primary-foreground shadow-sm transition-colors"
+                    : "flex w-full flex-col gap-1 rounded-xl border-2 border-border bg-card px-4 py-3.5 text-left text-foreground shadow-sm transition-colors hover:border-primary/50 hover:bg-muted/40"
+                }
               >
-                <span className="flex items-center gap-2 text-base font-semibold">
-                  <PackageOpen className="size-4 shrink-0" />
-                  提箱作业
-                  <span className="ml-auto rounded-md bg-background/20 px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                <span className="flex w-full items-center gap-2">
+                  <PackageOpen className="size-5 shrink-0" />
+                  <span className="text-base font-semibold">提箱作业</span>
+                  <span
+                    className={
+                      workPhase === "pickup"
+                        ? "ml-auto rounded-md bg-primary-foreground/20 px-2 py-0.5 text-xs font-semibold tabular-nums"
+                        : "ml-auto rounded-md bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-foreground"
+                    }
+                  >
                     {pickupList.total}
                   </span>
                 </span>
-                <span className="text-[11px] font-normal opacity-80">
+                <span
+                  className={
+                    workPhase === "pickup"
+                      ? "pl-7 text-xs text-primary-foreground/85"
+                      : "pl-7 text-xs text-muted-foreground"
+                  }
+                >
                   打印提箱单 · 预约堆场 · 现场确认放箱
                 </span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="return"
-                className="h-auto flex-col items-stretch gap-1 rounded-lg px-3 py-3 text-left data-active:bg-primary data-active:text-primary-foreground data-active:shadow-md"
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={workPhase === "return"}
+                onClick={() => setWorkPhase("return")}
+                className={
+                  workPhase === "return"
+                    ? "flex w-full flex-col gap-1 rounded-xl border-2 border-primary bg-primary px-4 py-3.5 text-left text-primary-foreground shadow-sm transition-colors"
+                    : "flex w-full flex-col gap-1 rounded-xl border-2 border-border bg-card px-4 py-3.5 text-left text-foreground shadow-sm transition-colors hover:border-primary/50 hover:bg-muted/40"
+                }
               >
-                <span className="flex items-center gap-2 text-base font-semibold">
-                  <PackageCheck className="size-4 shrink-0" />
-                  还箱作业
-                  <span className="ml-auto rounded-md bg-background/20 px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                <span className="flex w-full items-center gap-2">
+                  <PackageCheck className="size-5 shrink-0" />
+                  <span className="text-base font-semibold">还箱作业</span>
+                  <span
+                    className={
+                      workPhase === "return"
+                        ? "ml-auto rounded-md bg-primary-foreground/20 px-2 py-0.5 text-xs font-semibold tabular-nums"
+                        : "ml-auto rounded-md bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-foreground"
+                    }
+                  >
                     {returnList.total}
                   </span>
                 </span>
-                <span className="text-[11px] font-normal opacity-80">
+                <span
+                  className={
+                    workPhase === "return"
+                      ? "pl-7 text-xs text-primary-foreground/85"
+                      : "pl-7 text-xs text-muted-foreground"
+                  }
+                >
                   打印还箱单 · 预约还箱 · 现场确认收箱
                 </span>
-              </TabsTrigger>
-            </TabsList>
+              </button>
+            </div>
           </CardContent>
         </Card>
         <TabsContent value="pickup">
