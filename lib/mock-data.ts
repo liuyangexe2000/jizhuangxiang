@@ -222,7 +222,7 @@ export const bills: Bill[] = [
     issuedAt: "2026-07-01 10:00",
     confirmDeadline: "2026-07-04 10:00",
     items: [
-      { label: "箱损箱号", value: "CCLU7845120" },
+      { label: "箱损箱号", value: "CCLU7845125" },
       { label: "维修项目", value: "箱门变形" },
       { label: "合计", value: "¥3,200" },
     ],
@@ -375,7 +375,7 @@ export const returnApplications: ReturnApplication[] = [
     id: "r1",
     applyNo: "RA2026070001",
     carrier: "波兰联运物流",
-    containerNos: ["TCLU3421100", "TCLU3421101", "BEAU4590233"],
+    containerNos: ["TCLU3421104", "TCLU3421125", "BEAU4590237"],
     relatedDispatchNos: ["DP2026060015"],
     returnCity: "华沙",
     returnYard: "华沙pkpcc",
@@ -386,7 +386,7 @@ export const returnApplications: ReturnApplication[] = [
     id: "r2",
     applyNo: "RA2026070002",
     carrier: "中远海运欧洲承运",
-    containerNos: ["CCLU7845120", "CCLU7845121"],
+    containerNos: ["CCLU7845125", "CCLU7845130"],
     relatedDispatchNos: ["DP2026070001", "DP2026070003"],
     returnCity: "纽伦堡",
     returnYard: "纽伦堡CDN",
@@ -397,7 +397,7 @@ export const returnApplications: ReturnApplication[] = [
     id: "r3",
     applyNo: "RA2026060020",
     carrier: "德铁货运代理",
-    containerNos: ["FCIU8812345"],
+    containerNos: ["FCIU8812340"],
     relatedDispatchNos: ["DP2026060008"],
     returnCity: "西安",
     returnYard: "陆港堆场",
@@ -409,7 +409,7 @@ export const returnApplications: ReturnApplication[] = [
     id: "r4",
     applyNo: "RA2026060019",
     carrier: "波兰联运物流",
-    containerNos: ["TCLU3421099"],
+    containerNos: ["TCLU3421090"],
     relatedDispatchNos: ["DP2026060015"],
     returnCity: "华沙",
     returnYard: "华沙balticon",
@@ -424,13 +424,13 @@ export const returnApplications: ReturnApplication[] = [
 export { inventoryRowsSeed as inventoryRows } from "./data/inventory-rows.seed"
 
 export const gateRecords: GateRecord[] = [
-  { id: "g1", containerNo: "TCLU3421100", type: "进场", time: "2026-07-02 08:30", yard: "华沙pkpcc", city: "华沙", source: "代管公司上传", relatedOrderNo: "DP2026060015", mappingStatus: "已映射", ownership: "自有箱" },
-  { id: "g2", containerNo: "CCLU7845120", type: "出场", time: "2026-07-01 14:10", yard: "汉堡HCS", city: "汉堡", source: "系统放箱/调运订单", relatedOrderNo: "DP2026070001", mappingStatus: "已映射", ownership: "租赁箱" },
-  { id: "g3", containerNo: "UNKNOWN00921", type: "进场", time: "2026-07-02 19:40", yard: "杜堡dit", city: "杜伊斯堡", source: "代管公司上传", mappingStatus: "未映射", ownership: "自有箱" },
-  { id: "g4", containerNo: "FCIU8812345", type: "进场", time: "2026-06-28 16:20", yard: "陆港堆场", city: "西安", source: "系统放箱/调运订单", relatedOrderNo: "DP2026060008", mappingStatus: "已映射", ownership: "自有箱" },
-  { id: "g5", containerNo: "MSKU1122334", type: "出场", time: "2026-07-03 07:05", yard: "陆港堆场", city: "西安", source: "手工补录异常", mappingStatus: "异常", ownership: "租赁箱" },
-  { id: "g6", containerNo: "BEAU4590233", type: "进场", time: "2026-07-02 08:35", yard: "华沙pkpcc", city: "华沙", source: "代管公司上传", relatedOrderNo: "DP2026060015", mappingStatus: "已映射", ownership: "自有箱" },
-  { id: "g7", containerNo: "TEMP99920021", type: "进场", time: "2026-07-01 21:15", yard: "成都德成堆场", city: "成都", source: "手工补录异常", mappingStatus: "未映射", ownership: "自有箱" },
+  { id: "g1", containerNo: "TCLU3421104", type: "进场", time: "2026-07-02 08:30", yard: "华沙pkpcc", city: "华沙", source: "代管公司上传", relatedOrderNo: "DP2026060015", mappingStatus: "已映射", ownership: "自有箱" },
+  { id: "g2", containerNo: "CCLU7845125", type: "出场", time: "2026-07-01 14:10", yard: "汉堡HCS", city: "汉堡", source: "系统放箱/调运订单", relatedOrderNo: "DP2026070001", mappingStatus: "已映射", ownership: "租赁箱" },
+  { id: "g3", containerNo: "HLCU9009218", type: "进场", time: "2026-07-02 19:40", yard: "杜堡dit", city: "杜伊斯堡", source: "代管公司上传", mappingStatus: "未映射", ownership: "自有箱" },
+  { id: "g4", containerNo: "FCIU8812340", type: "进场", time: "2026-06-28 16:20", yard: "陆港堆场", city: "西安", source: "系统放箱/调运订单", relatedOrderNo: "DP2026060008", mappingStatus: "已映射", ownership: "自有箱" },
+  { id: "g5", containerNo: "MSKU1122333", type: "出场", time: "2026-07-03 07:05", yard: "陆港堆场", city: "西安", source: "手工补录异常", mappingStatus: "异常", ownership: "租赁箱" },
+  { id: "g6", containerNo: "BEAU4590237", type: "进场", time: "2026-07-02 08:35", yard: "华沙pkpcc", city: "华沙", source: "代管公司上传", relatedOrderNo: "DP2026060015", mappingStatus: "已映射", ownership: "自有箱" },
+  { id: "g7", containerNo: "TEMU9920026", type: "进场", time: "2026-07-01 21:15", yard: "成都德成堆场", city: "成都", source: "手工补录异常", mappingStatus: "未映射", ownership: "自有箱" },
 ]
 
 export { containerMastersSeed as containerMasters } from "./data/containers.seed"
@@ -572,7 +572,7 @@ export const bookings: Booking[] = [
     id: "bk1",
     bookingNo: "BK2026070001",
     type: "提箱预约",
-    containerNos: ["TCLU3421110", "TCLU3421111"],
+    containerNos: ["TCLU3421110", "TCLU3421130"],
     yard: "汉堡HCS",
     city: "汉堡",
     planTime: "2026-07-10 09:00",
@@ -589,7 +589,7 @@ export const bookings: Booking[] = [
     id: "bk2",
     bookingNo: "BK2026070002",
     type: "还箱预约",
-    containerNos: ["TCLU3421100", "BEAU4590233"],
+    containerNos: ["TCLU3421104", "BEAU4590237"],
     yard: "华沙pkpcc",
     city: "华沙",
     planTime: "2026-07-11 20:30",
@@ -606,7 +606,7 @@ export const bookings: Booking[] = [
     id: "bk3",
     bookingNo: "BK2026070003",
     type: "提箱预约",
-    containerNos: ["FCIU8812350"],
+    containerNos: ["FCIU8812356"],
     yard: "陆港堆场",
     city: "西安",
     planTime: "2026-07-05 14:00",
@@ -696,13 +696,13 @@ export const supplyContracts: SupplyContract[] = [
 
 // ---------- 集装箱维修管理：修箱工单 ----------
 export const repairOrders: RepairOrder[] = [
-  { id: "rp1", repairNo: "RP2026070001", containerNo: "MSKU1122334", containerType: "40HQ", ownership: "租赁箱", yard: "陆港堆场", city: "西安", damageDesc: "箱门变形、门锁损坏", level: "中修", vendor: "西安集装箱修理厂", estCost: 3200, reportedBy: "王师傅(堆场)", reportedAt: "2026-07-03 07:10", status: "维修中" },
-  { id: "rp2", repairNo: "RP2026070002", containerNo: "CCLU7845121", containerType: "40GP", ownership: "租赁箱", yard: "汉堡HCS", city: "汉堡", damageDesc: "侧板凹陷", level: "小修", vendor: "Hamburg Repair GmbH", estCost: 850, reportedBy: "Hans Müller(堆场)", reportedAt: "2026-07-02 16:40", status: "待检验" },
-  { id: "rp3", repairNo: "RP2026060015", containerNo: "FCIU8812301", containerType: "20GP", ownership: "自有箱", yard: "箱满多堆场", city: "郑州", damageDesc: "底板腐蚀、焊缝开裂", level: "大修", vendor: "郑州铁路集装箱修理厂", estCost: 6800, actualCost: 7200, reportedBy: "李检验(代管)", reportedAt: "2026-06-25 09:00", finishedAt: "2026-07-01 15:00", status: "已完工" },
-  { id: "rp4", repairNo: "RP2026070003", containerNo: "TCLU3421088", containerType: "40HQ", ownership: "自有箱", yard: "成都德成堆场", city: "成都", damageDesc: "整体锈蚀严重，结构老化", level: "报废评估", vendor: "蓉欧检测中心", estCost: 0, reportedBy: "赵检验(代管)", reportedAt: "2026-07-02 11:20", status: "待检验" },
-  { id: "rp5", repairNo: "RP2026070004", containerNo: "BEAU4590210", containerType: "40GP", ownership: "自有箱", yard: "陆港堆场", city: "西安", damageDesc: "封条缺失、需重新检验", level: "小修", vendor: "西安集装箱修理厂", estCost: 300, reportedBy: "王师傅(堆场)", reportedAt: "2026-07-03 09:30", status: "待报修" },
-  { id: "rp6", repairNo: "RP2026060009", containerNo: "SEGU5510042", containerType: "45HQ", ownership: "租赁箱", yard: "杜堡dit", city: "杜伊斯堡", damageDesc: "顶板破损修复", level: "中修", vendor: "Duisburg Container Service", estCost: 2400, actualCost: 2400, reportedBy: "Klaus Weber(代管)", reportedAt: "2026-06-20 13:00", finishedAt: "2026-06-26 10:00", status: "待验收" },
-  { id: "rp7", repairNo: "RP2026050030", containerNo: "TCLU3400011", containerType: "20GP", ownership: "自有箱", yard: "箱满多堆场", city: "郑州", damageDesc: "无法修复，结构报废", level: "报废评估", vendor: "郑州铁路集装箱修理厂", estCost: 0, reportedBy: "李检验(代管)", reportedAt: "2026-05-28 10:00", finishedAt: "2026-06-05 14:00", status: "已报废" },
+  { id: "rp1", repairNo: "RP2026070001", containerNo: "XAGU6047865", containerType: "40HQ", ownership: "自有箱", yard: "陆港堆场", city: "西安", damageDesc: "箱门变形、门锁损坏", level: "中修", vendor: "西安集装箱修理厂", estCost: 3200, reportedBy: "王师傅(堆场)", reportedAt: "2026-07-03 07:10", status: "维修中" },
+  { id: "rp2", repairNo: "RP2026070002", containerNo: "XAGU6028119", containerType: "40HQ", ownership: "自有箱", yard: "汉堡HCS", city: "汉堡", damageDesc: "侧板凹陷", level: "小修", vendor: "Hamburg Repair GmbH", estCost: 850, reportedBy: "Hans Müller(堆场)", reportedAt: "2026-07-02 16:40", status: "待检验" },
+  { id: "rp3", repairNo: "RP2026060015", containerNo: "FCIU8812309", containerType: "20GP", ownership: "自有箱", yard: "箱满多堆场", city: "郑州", damageDesc: "底板腐蚀、焊缝开裂", level: "大修", vendor: "郑州铁路集装箱修理厂", estCost: 6800, actualCost: 7200, reportedBy: "李检验(代管)", reportedAt: "2026-06-25 09:00", finishedAt: "2026-07-01 15:00", status: "已完工" },
+  { id: "rp4", repairNo: "RP2026070003", containerNo: "TCLU3421085", containerType: "40HQ", ownership: "自有箱", yard: "成都德成堆场", city: "成都", damageDesc: "整体锈蚀严重，结构老化", level: "报废评估", vendor: "蓉欧检测中心", estCost: 0, reportedBy: "赵检验(代管)", reportedAt: "2026-07-02 11:20", status: "待检验" },
+  { id: "rp5", repairNo: "RP2026070004", containerNo: "XAGU6017120", containerType: "40HQ", ownership: "自有箱", yard: "陆港堆场", city: "西安", damageDesc: "封条缺失、需重新检验", level: "小修", vendor: "西安集装箱修理厂", estCost: 300, reportedBy: "王师傅(堆场)", reportedAt: "2026-07-03 09:30", status: "待报修" },
+  { id: "rp6", repairNo: "RP2026060009", containerNo: "SEGU5510048", containerType: "45HQ", ownership: "租赁箱", yard: "杜堡dit", city: "杜伊斯堡", damageDesc: "顶板破损修复", level: "中修", vendor: "Duisburg Container Service", estCost: 2400, actualCost: 2400, reportedBy: "Klaus Weber(代管)", reportedAt: "2026-06-20 13:00", finishedAt: "2026-06-26 10:00", status: "待验收" },
+  { id: "rp7", repairNo: "RP2026050030", containerNo: "TCLU3400014", containerType: "20GP", ownership: "自有箱", yard: "箱满多堆场", city: "郑州", damageDesc: "无法修复，结构报废", level: "报废评估", vendor: "郑州铁路集装箱修理厂", estCost: 0, reportedBy: "李检验(代管)", reportedAt: "2026-05-28 10:00", finishedAt: "2026-06-05 14:00", status: "已报废" },
 ]
 
 // ---------- 统一待办与通知中心 ----------
@@ -715,7 +715,7 @@ export const notifications: Notification[] = [
   { id: "n6", type: "时限提醒", level: "普通", title: "提箱预约邮件待发送", desc: "预约 BK2026070003 尚未发送邮件通知堆场。", module: "M04 预约与通知", href: "/yard/bookings", roles: ["R04", "R06"], actionable: true, read: false, createdAt: "2026-07-03 06:30" },
   { id: "n7", type: "审批", level: "重要", title: "供应计划 SP2026070001 待审批", desc: "采购 200 个 40HQ，预计金额 ¥4,800,000。", module: "M05 供应计划", href: "/supply/plans", roles: ["R02"], actionable: true, read: false, createdAt: "2026-07-01 10:05" },
   { id: "n8", type: "系统", level: "普通", title: "库存差异待核对", desc: "杜堡dit系统与代管公司数量差异 +2。", module: "M03 差异核对", href: "/inventory/discrepancy", roles: ["R01", "R04"], actionable: true, read: true, createdAt: "2026-07-02 22:05" },
-  { id: "n9", type: "任务", level: "普通", title: "修箱工单 RP2026060009 待验收", desc: "杜伊斯堡箱号 SEGU5510042 顶板修复完成待验收。", module: "M06 维修管理", href: "/repair/orders", roles: ["R01", "R04"], actionable: true, read: true, createdAt: "2026-06-26 10:05" },
+  { id: "n9", type: "任务", level: "普通", title: "修箱工单 RP2026060009 待验收", desc: "杜伊斯堡箱号 SEGU5510048 顶板修复完成待验收。", module: "M06 维修管理", href: "/repair/orders", roles: ["R01", "R04"], actionable: true, read: true, createdAt: "2026-06-26 10:05" },
   { id: "n10", type: "系统", level: "普通", title: "订舱平台数据同步完成", desc: "本日新增用箱订单 5 条已成功接收。", module: "系统集成", href: "/admin/integrations", roles: ["R00", "R01"], actionable: false, read: true, createdAt: "2026-07-03 08:00" },
 ]
 
@@ -726,7 +726,7 @@ export const auditLogs: AuditLog[] = [
   { id: "al3", time: "2026-07-03 08:41:12", operator: "系统", operatorRole: "R00", action: "新增", module: "M01 客户门户", target: "UB202607030002", detail: "订舱平台自动接收用箱订单", ip: "系统", proxied: false },
   { id: "al4", time: "2026-07-03 08:20:44", operator: "王芳", operatorRole: "R02", action: "审批", module: "M02 调运管理", target: "DP2026070001", detail: "财务审批通过", ip: "10.12.5.8", proxied: false },
   { id: "al5", time: "2026-07-02 22:05:00", operator: "系统", operatorRole: "R00", action: "修改", module: "M03 库存管理", target: "杜堡dit", detail: "夜间差异核对：系统 130 / 代管 132", ip: "系统", proxied: false },
-  { id: "al6", time: "2026-07-02 16:40:20", operator: "Hans Müller", operatorRole: "R06", action: "新增", module: "M06 维修管理", target: "RP2026070002", detail: "登记修箱工单：CCLU7845121 侧板凹陷", ip: "195.20.11.4", proxied: false },
+  { id: "al6", time: "2026-07-02 16:40:20", operator: "Hans Müller", operatorRole: "R06", action: "新增", module: "M06 维修管理", target: "RP2026070002", detail: "登记修箱工单：XAGU6028119 侧板凹陷", ip: "195.20.11.4", proxied: false },
   { id: "al7", time: "2026-07-02 15:30:10", operator: "系统", operatorRole: "R00", action: "新增", module: "M01 账单中心", target: "BILL-OD-20260702-007", detail: "自动生成超期费账单 ¥5,600", ip: "系统", proxied: false },
   { id: "al8", time: "2026-07-02 11:20:33", operator: "李晓明", operatorRole: "R03", action: "删除", module: "M01 客户门户", target: "UB202606200099", detail: "24 小时内取消用箱订单", ip: "220.181.38.148", proxied: false },
   { id: "al9", time: "2026-07-02 10:02:18", operator: "系统管理员", operatorRole: "R00", action: "修改", module: "基础配置", target: "城市字典·纽伦堡", detail: "停用城市字典项", ip: "10.12.3.21", proxied: false },

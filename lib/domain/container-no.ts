@@ -90,3 +90,39 @@ export function validateIso6346ContainerNo(input: string): ContainerNoValidation
 export function isValidIso6346ContainerNo(input: string): boolean {
   return validateIso6346ContainerNo(input).ok
 }
+
+/** 由 10 位主体（4 字母 + 6 数字）生成完整合法箱号 */
+export function makeIso6346ContainerNo(body10: string): string {
+  const body = normalizeContainerNo(body10)
+  const digit = iso6346CheckDigit(body)
+  if (digit == null) {
+    throw new Error(`无法生成校验位：${body10}`)
+  }
+  return `${body}${digit}`
+}
+
+/**
+ * 尽量把演示/脏数据箱号纠正为合法 ISO 6346：
+ * - 已合法：原样返回
+ * - 4+6+错误校验位：纠正末位
+ * - 其它：用稳定哈希生成 TEMU + 6 位序号 + 校验位
+ */
+export function coerceToIso6346ContainerNo(input: string): string {
+  const raw = normalizeContainerNo(input)
+  const valid = validateIso6346ContainerNo(raw)
+  if (valid.ok) return valid.containerNo
+
+  if (/^[A-Z]{4}\d{6}\d?$/.test(raw) && /^[UJZ]$/.test(raw[3]!)) {
+    const body = raw.slice(0, 10)
+    const digit = iso6346CheckDigit(body)
+    if (digit != null) return `${body}${digit}`
+  }
+
+  let hash = 0
+  const seed = raw || "EMPTY"
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 33 + seed.charCodeAt(i)) >>> 0
+  }
+  const serial = String(hash % 1_000_000).padStart(6, "0")
+  return makeIso6346ContainerNo(`TEMU${serial}`)
+}
