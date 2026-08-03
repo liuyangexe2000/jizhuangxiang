@@ -36,6 +36,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { CitySearchSelect } from "@/components/city-search-select"
+import { useDictionary } from "@/lib/dictionary-context"
 import { useResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
 import type { DispatchPriceRule, Yard } from "@/lib/types"
@@ -44,6 +46,7 @@ import { solidTone } from "@/lib/ui-tone"
 const ZONES: DispatchPriceRule["zone"][] = ["近距", "中距", "远距"]
 
 type FormState = {
+  pickupCity: string
   pickupPlace: string
   scope: string
   unitPrice: string
@@ -54,6 +57,7 @@ type FormState = {
 }
 
 const emptyForm: FormState = {
+  pickupCity: "",
   pickupPlace: "",
   scope: "",
   unitPrice: "",
@@ -64,6 +68,7 @@ const emptyForm: FormState = {
 }
 
 export default function DispatchPricesPage() {
+  const { pickupCities } = useDictionary()
   const { data: rows, create, update, remove } = useResource<DispatchPriceRule>("dispatchPriceRules")
   const { data: yards } = useResource<Yard>("yards")
   const [keyword, setKeyword] = useState("")
@@ -72,11 +77,29 @@ export default function DispatchPricesPage() {
   const [editing, setEditing] = useState<DispatchPriceRule | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
 
-  const yardNames = useMemo(() => {
-    const enabled = yards.filter((y) => y.enabled && !y.deleted).map((y) => y.name)
-    const fromRules = rows.map((r) => r.pickupPlace)
-    return Array.from(new Set([...enabled, ...fromRules])).sort((a, b) => a.localeCompare(b, "zh"))
-  }, [yards, rows])
+  const enabledYards = useMemo(
+    () => yards.filter((y) => y.enabled && !y.deleted),
+    [yards],
+  )
+
+  const yardsInCity = useMemo(() => {
+    if (!form.pickupCity) return []
+    const inCity = enabledYards.filter((y) => y.city === form.pickupCity)
+    // 编辑时若原堆场已停用，仍保留可选
+    if (
+      form.pickupPlace &&
+      !inCity.some((y) => y.name === form.pickupPlace)
+    ) {
+      const orphan = yards.find((y) => y.name === form.pickupPlace)
+      if (orphan) return [...inCity, orphan]
+    }
+    return inCity
+  }, [enabledYards, yards, form.pickupCity, form.pickupPlace])
+
+  const cityOptions = useMemo(() => {
+    const fromYards = enabledYards.map((y) => y.city).filter(Boolean)
+    return Array.from(new Set([...pickupCities, ...fromYards])).sort((a, b) => a.localeCompare(b, "zh"))
+  }, [pickupCities, enabledYards])
 
   const filtered = useMemo(() => {
     const kw = keyword.trim().toLowerCase()
@@ -118,8 +141,10 @@ export default function DispatchPricesPage() {
   }
 
   function openEdit(r: DispatchPriceRule) {
+    const yard = yards.find((y) => y.name === r.pickupPlace)
     setEditing(r)
     setForm({
+      pickupCity: yard?.city || "",
       pickupPlace: r.pickupPlace,
       scope: r.scope,
       unitPrice: String(r.unitPrice),
@@ -143,6 +168,10 @@ export default function DispatchPricesPage() {
   function handleSave() {
     const pickupPlace = form.pickupPlace.trim()
     const scope = form.scope.trim()
+    if (!form.pickupCity) {
+      toast.error("请先选择提箱城市")
+      return
+    }
     if (!pickupPlace || !scope) {
       toast.error("请填写提箱堆场与还箱范围")
       return
@@ -340,19 +369,35 @@ export default function DispatchPricesPage() {
             <DialogDescription>同一提箱堆场与还箱范围仅允许一条启用方案。</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-2">
+              <Label>提箱城市 *</Label>
+              <CitySearchSelect
+                value={form.pickupCity}
+                onValueChange={(city) =>
+                  setForm((f) => ({
+                    ...f,
+                    pickupCity: city,
+                    pickupPlace: "",
+                  }))
+                }
+                cities={cityOptions}
+                placeholder="选择城市"
+              />
+            </div>
+            <div className="space-y-2">
               <Label>提箱堆场 *</Label>
               <Select
                 value={form.pickupPlace}
+                disabled={!form.pickupCity}
                 onValueChange={(v) => setForm((f) => ({ ...f, pickupPlace: v ?? "" }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择提箱堆场" />
+                  <SelectValue placeholder={form.pickupCity ? "选择该城市堆场" : "请先选择城市"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {yardNames.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
+                  {yardsInCity.map((y) => (
+                    <SelectItem key={y.id} value={y.name}>
+                      {y.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -426,9 +471,9 @@ export default function DispatchPricesPage() {
                 onCheckedChange={(enabled) => setForm((f) => ({ ...f, enabled }))}
               />
             </div>
-            {form.pickupPlace && form.scope ? (
+            {form.pickupCity && form.pickupPlace && form.scope ? (
               <div className={`rounded-md px-3 py-2 text-xs sm:col-span-2 ${solidTone.info}`}>
-                方案预览：{form.pickupPlace} → {form.scope} · {form.zone}
+                方案预览：{form.pickupCity} · {form.pickupPlace} → {form.scope} · {form.zone}
                 {form.unitPrice ? ` · ¥${Number(form.unitPrice || 0).toLocaleString()}/箱` : ""}
               </div>
             ) : null}
