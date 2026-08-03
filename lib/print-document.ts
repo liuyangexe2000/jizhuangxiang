@@ -209,3 +209,42 @@ export function printPrintArea(opts?: {
   void run()
   return true
 }
+
+/**
+ * 下载与打印相同内容的电子版（自包含 HTML，可用浏览器打开/另存为 PDF）。
+ * @returns 是否成功触发下载
+ */
+export function downloadPrintArea(opts?: {
+  title?: string
+  filename?: string
+  root?: ParentNode | null
+}): boolean {
+  if (typeof window === "undefined" || typeof document === "undefined") return false
+
+  const scope = opts?.root ?? document
+  const area = scope.querySelector(".print-area") as HTMLElement | null
+  if (!area) {
+    console.warn("[download] 未找到 .print-area")
+    return false
+  }
+
+  const title = opts?.title || "单据"
+  const html = buildDocumentHtml(area, title)
+  const safeName = (opts?.filename || title)
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+  const filename = safeName.toLowerCase().endsWith(".html") ? safeName : `${safeName}.html`
+
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  a.rel = "noopener"
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 2000)
+  return true
+}

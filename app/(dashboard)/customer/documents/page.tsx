@@ -59,7 +59,7 @@ import {
   relocateReserved,
 } from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
-import { printPrintArea } from "@/lib/print-document"
+import { downloadPrintArea, printPrintArea } from "@/lib/print-document"
 import { DOC_UPLOAD_ACCEPT, validateDocUploadFile } from "@/lib/doc-upload"
 import type {
   AttachmentMeta,
@@ -1198,7 +1198,7 @@ export default function DocumentsPage() {
           <DialogHeader className="no-print">
             <DialogTitle>单据预览</DialogTitle>
             <DialogDescription>
-              提箱单不含用箱价格；可切换已启用模板，打印时带电子章。
+              提箱单不含用箱价格；可切换已启用模板，打印或下载电子版均带电子章。
             </DialogDescription>
           </DialogHeader>
           {activePrintTemplates.length > 1 && (
@@ -1227,6 +1227,21 @@ export default function DocumentsPage() {
           <DialogFooter className="no-print">
             <Button variant="outline" onClick={() => setPrintTarget(null)}>
               关闭
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const title = printTarget
+                  ? `${printTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${printTarget.order.orderNo}`
+                  : "单据"
+                const ok = downloadPrintArea({ title, filename: title })
+                if (ok) toast.success("已开始下载电子版")
+                else toast.error("未找到可下载的单据内容")
+              }}
+            >
+              <Download className="mr-1 size-4" />
+              下载电子版
             </Button>
             <Button
               type="button"
