@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { MapPinned, Plus, Pencil, Trash2, Search, Download, Upload } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/dialog"
 import { useDictionary, type CityInput } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
+import { downloadCsv, parseCsv } from "@/lib/csv"
+import { CITY_CSV_HEADERS, cityToCsvRow, parseCityCsvRows } from "@/lib/domain/city-csv"
 import type { CityDictItem, CityRegion } from "@/lib/types"
 import { solidTone } from "@/lib/ui-tone"
 
@@ -60,6 +62,8 @@ export default function CityDictPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<CityDictItem | null>(null)
   const [form, setForm] = useState<CityInput>(emptyForm)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
     return cities.filter((c) => {
@@ -146,21 +150,93 @@ export default function CityDictPage() {
     })()
   }
 
+  function handleExport() {
+    const source = filtered.length > 0 ? filtered : cities
+    if (source.length === 0) {
+      toast.error("暂无城市可导出")
+      return
+    }
+    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "")
+    downloadCsv(
+      `城市字典_${stamp}.csv`,
+      [...CITY_CSV_HEADERS],
+      source.map((c) => cityToCsvRow(c)),
+    )
+    toast.success(`已导出 ${source.length} 条城市 CSV`, {
+      description: regionFilter === "全部" && !keyword ? "全量导出" : "按当前筛选结果导出",
+    })
+  }
+
+  async function handleImportFile(file: File) {
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const matrix = parseCsv(text)
+      const parsed = parseCityCsvRows(matrix)
+      if (!parsed.ok) {
+        toast.error(parsed.message)
+        return
+      }
+      let created = 0
+      let updated = 0
+      let failed = 0
+      for (const row of parsed.rows) {
+        const existing = cities.find((c) => c.code.toLowerCase() === row.code.toLowerCase())
+        try {
+          if (existing) {
+            await updateCity(existing.id, row)
+            updated += 1
+          } else {
+            await addCity(row)
+            created += 1
+          }
+        } catch {
+          failed += 1
+        }
+      }
+      const warn = parsed.errors.slice(0, 3).join("；")
+      toast.success(`导入完成：新增 ${created} · 更新 ${updated}${failed ? ` · 失败 ${failed}` : ""}`, {
+        description: warn || `共处理 ${parsed.rows.length} 行（按编码匹配）`,
+      })
+    } catch (e) {
+      toast.error((e as Error).message || "导入失败")
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
   return (
     <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) void handleImportFile(file)
+        }}
+      />
       <PageHeader
         module="基础配置 · 基础数据字典"
         title="城市字典"
-        description="维护提箱/还箱城市字典，配置可用范围与启用状态，变更实时同步至用箱申请、调运申请等下拉选择。"
+        description="维护提箱/还箱城市字典，支持 CSV 导入导出（UTF-8）；变更实时同步至用箱申请、调运申请等下拉选择。"
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 bg-transparent" onClick={() => toast.info("城市字典导出尚未接入")}>
+            <Button variant="outline" size="sm" className="gap-1.5 bg-transparent" onClick={handleExport}>
               <Download className="size-4" />
               导出
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 bg-transparent" onClick={() => toast.info("请选择要导入的字典文件")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 bg-transparent"
+              disabled={importing}
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Upload className="size-4" />
-              导入
+              {importing ? "导入中…" : "导入"}
             </Button>
             <Button size="sm" className="gap-1.5" onClick={openAdd}>
               <Plus className="size-4" />
