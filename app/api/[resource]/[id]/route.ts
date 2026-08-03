@@ -53,6 +53,10 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const { ensureCustomerContractColumns } = await import("@/lib/ensure-customer-contract-schema")
     await ensureCustomerContractColumns()
   }
+  if (resource === "suppliers") {
+    const { ensureSelfOpSupplier } = await import("@/lib/ensure-self-op-supplier")
+    await ensureSelfOpSupplier()
+  }
   if (resource === "bills") {
     await ensureBillFxColumns()
   }
@@ -92,6 +96,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (resource === "customers" || resource === "orders") {
     const { ensureCustomerContractColumns } = await import("@/lib/ensure-customer-contract-schema")
     await ensureCustomerContractColumns()
+  }
+  if (resource === "suppliers") {
+    const { ensureSelfOpSupplier } = await import("@/lib/ensure-self-op-supplier")
+    await ensureSelfOpSupplier()
   }
   if (resource === "bills") {
     await ensureBillFxColumns()

@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
@@ -45,6 +46,9 @@ import {
 } from "lucide-react"
 
 export default function InventoryLedgerPage() {
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get("tab") === "masters" ? "masters" : "dimensions"
+  const [tab, setTab] = useState(initialTab)
   const { data: inventoryRows } = useResource<InventoryRow>("inventory")
   const [kw, setKw] = useState("")
   const [region, setRegion] = useState("全部")
@@ -90,7 +94,7 @@ export default function InventoryLedgerPage() {
         <StatCard label="预计进场" value={sum.incoming} unit="箱" icon={TruckIcon} tone="primary" hint="已提未还在途" />
       </div>
 
-      <Tabs defaultValue="dimensions">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="dimensions">四维库存汇总</TabsTrigger>
           <TabsTrigger value="masters">集装箱总表（生命周期追溯）</TabsTrigger>

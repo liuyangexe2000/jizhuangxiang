@@ -77,7 +77,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { title: "供应计划", href: "/supply/plans", icon: ClipboardCheck, roles: ["R01"], desc: "采购/租赁计划编制与审批" },
       { title: "供应合同", href: "/supply/contracts", icon: FileText, roles: ["R01", "R02"], desc: "采购/租赁合同与到箱跟踪" },
-      { title: "供应商台账", href: "/supply/suppliers", icon: Users, roles: ["R01"], desc: "制造商/租赁商信息维护" },
+      { title: "供应商台账", href: "/supply/suppliers", icon: Users, roles: ["R01"], desc: "自营主体 + 制造商/租赁商；自有箱见库存总表" },
     ],
   },
   {

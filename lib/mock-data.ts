@@ -701,6 +701,18 @@ export const systemUsers: SystemUser[] = [
 
 // ---------- 供应计划：供应商台账 ----------
 export const suppliers: Supplier[] = [
+  {
+    id: "s0",
+    name: "西安国际陆港多式联运有限公司",
+    type: "自营",
+    contact: "集装箱管理部",
+    phone: "029-8900 0000",
+    email: "container@xaport.com",
+    country: "中国",
+    rating: "A",
+    cooperationSince: "2013-01",
+    enabled: true,
+  },
   { id: "s1", name: "中集集团（CIMC）", type: "制造商", contact: "刘经理", phone: "0755-2669 1888", email: "sales@cimc.com", country: "中国", rating: "A", cooperationSince: "2019-03", enabled: true },
   { id: "s2", name: "胜狮货柜（Singamas）", type: "制造商", contact: "陈经理", phone: "021-5877 2000", email: "info@singamas.com", country: "中国", rating: "A", cooperationSince: "2020-06", enabled: true },
   { id: "s3", name: "Triton International", type: "租赁商", contact: "Mark Lee", phone: "+1 415 649 2100", email: "lease@triton.com", country: "美国", rating: "A", cooperationSince: "2018-09", enabled: true },

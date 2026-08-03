@@ -426,7 +426,7 @@ export interface Yard {
 
 // ---------- 集装箱供应计划（采购/租赁） ----------
 
-export type SupplierType = "制造商" | "租赁商"
+export type SupplierType = "自营" | "制造商" | "租赁商"
 
 export interface Supplier {
   id: string
