@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { Database, Plus, Pencil, Trash2, Search } from "lucide-react"
+import { Database, Download, Plus, Pencil, Trash2, Search } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { ListPagination } from "@/components/list-pagination"
@@ -41,8 +41,22 @@ import { useDictionary } from "@/lib/dictionary-context"
 import { cityOptionsForField, cityKeyForYardField, isCityField, isYardField } from "@/lib/city-tree"
 import { CONTAINER_TYPES, defaultFieldValue, isContainerTypeField } from "@/lib/container-types"
 import { CitySearchSelect } from "@/components/city-search-select"
+import { downloadCsv } from "@/lib/csv"
 import type { ResourceKey } from "@/lib/resources"
 import type { Yard } from "@/lib/types"
+
+function ledgerCellValue(v: unknown): string {
+  if (v == null) return ""
+  if (typeof v === "boolean") return v ? "是" : "否"
+  if (typeof v === "object") {
+    try {
+      return JSON.stringify(v)
+    } catch {
+      return String(v)
+    }
+  }
+  return String(v)
+}
 
 // 数据集定义：字段以 key/label 描述，支持通用增删改查
 interface FieldDef {
@@ -531,6 +545,19 @@ function DatasetTable({ def }: { def: DatasetDef }) {
     }
   }
 
+  function downloadLedger() {
+    const source = list.sorted
+    if (source.length === 0) {
+      toast.error("当前没有可下载的数据")
+      return
+    }
+    const headers = def.fields.map((f) => f.label)
+    const exportRows = source.map((r) => def.fields.map((f) => ledgerCellValue(r[f.key])))
+    const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 12)
+    downloadCsv(`${def.name}台账_${stamp}.csv`, headers, exportRows)
+    toast.success(`已下载 ${exportRows.length} 条「${def.name}」台账`)
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -548,6 +575,10 @@ function DatasetTable({ def }: { def: DatasetDef }) {
               onChange={(e) => setKeyword(e.target.value)}
             />
           </div>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadLedger}>
+            <Download className="size-4" />
+            下载台账
+          </Button>
           <Button size="sm" className="gap-1.5" onClick={openAdd}>
             <Plus className="size-4" />
             新增记录
@@ -702,7 +733,7 @@ export default function AdminDataPage() {
       <PageHeader
         module="系统管理 · 系统管理员专区"
         title="业务数据台"
-        description="集中管理系统全部已注册业务资源，支持增删改查。请谨慎操作，变更将直接影响业务系统。"
+        description="集中管理系统全部已注册业务资源，支持增删改查与台账 CSV 下载。请谨慎操作，变更将直接影响业务系统。"
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
