@@ -19,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -448,6 +447,49 @@ const datasets: DatasetDef[] = [
   },
 ]
 
+const DATASET_GROUP_ORDER = [
+  "M01 客户用箱",
+  "M02 调运管理",
+  "M03 库存资产",
+  "M04 堆场作业",
+  "M05 供应计划",
+  "M06 维修管理",
+  "基础配置",
+  "系统与集成",
+] as const
+
+function datasetGroup(d: DatasetDef): (typeof DATASET_GROUP_ORDER)[number] {
+  switch (d.id) {
+    case "orders":
+    case "useBoxPriceRules":
+    case "bills":
+      return "M01 客户用箱"
+    case "dispatch":
+    case "returns":
+      return "M02 调运管理"
+    case "inventory":
+    case "gate":
+    case "masters":
+    case "discrepancy":
+      return "M03 库存资产"
+    case "yards":
+    case "bookings":
+    case "templates":
+      return "M04 堆场作业"
+    case "suppliers":
+    case "supplyPlans":
+    case "supplyContracts":
+      return "M05 供应计划"
+    case "repair":
+      return "M06 维修管理"
+    case "cities":
+    case "customers":
+      return "基础配置"
+    default:
+      return "系统与集成"
+  }
+}
+
 function DatasetTable({ def }: { def: DatasetDef }) {
   const { cities, pickupCities, returnCities } = useDictionary()
   const { data: rows, create, update, remove } = useResource<Record<string, unknown>>(def.resource)
@@ -728,6 +770,19 @@ function DatasetTable({ def }: { def: DatasetDef }) {
 }
 
 export default function AdminDataPage() {
+  const [activeId, setActiveId] = useState(datasets[0].id)
+  const active = datasets.find((d) => d.id === activeId) ?? datasets[0]
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, DatasetDef[]>()
+    for (const g of DATASET_GROUP_ORDER) map.set(g, [])
+    for (const d of datasets) {
+      const g = datasetGroup(d)
+      map.get(g)!.push(d)
+    }
+    return DATASET_GROUP_ORDER.map((g) => [g, map.get(g)!] as const).filter(([, items]) => items.length > 0)
+  }, [])
+
   return (
     <>
       <PageHeader
@@ -743,18 +798,48 @@ export default function AdminDataPage() {
         <StatCard label="数据来源" value="实时数据库" icon={Database} />
       </div>
 
-      <Tabs defaultValue={datasets[0].id}>
-        <TabsList className="flex-wrap">
-          {datasets.map((d) => (
-            <TabsTrigger key={d.id} value={d.id}>{d.name}</TabsTrigger>
-          ))}
-        </TabsList>
-        {datasets.map((d) => (
-          <TabsContent key={d.id} value={d.id} className="mt-4">
-            <DatasetTable def={d} />
-          </TabsContent>
-        ))}
-      </Tabs>
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-foreground">选择数据集</p>
+              <p className="text-xs text-muted-foreground">按业务模块分组，点击切换下方台账</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              当前：<span className="font-medium text-foreground">{active.name}</span>
+            </p>
+          </div>
+          <div className="space-y-4">
+            {grouped.map(([group, items]) => (
+              <div key={group} className="space-y-2">
+                <p className="text-xs font-semibold tracking-wide text-muted-foreground">{group}</p>
+                <div className="flex flex-wrap gap-2">
+                  {items.map((d) => {
+                    const selected = d.id === active.id
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => setActiveId(d.id)}
+                        title={d.desc}
+                        className={
+                          selected
+                            ? "rounded-lg border-2 border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm"
+                            : "rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/45 hover:bg-muted/50"
+                        }
+                      >
+                        {d.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <DatasetTable key={active.id} def={active} />
     </>
   )
 }
