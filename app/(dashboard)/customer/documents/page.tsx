@@ -48,6 +48,13 @@ import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { useRole } from "@/lib/role-context"
 import { usePublicSettings } from "@/lib/settings-client"
 import { buildOrderBooking, returnProofOverdueList, shouldReleaseDoc } from "@/lib/domain/order-ops"
+import {
+  findPickupDoc,
+  issuePickupDocSlip,
+  latestPickupDoc,
+  listPickupDocs,
+  sumPickupDocQuantity,
+} from "@/lib/domain/pickup-doc"
 import { isWithinWorkHours } from "@/lib/domain/booking-ops"
 import {
   cityFromPlace,
@@ -109,7 +116,7 @@ function parseContainerNoLines(text: string): string[] {
 }
 
 export default function DocumentsPage() {
-  const { roleId } = useRole()
+  const { roleId, user } = useRole()
   const isYardAdmin = roleId === "R01" || roleId === "R00"
   const canExecuteGate = roleId === "R00" || roleId === "R01" || roleId === "R04" || roleId === "R06"
   const { settings } = usePublicSettings()
@@ -135,12 +142,15 @@ export default function DocumentsPage() {
   const [yardTarget, setYardTarget] = useState<UseBoxOrder | null>(null)
   const [pickupYard, setPickupYard] = useState("")
   const [returnYard, setReturnYard] = useState("")
-  const [printTarget, setPrintTarget] = useState<{ order: UseBoxOrder; phase: Phase } | null>(null)
+  const [printTarget, setPrintTarget] = useState<{ order: UseBoxOrder; phase: Phase; docNo?: string } | null>(null)
   const [printTemplateId, setPrintTemplateId] = useState("")
+  const [printDocNo, setPrintDocNo] = useState("")
+  const [issueQty, setIssueQty] = useState("")
   const [downloadTarget, setDownloadTarget] = useState<{
     order: UseBoxOrder
     phase: Phase
     format: PrintDownloadFormat
+    docNo?: string
   } | null>(null)
   const [downloadingDoc, setDownloadingDoc] = useState(false)
   const downloadRootRef = useRef<HTMLDivElement>(null)
@@ -695,9 +705,140 @@ export default function DocumentsPage() {
   const activeDownloadTemplate =
     downloadTarget?.phase === "return" ? returnTemplate : pickupTemplate
 
+  const printOrderLive = useMemo(() => {
+    if (!printTarget) return null
+    return orders.find((o) => o.id === printTarget.order.id) ?? printTarget.order
+  }, [orders, printTarget])
+
+  const printPickupDocs = useMemo(
+    () => (printOrderLive && printTarget?.phase === "pickup" ? listPickupDocs(printOrderLive) : []),
+    [printOrderLive, printTarget],
+  )
+
+  const activePrintDocNo =
+    printTarget?.phase === "pickup"
+      ? printDocNo || printTarget.docNo || latestPickupDoc(printOrderLive || printTarget.order)?.docNo || ""
+      : ""
+
+  const pickupDocExtras = useMemo(() => {
+    if (!printOrderLive || printTarget?.phase !== "pickup") return undefined
+    const slip = findPickupDoc(printOrderLive, activePrintDocNo)
+    if (!slip) return { pickupDocNo: "—" }
+    return {
+      pickupDocNo: slip.docNo,
+      quantity: `${slip.quantity} 箱`,
+      confirmedAt: slip.issuedAt,
+    }
+  }, [printOrderLive, printTarget, activePrintDocNo])
+
+  const downloadDocExtras = useMemo(() => {
+    if (!downloadTarget || downloadTarget.phase !== "pickup") return undefined
+    const order = orders.find((o) => o.id === downloadTarget.order.id) ?? downloadTarget.order
+    const slip = findPickupDoc(order, downloadTarget.docNo)
+    if (!slip) return { pickupDocNo: "—" }
+    return {
+      pickupDocNo: slip.docNo,
+      quantity: `${slip.quantity} 箱`,
+      confirmedAt: slip.issuedAt,
+    }
+  }, [downloadTarget, orders])
+
+  async function ensurePickupDocs(order: UseBoxOrder): Promise<{ order: UseBoxOrder; docNo: string }> {
+    const existing = listPickupDocs(order)
+    if (existing.length > 0) {
+      return { order, docNo: existing[existing.length - 1]!.docNo }
+    }
+    const issuedBy = user?.name || user?.account || "系统"
+    const slip = issuePickupDocSlip({
+      orderNo: order.orderNo,
+      existing: [],
+      quantity: order.quantity,
+      issuedBy,
+      issuedAt: nowLocalStr(),
+      remark: "首次开具提箱单",
+    })
+    const pickupDocs = [slip]
+    await updateOrder(order.id, {
+      pickupDocs,
+      releaseDocReady: true,
+      __auditAction: "修改",
+      __auditDetail: `开具提箱单 ${slip.docNo}`,
+    })
+    await revalidateResource("orders")
+    return { order: { ...order, pickupDocs, releaseDocReady: true }, docNo: slip.docNo }
+  }
+
+  async function openPickupPrint(order: UseBoxOrder) {
+    if (!shouldReleaseDoc(order)) {
+      toast.error("提箱单尚未放行，请先由箱管确认订单")
+      return
+    }
+    try {
+      const ensured = await ensurePickupDocs(order)
+      setPrintTemplateId(pickupTemplate?.id || "")
+      setPrintDocNo(ensured.docNo)
+      setIssueQty(String(Math.max(1, order.quantity - sumPickupDocQuantity(ensured.order)) || order.quantity))
+      setPrintTarget({ order: ensured.order, phase: "pickup", docNo: ensured.docNo })
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
+  async function openPickupDownload(order: UseBoxOrder, format: PrintDownloadFormat) {
+    if (!shouldReleaseDoc(order)) {
+      toast.error("提箱单尚未放行，请先由箱管确认订单")
+      return
+    }
+    try {
+      const ensured = await ensurePickupDocs(order)
+      setDownloadTarget({ order: ensured.order, phase: "pickup", format, docNo: ensured.docNo })
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
+  async function issueAnotherPickupDoc() {
+    if (!printOrderLive || printTarget?.phase !== "pickup") return
+    const qty = Number(issueQty)
+    if (!Number.isFinite(qty) || qty <= 0) {
+      toast.error("请填写本张提箱单的箱量")
+      return
+    }
+    const existing = listPickupDocs(printOrderLive)
+    const slip = issuePickupDocSlip({
+      orderNo: printOrderLive.orderNo,
+      existing,
+      quantity: qty,
+      issuedBy: user?.name || user?.account || "系统",
+      issuedAt: nowLocalStr(),
+    })
+    const pickupDocs = [...existing, slip]
+    try {
+      await updateOrder(printOrderLive.id, {
+        pickupDocs,
+        releaseDocReady: true,
+        __auditAction: "修改",
+        __auditDetail: `开具提箱单 ${slip.docNo}（${qty} 箱）`,
+      })
+      await revalidateResource("orders")
+      setPrintDocNo(slip.docNo)
+      setPrintTarget((t) => (t ? { ...t, order: { ...printOrderLive, pickupDocs }, docNo: slip.docNo } : t))
+      setIssueQty("1")
+      toast.success(`已开具提箱单 ${slip.docNo}`)
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
   useEffect(() => {
     if (!downloadTarget) return
-    const title = `${downloadTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${downloadTarget.order.orderNo}`
+    const live = orders.find((o) => o.id === downloadTarget.order.id) ?? downloadTarget.order
+    const slip =
+      downloadTarget.phase === "pickup" ? findPickupDoc(live, downloadTarget.docNo) : null
+    const title =
+      downloadTarget.phase === "pickup"
+        ? `提箱单-${slip?.docNo || live.orderNo}`
+        : `还箱单-${live.orderNo}`
     const format = downloadTarget.format
     let cancelled = false
     const run = async () => {
@@ -724,7 +865,7 @@ export default function DocumentsPage() {
     return () => {
       cancelled = true
     }
-  }, [downloadTarget])
+  }, [downloadTarget, orders])
 
   const attachmentCount = (order: UseBoxOrder) => attachments.filter((a) => a.refNo === order.orderNo).length
 
@@ -844,8 +985,8 @@ export default function DocumentsPage() {
               setBookingTime(toInputTime(nowLocalStr()))
             }}
             onYard={openYardDialog}
-            onPrint={(o) => { setPrintTemplateId(pickupTemplate?.id || ""); setPrintTarget({ order: o, phase: "pickup" }); }}
-            onDownload={(o, format) => setDownloadTarget({ order: o, phase: "pickup", format })}
+            onPrint={(o) => void openPickupPrint(o)}
+            onDownload={(o, format) => void openPickupDownload(o, format)}
             downloading={downloadingDoc}
             onStuffing={openStuffingDialog}
             onException={openExceptionDialog}
@@ -1245,7 +1386,11 @@ export default function DocumentsPage() {
           className="pointer-events-none fixed top-0 left-[-10000px] w-[760px] opacity-0"
         >
           {downloadTarget.phase === "pickup" ? (
-            <OrderPickupDocument order={downloadTarget.order} template={activeDownloadTemplate} />
+            <OrderPickupDocument
+              order={orders.find((o) => o.id === downloadTarget.order.id) ?? downloadTarget.order}
+              template={activeDownloadTemplate}
+              extras={downloadDocExtras}
+            />
           ) : (
             <OrderReturnDocument order={downloadTarget.order} template={activeDownloadTemplate} />
           )}
@@ -1260,9 +1405,49 @@ export default function DocumentsPage() {
           <DialogHeader className="no-print">
             <DialogTitle>单据预览</DialogTitle>
             <DialogDescription>
-              提箱单不含用箱价格；可切换已启用模板，打印或下载电子版均带电子章。
+              {printTarget?.phase === "pickup"
+                ? "一单可开具多张提箱单（分批/多车次）；请选择提箱单号后打印或下载。"
+                : "可切换已启用模板，打印或下载电子版均带电子章。"}
             </DialogDescription>
           </DialogHeader>
+          {printTarget?.phase === "pickup" && printOrderLive && (
+            <div className="no-print space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">提箱单号</Label>
+                  <Select value={activePrintDocNo} onValueChange={(v) => setPrintDocNo(v ?? "")}>
+                    <SelectTrigger className="min-w-[16rem]">
+                      <SelectValue placeholder="选择提箱单号" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {printPickupDocs.map((d) => (
+                        <SelectItem key={d.docNo} value={d.docNo}>
+                          {d.docNo} · {d.quantity} 箱 · {d.issuedAt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">新开具箱量</Label>
+                  <Input
+                    className="w-24"
+                    type="number"
+                    min={1}
+                    value={issueQty}
+                    onChange={(e) => setIssueQty(e.target.value)}
+                  />
+                </div>
+                <Button type="button" variant="secondary" size="sm" onClick={() => void issueAnotherPickupDoc()}>
+                  开具新提箱单
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                订单 {printOrderLive.orderNo} 共 {printOrderLive.quantity} 箱 · 已开具{" "}
+                {sumPickupDocQuantity(printOrderLive)} 箱 / {printPickupDocs.length} 张单
+              </p>
+            </div>
+          )}
           {activePrintTemplates.length > 1 && (
             <div className="no-print flex flex-wrap items-center gap-2">
               <Label className="text-xs text-muted-foreground">打印模板</Label>
@@ -1282,7 +1467,11 @@ export default function DocumentsPage() {
           )}
           {printTarget &&
             (printTarget.phase === "pickup" ? (
-              <OrderPickupDocument order={printTarget.order} template={activePrintTemplate} />
+              <OrderPickupDocument
+                order={printOrderLive || printTarget.order}
+                template={activePrintTemplate}
+                extras={pickupDocExtras}
+              />
             ) : (
               <OrderReturnDocument order={printTarget.order} template={activePrintTemplate} />
             ))}
@@ -1303,8 +1492,15 @@ export default function DocumentsPage() {
                 <DropdownMenuItem
                   disabled={downloadingDoc}
                   onClick={async () => {
+                    const live = printOrderLive || printTarget?.order
+                    const slip =
+                      printTarget?.phase === "pickup" && live
+                        ? findPickupDoc(live, activePrintDocNo)
+                        : null
                     const title = printTarget
-                      ? `${printTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${printTarget.order.orderNo}`
+                      ? printTarget.phase === "pickup"
+                        ? `提箱单-${slip?.docNo || live?.orderNo}`
+                        : `还箱单-${printTarget.order.orderNo}`
                       : "单据"
                     setDownloadingDoc(true)
                     try {
@@ -1321,8 +1517,15 @@ export default function DocumentsPage() {
                 <DropdownMenuItem
                   disabled={downloadingDoc}
                   onClick={async () => {
+                    const live = printOrderLive || printTarget?.order
+                    const slip =
+                      printTarget?.phase === "pickup" && live
+                        ? findPickupDoc(live, activePrintDocNo)
+                        : null
                     const title = printTarget
-                      ? `${printTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${printTarget.order.orderNo}`
+                      ? printTarget.phase === "pickup"
+                        ? `提箱单-${slip?.docNo || live?.orderNo}`
+                        : `还箱单-${printTarget.order.orderNo}`
                       : "单据"
                     setDownloadingDoc(true)
                     try {
@@ -1340,13 +1543,20 @@ export default function DocumentsPage() {
             </DropdownMenu>
             <Button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                const live = printOrderLive || printTarget?.order
+                const slip =
+                  printTarget?.phase === "pickup" && live
+                    ? findPickupDoc(live, activePrintDocNo)
+                    : null
                 printPrintArea({
                   title: printTarget
-                    ? `${printTarget.phase === "pickup" ? "提箱单" : "还箱单"}-${printTarget.order.orderNo}`
+                    ? printTarget.phase === "pickup"
+                      ? `提箱单-${slip?.docNo || live?.orderNo}`
+                      : `还箱单-${printTarget.order.orderNo}`
                     : "打印单据",
                 })
-              }
+              }}
             >
               <Printer className="mr-1 size-4" />
               打印
@@ -1409,6 +1619,7 @@ function WorkTable(props: {
             <thead>
               <tr>
                 <SortableTableHead label="订单号" columnKey="orderNo" sortKey={props.list.sortKey} sortDir={props.list.sortDir} onSort={props.list.toggleSort} />
+                {pickup && <th className="p-3 text-left">提箱单号</th>}
                 <SortableTableHead label="客户" columnKey="customer" sortKey={props.list.sortKey} sortDir={props.list.sortDir} onSort={props.list.toggleSort} />
                 <SortableTableHead label={pickup ? "提箱堆场" : "还箱堆场"} columnKey={pickup ? "pickupYard" : "returnYard"} sortKey={props.list.sortKey} sortDir={props.list.sortDir} onSort={props.list.toggleSort} />
                 <SortableTableHead label="状态" columnKey="status" sortKey={props.list.sortKey} sortDir={props.list.sortDir} onSort={props.list.toggleSort} />
@@ -1417,9 +1628,26 @@ function WorkTable(props: {
               </tr>
             </thead>
             <tbody>
-              {props.rows.map((order) => (
+              {props.rows.map((order) => {
+                const docs = listPickupDocs(order)
+                const latest = latestPickupDoc(order)
+                return (
                 <tr key={order.id} className="border-t">
                   <td className="whitespace-nowrap p-3 font-mono text-xs">{order.orderNo}</td>
+                  {pickup && (
+                    <td className="max-w-[12rem] p-3 text-xs">
+                      {latest ? (
+                        <div className="space-y-0.5">
+                          <div className="font-mono font-medium">{latest.docNo}</div>
+                          {docs.length > 1 && (
+                            <div className="text-muted-foreground">共 {docs.length} 张</div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">未开具</span>
+                      )}
+                    </td>
+                  )}
                   <td className="whitespace-nowrap p-3">{order.customer}</td>
                   <td className="whitespace-nowrap p-3">{pickup ? order.pickupYard || "待确认" : order.returnYard || "待确认"}</td>
                   <td className="whitespace-nowrap p-3"><StatusBadge status={order.status} /></td>
@@ -1509,10 +1737,10 @@ function WorkTable(props: {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
               {props.list.total === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-muted-foreground">
+                  <td colSpan={pickup ? 7 : 6} className="p-10 text-center text-muted-foreground">
                     未找到匹配订单
                   </td>
                 </tr>

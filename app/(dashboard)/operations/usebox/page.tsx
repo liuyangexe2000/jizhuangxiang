@@ -41,6 +41,7 @@ import { usePublicSettings } from "@/lib/settings-client"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { applyReserveInventory, cityFromPlace, findInventoryRow, inventoryId, nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { buildUseBoxBill, fmtDeadline } from "@/lib/domain/order-ops"
+import { issuePickupDocSlip } from "@/lib/domain/pickup-doc"
 import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { pushNotification } from "@/lib/domain/notify"
 import type { Bill, Customer, InventoryRow, Notification, UseBoxOrder, Yard } from "@/lib/types"
@@ -134,6 +135,15 @@ export default function OperationsUseboxPage() {
     const confirmedAt = nowLocalStr()
     const customerId =
       confirming.customerId || resolveCustomerId(confirming.customer, customers)
+    const confirmedBy = user?.name || user?.account || "箱管"
+    const firstSlip = issuePickupDocSlip({
+      orderNo: confirming.orderNo,
+      existing: [],
+      quantity: confirming.quantity,
+      issuedBy: confirmedBy,
+      issuedAt: confirmedAt,
+      remark: "订单确认时自动开具",
+    })
     const nextOrder: UseBoxOrder = {
       ...confirming,
       customerId,
@@ -143,9 +153,10 @@ export default function OperationsUseboxPage() {
       unitPrice: price,
       adminRemark,
       confirmedAt,
-      confirmedBy: user?.name || user?.account || "箱管",
+      confirmedBy,
       cancelDeadline: fmtDeadline(now, settings?.cancelFreeHours ?? 24),
       releaseDocReady: true,
+      pickupDocs: [firstSlip],
     }
     try {
       await update(confirming.id, {
@@ -158,9 +169,10 @@ export default function OperationsUseboxPage() {
         confirmedBy: nextOrder.confirmedBy,
         cancelDeadline: nextOrder.cancelDeadline,
         releaseDocReady: true,
+        pickupDocs: [firstSlip],
         ...(customerId && !confirming.customerId ? { customerId } : {}),
         __auditAction: "修改",
-        __auditDetail: `确认用箱订单 ${confirming.orderNo}，预占 ${pickupYard} ${confirming.quantity} 箱`,
+        __auditDetail: `确认用箱订单 ${confirming.orderNo}，开具提箱单 ${firstSlip.docNo}，预占 ${pickupYard} ${confirming.quantity} 箱`,
       })
       await updateInventory(inventoryId(inv), {
         ...applyReserveInventory(inv, confirming.quantity),

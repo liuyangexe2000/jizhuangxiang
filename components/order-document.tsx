@@ -52,8 +52,8 @@ function OrderDocShell({
   extras?: Partial<Record<DocFieldKey, string>>
   className?: string
 }) {
-  const meta = interpolateDocText(layout.metaLine, order)
-  const notice = interpolateDocText(layout.notice, order)
+  const meta = interpolateDocText(layout.metaLine, order, extras)
+  const notice = interpolateDocText(layout.notice, order, extras)
 
   return (
     <div

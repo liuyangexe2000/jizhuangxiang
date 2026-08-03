@@ -68,6 +68,17 @@ export interface UseBoxOrder {
   returnGateAt?: string
   /** 放箱时选定的真实箱号（数量应等于 quantity） */
   containerNos?: string[]
+  /**
+   * 提箱单列表（一单可多张：分批/多车次）。
+   * 每张有独立提箱单号，打印/下载按单号出单。
+   */
+  pickupDocs?: {
+    docNo: string
+    issuedAt: string
+    issuedBy: string
+    quantity: number
+    remark?: string
+  }[]
 }
 
 export type BillType = "用箱账单" | "超期费账单" | "箱损费账单" | "用箱变更费账单" | "调运费账单"

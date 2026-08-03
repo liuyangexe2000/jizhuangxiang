@@ -46,6 +46,7 @@ CREATE TABLE `use_box_orders` (
   `returnGateBy` VARCHAR(60) NULL,
   `returnGateAt` VARCHAR(32) NULL,
   `containerNos` JSON NULL,
+  `pickupDocs` JSON NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_orders_orderNo` (`orderNo`),
   KEY `idx_orders_status` (`status`)

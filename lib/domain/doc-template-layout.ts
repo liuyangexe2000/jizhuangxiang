@@ -21,6 +21,7 @@ export function kindLabel(kind: DocKind | undefined): string {
 
 export type DocFieldKey =
   | "orderNo"
+  | "pickupDocNo"
   | "createdAt"
   | "confirmedAt"
   | "customer"
@@ -47,6 +48,7 @@ export interface DocFieldDef {
 
 export const DOC_FIELD_CATALOG: DocFieldDef[] = [
   { key: "orderNo", label: "订单号", kinds: ["pickup", "return", "other"] },
+  { key: "pickupDocNo", label: "提箱单号", kinds: ["pickup", "other"] },
   { key: "createdAt", label: "创建时间", kinds: ["pickup", "return", "other"] },
   { key: "confirmedAt", label: "确认时间", kinds: ["pickup", "return", "other"] },
   { key: "customer", label: "客户", kinds: ["pickup", "return", "dispatch_approval", "business_entrust", "other"] },
@@ -115,8 +117,14 @@ export function defaultPickupLayout(title = "提 箱 单"): DocTemplateLayout {
     orgLine: "中欧班列平台公司 · 集装箱管理部",
     title,
     showTemplateName: true,
-    metaLine: "订单号：{{orderNo}}  |  生成时间：{{confirmedAt}}",
+    metaLine: "提箱单号：{{pickupDocNo}}  |  订单号：{{orderNo}}  |  生成时间：{{confirmedAt}}",
     rows: [
+      {
+        cells: [
+          { key: "pickupDocNo", label: "提箱单号" },
+          { key: "orderNo", label: "订单号" },
+        ],
+      },
       {
         cells: [
           { key: "customer", label: "客户" },
@@ -151,23 +159,28 @@ export function defaultPickupOpsLayout(): DocTemplateLayout {
     rows: [
       {
         cells: [
+          { key: "pickupDocNo", label: "提箱单号" },
           { key: "customer", label: "客户" },
-          { key: "containerType", label: "箱型" },
         ],
       },
       {
         cells: [
+          { key: "containerType", label: "箱型" },
           { key: "quantity", label: "数量" },
+        ],
+      },
+      {
+        cells: [
           { key: "pickupYard", label: "提箱堆场" },
+          { key: "pickupBooking", label: "预约提箱时间" },
         ],
       },
       {
         cells: [
           { key: "pickupCity", label: "提箱城市" },
-          { key: "pickupBooking", label: "预约提箱时间" },
+          { key: "conditionNote", label: "箱况备注" },
         ],
       },
-      { cells: [{ key: "conditionNote", label: "箱况备注" }] },
       { cells: [{ key: "adminRemark", label: "箱管备注" }] },
     ],
     notice: "作业联仅供堆场现场核验，不含费用信息。请核对箱型数量后放箱。",
@@ -181,18 +194,21 @@ export function defaultPickupSimpleLayout(): DocTemplateLayout {
     rows: [
       {
         cells: [
+          { key: "pickupDocNo", label: "提箱单号" },
           { key: "customer", label: "客户" },
-          { key: "quantity", label: "数量" },
         ],
       },
       {
         cells: [
+          { key: "quantity", label: "数量" },
           { key: "containerType", label: "箱型" },
-          { key: "pickupYard", label: "提箱堆场" },
         ],
       },
       {
-        cells: [{ key: "pickupCity", label: "提箱城市" }],
+        cells: [
+          { key: "pickupYard", label: "提箱堆场" },
+          { key: "pickupCity", label: "提箱城市" },
+        ],
       },
     ],
     notice: "请凭本单前往「{{pickupYard}}」办理提箱。",
@@ -374,6 +390,11 @@ export function resolveDocField(
   switch (key) {
     case "orderNo":
       return order.orderNo
+    case "pickupDocNo": {
+      const docs = order.pickupDocs
+      const last = Array.isArray(docs) && docs.length > 0 ? docs[docs.length - 1]?.docNo : ""
+      return last || "—"
+    }
     case "createdAt":
       return order.createdAt || "—"
     case "confirmedAt":
@@ -412,12 +433,22 @@ export function resolveDocField(
   }
 }
 
-export function interpolateDocText(template: string, order: UseBoxOrder): string {
+export function interpolateDocText(
+  template: string,
+  order: UseBoxOrder,
+  extras?: Partial<Record<DocFieldKey, string>>,
+): string {
   const pickupYard = order.pickupYard || `${order.pickupCity}堆场`
   const returnYard = order.returnYard || `${order.returnCity}堆场`
   const confirmedByLine = order.confirmedBy ? ` 确认人：${order.confirmedBy}。` : ""
+  const docs = order.pickupDocs
+  const lastDoc =
+    (extras?.pickupDocNo?.trim() ||
+      (Array.isArray(docs) && docs.length > 0 ? docs[docs.length - 1]?.docNo : "")) ||
+    "—"
   const map: Record<string, string> = {
     orderNo: order.orderNo,
+    pickupDocNo: lastDoc,
     createdAt: order.createdAt || "—",
     confirmedAt: order.confirmedAt ?? order.createdAt ?? "—",
     customer: order.customer,
@@ -429,6 +460,9 @@ export function interpolateDocText(template: string, order: UseBoxOrder): string
     quantity: String(order.quantity),
     confirmedBy: order.confirmedBy || "—",
     confirmedByLine,
+  }
+  for (const [k, v] of Object.entries(extras || {})) {
+    if (v != null && String(v).trim()) map[k] = String(v)
   }
   return template.replace(/\{\{(\w+)\}\}/g, (_, k: string) => map[k] ?? "")
 }

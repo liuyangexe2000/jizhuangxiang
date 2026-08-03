@@ -65,6 +65,22 @@ export const useBoxOrders: UseBoxOrder[] = [
     returnProofUploaded: true,
     channel: "订舱勾选",
     adminRemark: "已按优惠价确认",
+    pickupDocs: [
+      {
+        docNo: "REL-UB202606200001-01",
+        issuedAt: "2026-06-20 10:30",
+        issuedBy: "张伟",
+        quantity: 8,
+        remark: "第一车",
+      },
+      {
+        docNo: "REL-UB202606200001-02",
+        issuedAt: "2026-06-20 14:00",
+        issuedBy: "张伟",
+        quantity: 4,
+        remark: "第二车",
+      },
+    ],
   },
   {
     id: "o2",
