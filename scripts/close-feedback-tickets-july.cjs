@@ -6,6 +6,7 @@
  * 用法：
  *   node scripts/close-feedback-tickets-july.cjs [.env路径] [--dry-run]
  *   node scripts/close-feedback-tickets-july.cjs .env.production.local
+ *   node scripts/close-feedback-tickets-july.cjs .env.production.local --refresh-feedback
  *
  * 幂等：已是「已关闭」且 processFeedback 已填则跳过；否则补齐 status + processFeedback
  */
@@ -56,6 +57,7 @@ async function ensureProcessFeedbackColumn(conn, dryRun) {
 async function main() {
   const args = process.argv.slice(2).filter((a) => a !== "--dry-run")
   const dryRun = process.argv.includes("--dry-run")
+  const refreshFeedback = process.argv.includes("--refresh-feedback")
   const envPath = args[0] || ".env.production.local"
   const ticketNos = Object.keys(JULY_CLOSURE)
 
@@ -90,9 +92,15 @@ async function main() {
   let skipped = 0
   for (const r of rows) {
     const text = JULY_CLOSURE[r.ticketNo]
-    const already =
-      r.status === TARGET_STATUS && (r.processFeedback || "").trim() === text.trim()
-    if (already) {
+    const hasFeedback = Boolean((r.processFeedback || "").trim())
+    const sameFeedback = (r.processFeedback || "").trim() === text.trim()
+    const alreadyClosed = r.status === TARGET_STATUS && hasFeedback && !refreshFeedback
+    if (alreadyClosed) {
+      skipped++
+      console.log("\n[skip]", r.ticketNo, "已是已关闭且已有处理反馈")
+      continue
+    }
+    if (r.status === TARGET_STATUS && sameFeedback) {
       skipped++
       console.log("\n[skip]", r.ticketNo, "已是已关闭且反馈一致")
       continue
