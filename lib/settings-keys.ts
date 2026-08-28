@@ -15,6 +15,8 @@ export const SETTING_KEYS = {
   useboxOverdueDailyRate: "biz.useboxOverdueDailyRate",
   /** 还箱异常默认箱损费（元） */
   useboxDamageDefaultFee: "biz.useboxDamageDefaultFee",
+  /** 提箱后取消变更费比例（0~1） */
+  postPickupCancelFeeRate: "biz.postPickupCancelFeeRate",
   approvalThresholds: "biz.approvalThresholds",
   feedbackTicketEnabled: "ui.feedbackTicketEnabled",
 } as const

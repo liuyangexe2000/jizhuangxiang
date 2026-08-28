@@ -35,29 +35,19 @@ import {
 } from "@/components/ui/select"
 import { useResource, revalidateResource } from "@/lib/api"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
-import type { Bill, InventoryRow, Notification, UseBoxOrder } from "@/lib/types"
-import { buildCancelFeeBill, buildPostPickupCancelFeeBill } from "@/lib/domain/order-ops"
+import type { UseBoxOrder } from "@/lib/types"
+import { computeCancelOutcome } from "@/lib/domain/order-ops"
 import {
   formatExchangeRate,
   formatMoney,
   inferBillCurrency,
 } from "@/lib/domain/money"
-import {
-  applyReleaseReserveInventory,
-  cityFromPlace,
-  findInventoryRow,
-  inventoryId,
-} from "@/lib/domain/dispatch-ops"
-import { pushNotification } from "@/lib/domain/notify"
 import { boxSourceLabel } from "@/lib/domain/box-source"
 
 const statusFilters = ["全部", "待确认", "已确认", "提箱中", "还箱中", "已完成", "已取消", "超时取消"]
 
 export default function OrdersPage() {
-  const { data: orders, update } = useResource<UseBoxOrder>("orders")
-  const { create: createBill } = useResource<Bill>("bills")
-  const { create: createNotif } = useResource<Notification>("notifications")
-  const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
+  const { data: orders } = useResource<UseBoxOrder>("orders")
   const [keyword, setKeyword] = useState("")
   const [status, setStatus] = useState("全部")
   const [detail, setDetail] = useState<UseBoxOrder | null>(null)
@@ -100,71 +90,35 @@ export default function OrdersPage() {
   }
 
   async function cancelOrder(o: UseBoxOrder) {
-    if (!["待确认", "已确认", "提箱中"].includes(o.status)) {
+    const preview = computeCancelOutcome(o)
+    if (!preview.canCancel) {
       toast.error("当前状态不可取消")
       return
     }
-    const isPostPickup = o.status === "提箱中"
-    const deadlineMs = o.cancelDeadline ? Date.parse(o.cancelDeadline.replace(/-/g, "/")) : NaN
-    const withinFree = isPostPickup
-      ? false
-      : o.status === "待确认"
-        ? true
-        : Number.isFinite(deadlineMs)
-          ? Date.now() <= deadlineMs
-          : false
-    const nextStatus = withinFree ? "已取消" : "超时取消"
+    const { withinFree, isPostPickup } = preview
     try {
-      await update(o.id, {
-        status: nextStatus,
-        __auditAction: "修改",
-        __auditDetail: isPostPickup
-          ? `提箱中取消用箱订单 ${o.orderNo}（收取 20% 变更费）`
-          : `取消用箱订单 ${o.orderNo}（${nextStatus}）`,
-      })
-      if (o.status === "已确认" && o.pickupYard) {
-        const inv = findInventoryRow(inventory, {
-          yard: o.pickupYard,
-          city: cityFromPlace(o.pickupYard),
-        })
-        if (inv) {
-          await updateInventory(inventoryId(inv), {
-            ...applyReleaseReserveInventory(inv, o.quantity),
-            __auditAction: "修改",
-            __auditDetail: `取消订单释放预占库存 ${o.orderNo}`,
-          })
-          await revalidateResource("inventory")
-        }
+      const res = await fetch(`/api/orders/${encodeURIComponent(o.id)}/cancel`, { method: "POST" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || "取消失败")
+        return
       }
+      await Promise.all([
+        revalidateResource("orders"),
+        revalidateResource("bills"),
+        revalidateResource("inventory"),
+        revalidateResource("containers"),
+        revalidateResource("gate"),
+      ])
       if (!withinFree) {
-        const feeBill = isPostPickup ? buildPostPickupCancelFeeBill(o) : buildCancelFeeBill(o)
-        await createBill({
-          ...feeBill,
-          __auditAction: "新增",
-          __auditDetail: isPostPickup
-            ? `提箱后取消变更费 ${o.orderNo}`
-            : `超时取消取消费 ${o.orderNo}`,
-        })
-        await pushNotification(createNotif, {
-          type: "账单",
-          level: "重要",
-          title: isPostPickup ? `提箱后取消变更费 · ${o.orderNo}` : `取消费账单 · ${o.orderNo}`,
-          desc: isPostPickup
-            ? "订单提箱中取消，已生成 20% 变更费账单。"
-            : "订单超时取消，已生成变更费账单。",
-          module: "M01 账单中心",
-          href: "/customer/bills",
-          roles: ["R01", "R03"],
-        })
         toast.warning(
           isPostPickup
-            ? `订单 ${o.orderNo} 已取消，已生成 20% 变更费账单`
+            ? `订单 ${o.orderNo} 已取消，已生成变更费账单${data.feeBillNo ? ` ${data.feeBillNo}` : ""}`
             : `订单 ${o.orderNo} 已超时取消，取消费账单已生成（BR-03）`,
         )
       } else {
         toast.success(`订单 ${o.orderNo} 已免责取消`)
       }
-      await revalidateResource("bills")
       setDetail(null)
     } catch (e) {
       toast.error((e as Error).message)

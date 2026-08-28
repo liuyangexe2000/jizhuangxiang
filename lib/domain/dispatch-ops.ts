@@ -74,6 +74,32 @@ export function applyReserveInventory(row: InventoryRow, qty: number): Partial<I
   }
 }
 
+/** 提箱后取消回滚库存（与 applyPickupInventory 对称） */
+export function applyRevertPickupInventory(row: InventoryRow, qty: number): Partial<InventoryRow> {
+  const onSite = row.onSite + qty
+  const incoming = Math.max(0, row.incoming - qty)
+  return {
+    onSite,
+    available: row.available + qty,
+    incoming,
+  }
+}
+
+/** 提箱后取消：箱主档恢复在场 */
+export function patchContainerOnCancelPickup(
+  c: ContainerMaster,
+  yard: string,
+  city: string,
+): Partial<ContainerMaster> {
+  return {
+    status: "在场",
+    currentYard: yard,
+    currentCity: city,
+    relatedOrderNo: undefined,
+    lastGateTime: nowLocalStr(),
+  }
+}
+
 /** 释放预占（订单在提箱前取消） */
 export function applyReleaseReserveInventory(row: InventoryRow, qty: number): Partial<InventoryRow> {
   return {

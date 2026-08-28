@@ -192,19 +192,10 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
     channel: "订舱勾选",
   })
   await expectOk("创建超时取消样例单", o2, fail)
-  await r03.patch("orders", o2.data.id, { status: "超时取消" })
-  const fee = await r03.create("bills", {
-    billNo: `BILL${uid("F").slice(0, 8)}`,
-    type: "用箱变更费账单",
-    relatedOrderNo: cancelNo,
-    party: "西安国际陆港集团",
-    amount: 560,
-    status: "待确认",
-    issuedAt: nowStr().slice(0, 10),
-    confirmDeadline: pastDeadline(-3),
-    items: [{ label: "取消费", value: "20%" }],
-  })
-  await expectOk("超时取消取消费账单", fee, fail)
+  const cancelRes = await r03.api("POST", `/api/orders/${encodeURIComponent(o2.data.id)}/cancel`)
+  await expectOk("超时取消订单", cancelRes, fail)
+  assert(cancelRes.data?.status === "超时取消", "取消后状态应为超时取消", fail)
+  assert(!!cancelRes.data?.feeBillNo, "应自动生成取消费账单号", fail)
   pass("M01 申请→箱管确认出账→状态推进→取消费")
 }
 

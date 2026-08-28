@@ -56,7 +56,14 @@ function fromInputTime(time: string) {
   return t.replace("T", " ").slice(0, 16)
 }
 
-const GATE_CSV_HEADERS = ["箱号", "类型", "城市", "堆场", "时间"] as const
+const GATE_CSV_HEADERS = ["箱号", "类型", "城市", "堆场", "时间", "箱属"] as const
+
+function parseOwnership(raw: string): "自有箱" | "租赁箱" | null {
+  const t = raw.trim()
+  if (!t || t === "自有箱") return "自有箱"
+  if (t === "租赁箱") return "租赁箱"
+  return null
+}
 
 export default function ExceptionsPage() {
   const { roleId } = useRole()
@@ -251,7 +258,7 @@ export default function ExceptionsPage() {
 
   function handleDownloadTemplate() {
     downloadCsv("进出场异常_导入模板.csv", [...GATE_CSV_HEADERS], [
-      ["TCLU1234567", "进场", "西安", "西安中心站堆场", "2026-08-28 10:00"],
+      ["TCLU1234567", "进场", "西安", "西安中心站堆场", "2026-08-28 10:00", "自有箱"],
     ])
     toast.success("已下载导入模板")
   }
@@ -272,8 +279,9 @@ export default function ExceptionsPage() {
       const iCity = idx("城市")
       const iYard = idx("堆场")
       const iTime = idx("时间")
+      const iOwn = idx("箱属")
       if ([iNo, iType, iCity, iYard, iTime].some((i) => i < 0)) {
-        toast.error("CSV 表头须包含：箱号,类型,城市,堆场,时间")
+        toast.error("CSV 表头须包含：箱号,类型,城市,堆场,时间（箱属可选）")
         return
       }
       let created = 0
@@ -286,9 +294,16 @@ export default function ExceptionsPage() {
         const city = (row[iCity] || "").trim()
         const yard = (row[iYard] || "").trim()
         const timeRaw = (row[iTime] || "").trim()
+        const ownRaw = iOwn >= 0 ? (row[iOwn] || "").trim() : "自有箱"
         if (!containerNo || !city || !yard) {
           failed += 1
           errors.push(`第 ${r + 1} 行缺少箱号/城市/堆场`)
+          continue
+        }
+        const ownership = parseOwnership(ownRaw)
+        if (!ownership) {
+          failed += 1
+          errors.push(`第 ${r + 1} 行箱属须为自有箱或租赁箱`)
           continue
         }
         const type = typeRaw === "出场" ? "出场" : typeRaw === "进场" ? "进场" : null
@@ -307,21 +322,28 @@ export default function ExceptionsPage() {
             time,
             yard,
             city,
-            source: "手工补录异常",
+            source: "CSV 批量补录异常",
             mappingStatus: "未映射",
-            ownership: "自有箱",
+            ownership,
             __auditAction: "新增",
             __auditDetail: `CSV 导入进出场 ${containerNo}`,
           })
           created += 1
-        } catch {
+        } catch (e) {
           failed += 1
+          errors.push(`第 ${r + 1} 行 ${containerNo}：${(e as Error).message}`)
         }
       }
       await revalidateResource("gate")
-      toast.success(`导入完成：新增 ${created}${failed ? ` · 失败 ${failed}` : ""}`, {
-        description: errors.slice(0, 2).join("；") || undefined,
-      })
+      if (created > 0 && failed === 0) {
+        toast.success(`导入完成：新增 ${created} 条`)
+      } else if (created > 0) {
+        toast.warning(`部分成功：新增 ${created}，失败 ${failed}`, {
+          description: errors.slice(0, 3).join("；"),
+        })
+      } else {
+        toast.error(`导入失败 ${failed} 条`, { description: errors.slice(0, 3).join("；") })
+      }
     } catch (e) {
       toast.error((e as Error).message || "导入失败")
     } finally {

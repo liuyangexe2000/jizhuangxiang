@@ -183,8 +183,8 @@ async function main() {
       : "用箱账单未在登记箱号后生成或缺少箱号明细",
   )
 
-  const returnProof = await r03.patch("orders", created.data.id, { returnProofUploaded: true })
-  mark("UT-UB-01#9", !!returnProof.ok, "客户上传还箱证明（不驱动状态）")
+  const returnProofDenied = await r03.patch("orders", created.data.id, { returnProofUploaded: true })
+  mark("UT-UB-01#9", returnProofDenied.status === 403, "客户不可 PATCH 还箱证明，须走 upload-doc")
 
   await r03.create("attachments", {
     refType: "return_proof",
@@ -307,7 +307,7 @@ async function main() {
     returnProofUploaded: false,
     channel: "订舱后新增",
   })
-  const cancelled = await r03.patch("orders", c1.data.id, { status: "已取消" })
+  const cancelled = await r03.api("POST", `/api/orders/${encodeURIComponent(c1.data.id)}/cancel`)
   mark("UT-UB-03", !!cancelled.ok && cancelled.data?.status === "已取消", "待确认免责取消成功")
 
   // —— UT-UB-05 ——

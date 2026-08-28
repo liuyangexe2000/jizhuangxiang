@@ -104,6 +104,26 @@ export function buildPostPickupCancelFeeBill(o: UseBoxOrder, feeRate = 0.2): Omi
   return buildCancelFeeBill(o, `提箱后取消变更费（${Math.round(feeRate * 100)}%）`)
 }
 
+const CANCELLABLE_STATUSES = new Set(["待确认", "已确认", "提箱中"])
+
+/** 计算取消结果（客户端预览 / 服务端 cancel 共用） */
+export function computeCancelOutcome(o: UseBoxOrder, now = new Date()) {
+  if (!CANCELLABLE_STATUSES.has(o.status)) {
+    return { canCancel: false as const, withinFree: false, nextStatus: o.status as UseBoxOrder["status"], isPostPickup: false }
+  }
+  const isPostPickup = o.status === "提箱中"
+  const deadlineMs = o.cancelDeadline ? parseBizTime(o.cancelDeadline) : NaN
+  const withinFree = isPostPickup
+    ? false
+    : o.status === "待确认"
+      ? true
+      : Number.isFinite(deadlineMs)
+        ? now.getTime() <= deadlineMs
+        : false
+  const nextStatus = withinFree ? ("已取消" as const) : ("超时取消" as const)
+  return { canCancel: true as const, withinFree, nextStatus, isPostPickup }
+}
+
 /** 用箱天数（自提箱/确认日起算），不足一天按一天 */
 export function calcUseboxUsedDays(o: UseBoxOrder, asOf = new Date()): number {
   const start = parseBizTime(o.pickupGateAt || o.confirmedAt || o.createdAt)

@@ -64,6 +64,7 @@ export const CODE_DEFAULTS: Record<string, unknown> = {
   [SETTING_KEYS.aclNav]: null, // null = 使用 nav.ts
   [SETTING_KEYS.aclResources]: null, // null = 使用 acl.ts
   [SETTING_KEYS.cancelFreeHours]: 24,
+  [SETTING_KEYS.postPickupCancelFeeRate]: 0.2,
   [SETTING_KEYS.returnBookingLeadHours]: 24,
   [SETTING_KEYS.workHours]: DEFAULT_WORK_HOURS,
   [SETTING_KEYS.billConfirmDays]: 3,

@@ -166,6 +166,19 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     }
   }
 
+  // 用箱订单：禁止直接 PATCH 取消状态（须走 cancel API 以回滚库存/账单）
+  if (resource === "orders") {
+    if (
+      typeof patch.status === "string" &&
+      (patch.status === "已取消" || patch.status === "超时取消")
+    ) {
+      return NextResponse.json(
+        { error: "订单取消须调用 POST /api/orders/:id/cancel，不可直接修改状态" },
+        { status: 400 },
+      )
+    }
+  }
+
   // 用箱订单：客户不可自行确认，也不可写堆场/后台备注/放行提箱单/改价
   if (resource === "orders" && session.roleId === "R03") {
     if (patch.status === "已确认") {
@@ -189,6 +202,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       "confirmedBy",
       "unitPrice",
       "quotedUnitPrice",
+      "returnProofUploaded",
+      "stuffingListUploaded",
     ] as const) {
       if (key in patch) {
         return NextResponse.json({ error: `无权修改字段 ${key}` }, { status: 403 })
