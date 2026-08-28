@@ -3,7 +3,7 @@ import { get, list, update, create } from "@/lib/repo"
 import { getSession } from "@/lib/auth-server"
 import { writeAudit } from "@/lib/audit"
 import { hashPassword } from "@/lib/password"
-import { ensureAccountApplicationsSchema } from "@/lib/ensure-account-applications-schema"
+import { ensureAccountApplicationsSchema, ensureAccountApplicationCredentialColumns } from "@/lib/ensure-account-applications-schema"
 import {
   deriveLoginAccount,
   generateInitialPassword,
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   }
 
   await ensureAccountApplicationsSchema()
+  await ensureAccountApplicationCredentialColumns()
   const { id } = await params
   const app = (await get("accountApplications", decodeURIComponent(id))) as AccountApplication | null
   if (!app) return NextResponse.json({ error: "申请不存在" }, { status: 404 })
@@ -89,6 +90,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     reviewedAt,
     reviewedBy,
     createdUserId: user.id,
+    issuedLoginAccount: account,
+    issuedInitialPassword: initialPassword,
   })
 
   await create("notifications", {
@@ -96,7 +99,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     type: "系统",
     level: "普通",
     title: `账号申请已通过 · ${app.name}`,
-    desc: `已为 ${app.org} 开通客户账号 ${account}，初始密码已生成（请通过安全渠道告知申请人）。`,
+    desc: `已为 ${app.org} 开通客户账号 ${account}；申请人可在 /signup 凭邮箱+手机查询初始密码。`,
     module: "系统管理",
     href: "/admin/users",
     roles: ["R00"],

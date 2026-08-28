@@ -11,7 +11,7 @@ import { resolveUseBoxOrderNo } from "@/lib/domain/usebox-order-no"
 import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
 import { ensureBillFxColumns } from "@/lib/ensure-bill-fx-schema"
-import type { Customer } from "@/lib/types"
+import type { Customer, ContainerType, UseBoxOrder } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -199,6 +199,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
           { status: 403 },
         )
       }
+    }
+    const { assertOrderRentalSupply } = await import("@/lib/domain/order-rental-guard")
+    const rentalGate = await assertOrderRentalSupply({
+      boxSource: stamped.boxSource as UseBoxOrder["boxSource"],
+      containerType: stamped.containerType as ContainerType,
+      quantity: Number(stamped.quantity) || 0,
+    })
+    if (!rentalGate.ok) {
+      return NextResponse.json({ error: rentalGate.message }, { status: 400 })
     }
   }
   const created = await create(resource, stamped)

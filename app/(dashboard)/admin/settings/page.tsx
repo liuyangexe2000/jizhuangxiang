@@ -19,6 +19,7 @@ type AdminSettingsPayload = {
   showDemoAccounts: boolean
   showUnauthorizedMenus: Record<RoleId, boolean>
   cancelFreeHours: number
+  postPickupCancelFeeRate: number
   returnBookingLeadHours: number
   workHours: WorkHoursConfig
   billConfirmDays: number
@@ -45,6 +46,7 @@ export default function AdminSettingsPage() {
           showDemoAccounts: !!data.showDemoAccounts,
           showUnauthorizedMenus: data.showUnauthorizedMenus,
           cancelFreeHours: Number(data.cancelFreeHours) || 24,
+          postPickupCancelFeeRate: Number(data.postPickupCancelFeeRate ?? 0.2) || 0.2,
           returnBookingLeadHours: Number(data.returnBookingLeadHours) || 24,
           workHours: data.workHours || { startHour: 8, endHour: 18 },
           billConfirmDays: Number(data.billConfirmDays) || 3,
@@ -71,6 +73,7 @@ export default function AdminSettingsPage() {
         [SETTING_KEYS.showDemoAccounts]: form.showDemoAccounts,
         [SETTING_KEYS.showUnauthorizedMenus]: form.showUnauthorizedMenus,
         [SETTING_KEYS.cancelFreeHours]: form.cancelFreeHours,
+        [SETTING_KEYS.postPickupCancelFeeRate]: form.postPickupCancelFeeRate,
         [SETTING_KEYS.returnBookingLeadHours]: form.returnBookingLeadHours,
         [SETTING_KEYS.workHours]: form.workHours,
         [SETTING_KEYS.billConfirmDays]: form.billConfirmDays,
@@ -201,6 +204,12 @@ export default function AdminSettingsPage() {
             onChange={(n) => setForm({ ...form, cancelFreeHours: n })}
           />
           <Field
+            label="提箱后取消变更费比例（0～1，默认 0.2）"
+            value={form.postPickupCancelFeeRate}
+            onChange={(n) => setForm({ ...form, postPickupCancelFeeRate: n })}
+            step={0.01}
+          />
+          <Field
             label="还箱预约最短提前（小时）"
             value={form.returnBookingLeadHours}
             onChange={(n) => setForm({ ...form, returnBookingLeadHours: n })}
@@ -270,16 +279,19 @@ function Field({
   label,
   value,
   onChange,
+  step,
 }: {
   label: string
   value: number
   onChange: (n: number) => void
+  step?: number
 }) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <Input
         type="number"
+        step={step}
         value={Number.isFinite(value) ? value : 0}
         onChange={(e) => onChange(Number(e.target.value))}
       />

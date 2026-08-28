@@ -45,3 +45,34 @@ export async function ensureAccountApplicationsSchema(): Promise<void> {
     console.warn("[v0] ensureAccountApplicationsSchema skipped:", (e as Error).message)
   }
 }
+
+async function ensureColumn(table: string, column: string, ddl: string) {
+  const [rows] = await pool.query(
+    `SELECT COUNT(*) AS c FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+    [table, column],
+  )
+  if (Number((rows as { c: number }[])[0]?.c ?? 0) === 0) {
+    await pool.query(ddl)
+    clearColumnCache(table)
+  }
+}
+
+/** 审批通过后暂存登录凭据，供申请人自助查询（首次查询后清除密码） */
+export async function ensureAccountApplicationCredentialColumns(): Promise<void> {
+  await ensureAccountApplicationsSchema()
+  try {
+    await ensureColumn(
+      "account_applications",
+      "issuedLoginAccount",
+      "ALTER TABLE `account_applications` ADD COLUMN `issuedLoginAccount` VARCHAR(64) NULL AFTER `createdUserId`",
+    )
+    await ensureColumn(
+      "account_applications",
+      "issuedInitialPassword",
+      "ALTER TABLE `account_applications` ADD COLUMN `issuedInitialPassword` VARCHAR(64) NULL AFTER `issuedLoginAccount`",
+    )
+  } catch (e) {
+    console.warn("[v0] ensureAccountApplicationCredentialColumns skipped:", (e as Error).message)
+  }
+}

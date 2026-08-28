@@ -10,7 +10,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { validateApplication } from "@/lib/domain/user-signup-plan"
 
+type Mode = "apply" | "status"
+
 export default function SignupPage() {
+  const [mode, setMode] = useState<Mode>("apply")
   const [name, setName] = useState("")
   const [org, setOrg] = useState("")
   const [email, setEmail] = useState("")
@@ -18,6 +21,13 @@ export default function SignupPage() {
   const [remark, setRemark] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [statusResult, setStatusResult] = useState<{
+    status: string
+    message?: string
+    rejectReason?: string
+    account?: string
+    initialPassword?: string
+  } | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,21 +55,118 @@ export default function SignupPage() {
     }
   }
 
+  async function onCheckStatus(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email.trim() || !phone.trim()) {
+      toast.error("请填写申请时的邮箱与手机号")
+      return
+    }
+    setSubmitting(true)
+    setStatusResult(null)
+    try {
+      const res = await fetch("/api/account-applications/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, phone }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || "查询失败")
+        return
+      }
+      setStatusResult(data)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="flex min-h-svh items-center justify-center bg-slate-50 px-4 py-10">
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader>
-          <CardTitle>账号申请</CardTitle>
+          <CardTitle>{mode === "apply" ? "账号申请" : "查询审批结果"}</CardTitle>
           <CardDescription>
-            填写基本信息提交申请，管理员审批通过后将开通客户门户账号。
+            {mode === "apply"
+              ? "填写基本信息提交申请，管理员审批通过后可凭邮箱+手机在此查询登录账号。"
+              : "输入申请时留存的邮箱与手机号，查询审核进度；通过后首次查询可获取初始密码。"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {submitted ? (
+          <div className="mb-4 flex gap-2">
+            <Button
+              type="button"
+              variant={mode === "apply" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("apply")}
+            >
+              提交申请
+            </Button>
+            <Button
+              type="button"
+              variant={mode === "status" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("status")}
+            >
+              查询进度
+            </Button>
+          </div>
+
+          {mode === "status" ? (
+            <form onSubmit={onCheckStatus} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="status-email">邮箱 *</Label>
+                <Input
+                  id="status-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="status-phone">手机 *</Label>
+                <Input
+                  id="status-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  autoComplete="tel"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? "查询中…" : "查询"}
+              </Button>
+              {statusResult && (
+                <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
+                  <p>
+                    <span className="text-muted-foreground">状态：</span>
+                    {statusResult.status}
+                  </p>
+                  {statusResult.message && <p>{statusResult.message}</p>}
+                  {statusResult.rejectReason && (
+                    <p className="text-destructive">驳回原因：{statusResult.rejectReason}</p>
+                  )}
+                  {statusResult.account && (
+                    <p>
+                      登录账号：<span className="font-mono font-medium">{statusResult.account}</span>
+                    </p>
+                  )}
+                  {statusResult.initialPassword && (
+                    <p>
+                      初始密码：<span className="font-mono font-medium">{statusResult.initialPassword}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+            </form>
+          ) : submitted ? (
             <div className="space-y-4 text-center">
               <p className="text-sm text-muted-foreground">
-                您的申请已收到，我们将在 1～3 个工作日内完成审核。审批结果将通过您留存的邮箱/手机联系。
+                您的申请已收到。审批完成后，请切换到「查询进度」凭邮箱+手机获取登录账号（初始密码仅展示一次）。
               </p>
+              <Button type="button" variant="outline" className="w-full" onClick={() => setMode("status")}>
+                去查询进度
+              </Button>
               <Link
                 href="/login"
                 className="inline-flex h-9 w-full items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-xs hover:bg-accent"

@@ -389,6 +389,11 @@ export default function ApplyPage() {
                     <SelectItem value="租赁箱">租赁箱</SelectItem>
                   </SelectContent>
                 </Select>
+                {boxSource === "租赁箱" && (
+                  <p className="text-xs text-muted-foreground">
+                    租赁箱须匹配「供应合同」中履行中的租赁合同（箱型与数量余量）；否则提交将被拦截。
+                  </p>
+                )}
               </div>
             </div>
 

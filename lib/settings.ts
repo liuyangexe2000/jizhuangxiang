@@ -152,6 +152,7 @@ export type PublicSettings = {
   showDemoAccounts: boolean
   showUnauthorizedMenus: ShowUnauthorizedMenusMap
   cancelFreeHours: number
+  postPickupCancelFeeRate: number
   returnBookingLeadHours: number
   workHours: WorkHoursConfig
   billConfirmDays: number
@@ -168,6 +169,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     showDemoAccounts,
     showUnauthorizedMenus,
     cancelFreeHours,
+    postPickupCancelFeeRate,
     returnBookingLeadHours,
     workHours,
     billConfirmDays,
@@ -184,6 +186,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
       buildDefaultShowUnauthorizedMenus(),
     ),
     getSetting<number>(SETTING_KEYS.cancelFreeHours, 24),
+    getSetting<number>(SETTING_KEYS.postPickupCancelFeeRate, 0.2),
     getSetting<number>(SETTING_KEYS.returnBookingLeadHours, 24),
     getSetting<WorkHoursConfig>(SETTING_KEYS.workHours, DEFAULT_WORK_HOURS),
     getSetting<number>(SETTING_KEYS.billConfirmDays, 3),
@@ -201,6 +204,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
       ...showUnauthorizedMenus,
     },
     cancelFreeHours,
+    postPickupCancelFeeRate: Math.max(0, Math.min(1, Number(postPickupCancelFeeRate) || 0.2)),
     returnBookingLeadHours,
     workHours: { ...DEFAULT_WORK_HOURS, ...workHours },
     billConfirmDays,

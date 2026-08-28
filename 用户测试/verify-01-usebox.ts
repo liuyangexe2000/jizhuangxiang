@@ -184,7 +184,18 @@ async function main() {
   )
 
   const returnProofDenied = await r03.patch("orders", created.data.id, { returnProofUploaded: true })
-  mark("UT-UB-01#9", returnProofDenied.status === 403, "客户不可 PATCH 还箱证明，须走 upload-doc")
+  mark("UT-UB-01#9a", returnProofDenied.status === 403, "客户不可 PATCH 还箱证明，须走 upload-doc")
+
+  const returnProof = await r03.uploadOrderDoc(
+    created.data.id,
+    "return_proof",
+    `return_${orderNo}.pdf`,
+  )
+  mark(
+    "UT-UB-01#9",
+    !!returnProof.ok && returnProof.data?.returnProofUploaded === true,
+    returnProof.ok ? "upload-doc 上传还箱证明并推进还箱中" : `上传还箱证明失败 ${returnProof.status}`,
+  )
 
   await r03.create("attachments", {
     refType: "return_proof",

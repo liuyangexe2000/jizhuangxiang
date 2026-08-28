@@ -591,6 +591,10 @@ export interface AccountApplication {
   reviewedBy?: string
   rejectReason?: string
   createdUserId?: string
+  /** 审批通过后的登录账号（申请人可查询） */
+  issuedLoginAccount?: string
+  /** 初始密码，首次查询后清除 */
+  issuedInitialPassword?: string
 }
 
 // ---------- 系统管理：用户与代理 ----------

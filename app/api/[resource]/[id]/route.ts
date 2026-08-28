@@ -9,6 +9,8 @@ import { hashPassword } from "@/lib/password"
 import { canReadRow, canWriteRow } from "@/lib/tenant"
 import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
 import { ensureBillFxColumns } from "@/lib/ensure-bill-fx-schema"
+import { boxSourceLabel } from "@/lib/domain/box-source"
+import type { UseBoxOrder } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -166,7 +168,6 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     }
   }
 
-  // 用箱订单：禁止直接 PATCH 取消状态（须走 cancel API 以回滚库存/账单）
   if (resource === "orders") {
     if (
       typeof patch.status === "string" &&
@@ -176,6 +177,19 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         { error: "订单取消须调用 POST /api/orders/:id/cancel，不可直接修改状态" },
         { status: 400 },
       )
+    }
+    const merged = { ...existing, ...patch } as UseBoxOrder
+    const boxChanging =
+      "boxSource" in patch ||
+      "containerType" in patch ||
+      "quantity" in patch ||
+      boxSourceLabel(existing.boxSource) === "租赁箱"
+    if (boxChanging && boxSourceLabel(merged.boxSource) === "租赁箱") {
+      const { assertOrderRentalSupply } = await import("@/lib/domain/order-rental-guard")
+      const rentalGate = await assertOrderRentalSupply(merged)
+      if (!rentalGate.ok) {
+        return NextResponse.json({ error: rentalGate.message }, { status: 400 })
+      }
     }
   }
 

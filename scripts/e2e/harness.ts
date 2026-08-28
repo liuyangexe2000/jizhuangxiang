@@ -89,6 +89,31 @@ export class Client {
   del(resource: string, id: string) {
     return this.api("DELETE", `/api/${resource}/${encodeURIComponent(id)}`)
   }
+
+  /** 上传还箱证明 / 随箱资料（multipart） */
+  async uploadOrderDoc(
+    orderId: string,
+    kind: "return_proof" | "stuffing_list",
+    fileName = "test-doc.pdf",
+    content = "%PDF-1.4 test",
+  ) {
+    const form = new FormData()
+    form.append("kind", kind)
+    form.append("file", new Blob([content], { type: "application/pdf" }), fileName)
+    const res = await fetch(`${BASE_URL}/api/orders/${encodeURIComponent(orderId)}/upload-doc`, {
+      method: "POST",
+      headers: this.cookie ? { Cookie: this.cookie } : {},
+      body: form,
+    })
+    let data: any = null
+    const text = await res.text()
+    try {
+      data = text ? JSON.parse(text) : null
+    } catch {
+      data = text
+    }
+    return { ok: res.ok, status: res.status, data }
+  }
 }
 
 export function uid(prefix = "E2E") {
