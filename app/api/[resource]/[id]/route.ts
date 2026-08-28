@@ -191,6 +191,20 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         return NextResponse.json({ error: rentalGate.message }, { status: 400 })
       }
     }
+    if (
+      patch.status === "已确认" &&
+      (existing as UseBoxOrder).status === "待确认"
+    ) {
+      const mergedConfirm = { ...(existing as UseBoxOrder), ...patch } as UseBoxOrder
+      const { reserveRentalContractOnConfirm } = await import("@/lib/domain/order-rental-guard")
+      const reserved = await reserveRentalContractOnConfirm(mergedConfirm)
+      if (!reserved.ok) {
+        return NextResponse.json({ error: reserved.message }, { status: 400 })
+      }
+      if (reserved.contractNo) {
+        patch.supplyContractNo = reserved.contractNo
+      }
+    }
   }
 
   // 用箱订单：客户不可自行确认，也不可写堆场/后台备注/放行提箱单/改价

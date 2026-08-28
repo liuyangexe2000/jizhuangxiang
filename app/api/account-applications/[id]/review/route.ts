@@ -8,6 +8,7 @@ import {
   deriveLoginAccount,
   generateInitialPassword,
 } from "@/lib/domain/user-signup-plan"
+import { isSmtpConfigured, sendMail } from "@/lib/mail"
 import { nowLocalStr } from "@/lib/domain/dispatch-ops"
 import type { AccountApplication, SystemUser } from "@/lib/types"
 
@@ -116,6 +117,34 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     detail: `通过账号申请并开通 R03：${app.name} / ${app.org}`,
     ip: clientIp(req),
   })
+
+  const signupUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    process.env.APP_BASE_URL?.replace(/\/$/, "") ||
+    ""
+  const statusHint = signupUrl ? `${signupUrl}/signup` : "/signup"
+  if (isSmtpConfigured()) {
+    try {
+      await sendMail({
+        to: app.email,
+        subject: "【集装箱业务系统】账号申请已通过",
+        text: [
+          `${app.name} 您好，`,
+          "",
+          `您的账号申请（${app.org}）已通过审批。`,
+          "",
+          `登录账号：${account}`,
+          `初始密码：${initialPassword}`,
+          "",
+          `请尽快登录并修改密码。您也可访问 ${statusHint} 选择「查询进度」再次查看（密码仅首次展示）。`,
+          "",
+          "如非本人申请，请联系系统管理员。",
+        ].join("\n"),
+      })
+    } catch (e) {
+      console.warn("[v0] account approval email failed:", (e as Error).message)
+    }
+  }
 
   return NextResponse.json({
     ok: true,

@@ -51,6 +51,8 @@ export interface UseBoxOrder {
   orderCurrency?: BillCurrency
   /** 箱源（自有箱 / 租赁箱，申请可选） */
   boxSource?: "自有箱" | "租赁箱"
+  /** 租赁箱绑定的供应合同号（确认时扣减 deliveredQty） */
+  supplyContractNo?: string
   status: OrderStatus
   createdAt: string
   confirmedAt?: string

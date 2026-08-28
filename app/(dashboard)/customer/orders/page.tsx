@@ -246,6 +246,9 @@ export default function OrdersPage() {
                 <Field label="还箱城市" value={detail.returnCity} />
                 <Field label="箱型 / 数量" value={`${detail.containerType} × ${detail.quantity}`} />
                 <Field label="箱源" value={boxSourceLabel(detail.boxSource) || "不限"} />
+                {detail.supplyContractNo && (
+                  <Field label="供应合同" value={detail.supplyContractNo} />
+                )}
                 <Field
                   label={confirmedLike(detail) ? "成交单价" : "系统报价"}
                   value={formatMoney(

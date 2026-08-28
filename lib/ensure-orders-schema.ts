@@ -45,6 +45,10 @@ export async function ensureOrdersContainerNosColumn(): Promise<void> {
       "boxSource",
       "ALTER TABLE `use_box_orders` ADD COLUMN `boxSource` VARCHAR(20) NULL AFTER `orderCurrency`",
     )
+    await ensureColumn(
+      "supplyContractNo",
+      "ALTER TABLE `use_box_orders` ADD COLUMN `supplyContractNo` VARCHAR(32) NULL AFTER `boxSource`",
+    )
     ensured = true
   } catch (e) {
     console.warn("[v0] ensureOrdersContainerNosColumn skipped:", (e as Error).message)

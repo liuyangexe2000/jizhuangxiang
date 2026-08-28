@@ -31,6 +31,7 @@ CREATE TABLE `use_box_orders` (
   `exchangeRate` DECIMAL(12,6) NULL,
   `orderCurrency` VARCHAR(4) NULL,
   `boxSource` VARCHAR(20) NULL,
+  `supplyContractNo` VARCHAR(32) NULL,
   `status` VARCHAR(20) NOT NULL,
   `createdAt` VARCHAR(32) NOT NULL,
   `confirmedAt` VARCHAR(32) NULL,

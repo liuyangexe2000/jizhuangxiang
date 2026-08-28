@@ -3,12 +3,22 @@ import { list, create } from "@/lib/repo"
 import { ensureAccountApplicationsSchema } from "@/lib/ensure-account-applications-schema"
 import { validateApplication } from "@/lib/domain/user-signup-plan"
 import { nowLocalStr } from "@/lib/domain/dispatch-ops"
+import { checkRateLimit, clientIpFromRequest } from "@/lib/rate-limit"
 import type { AccountApplication } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
 /** 公开提交账号申请 */
 export async function POST(req: NextRequest) {
+  const ip = clientIpFromRequest(req)
+  const limited = checkRateLimit(`aa:apply:${ip}`, 8, 60 * 60 * 1000)
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: `提交过于频繁，请 ${limited.retryAfterSec} 秒后再试` },
+      { status: 429 },
+    )
+  }
+
   await ensureAccountApplicationsSchema()
   const body = await req.json().catch(() => ({}))
   const input = {

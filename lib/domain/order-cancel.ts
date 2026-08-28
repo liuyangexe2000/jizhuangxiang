@@ -18,6 +18,7 @@ import {
   buildPostPickupCancelFeeBill,
   computeCancelOutcome,
 } from "@/lib/domain/order-ops"
+import { releaseRentalContractOnCancel } from "@/lib/domain/order-rental-guard"
 import { getSetting } from "@/lib/settings"
 import { SETTING_KEYS } from "@/lib/settings-keys"
 
@@ -28,6 +29,7 @@ export type CancelOrderResult = {
   feeBillNo?: string
   inventoryReverted: boolean
   containersReverted: number
+  rentalContractReleased: boolean
 }
 
 export async function cancelUseBoxOrder(
@@ -47,6 +49,8 @@ export async function cancelUseBoxOrder(
 
   let inventoryReverted = false
   let containersReverted = 0
+
+  const rentalContractReleased = await releaseRentalContractOnCancel(order)
 
   if (order.status === "已确认" && order.pickupYard) {
     const inventory = (await list("inventory")) as InventoryRow[]
@@ -129,5 +133,6 @@ export async function cancelUseBoxOrder(
     feeBillNo,
     inventoryReverted,
     containersReverted,
+    rentalContractReleased,
   }
 }

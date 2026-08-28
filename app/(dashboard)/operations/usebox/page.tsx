@@ -48,7 +48,8 @@ import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { pushNotification } from "@/lib/domain/notify"
 import type { BoxSource } from "@/lib/domain/box-source"
 import { boxSourceLabel } from "@/lib/domain/box-source"
-import type { Customer, InventoryRow, Notification, UseBoxOrder, Yard } from "@/lib/types"
+import { findRentalSupplyContract } from "@/lib/domain/rental-supply-contract"
+import type { Customer, InventoryRow, Notification, SupplyContract, UseBoxOrder, Yard } from "@/lib/types"
 
 const statusFilters = ["待确认", "全部", "已确认", "提箱中", "还箱中", "已完成", "已取消", "超时取消"]
 
@@ -57,6 +58,7 @@ export default function OperationsUseboxPage() {
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
   const { data: yards } = useResource<Yard>("yards")
   const { data: customers } = useResource<Customer>("customers")
+  const { data: supplyContracts } = useResource<SupplyContract>("supplyContracts")
   const { create: createNotification } = useResource<Notification>("notifications")
   const { user } = useRole()
   const { settings } = usePublicSettings()
@@ -103,6 +105,14 @@ export default function OperationsUseboxPage() {
 
   const pickupYards = useMemo(() => confirming ? yardsForCity(confirming.pickupCity) : [], [yards, confirming])
   const returnYards = useMemo(() => confirming ? yardsForCity(confirming.returnCity) : [], [yards, confirming])
+  const rentalPreviewContractNo = useMemo(() => {
+    if (!confirming || boxSource !== "租赁箱") return null
+    const hit = findRentalSupplyContract(supplyContracts, {
+      containerType: confirming.containerType,
+      quantity: confirming.quantity,
+    })
+    return hit?.contractNo ?? null
+  }, [confirming, boxSource, supplyContracts])
 
   function openConfirm(order: UseBoxOrder) {
     const pickupOptions = yardsForCity(order.pickupCity)
@@ -298,6 +308,9 @@ export default function OperationsUseboxPage() {
             <Field label="提箱城市" value={detail.pickupCity} /><Field label="还箱城市" value={detail.returnCity} />
             <Field label="箱型 / 数量" value={`${detail.containerType} × ${detail.quantity}`} /><Field label="成交单价" value={`¥${detail.unitPrice.toLocaleString()}`} />
             <Field label="箱源" value={boxSourceLabel(detail.boxSource) || "不限"} />
+            {detail.supplyContractNo && (
+              <Field label="供应合同" value={detail.supplyContractNo} />
+            )}
             <Field label="提箱堆场" value={detail.pickupYard || "—"} /><Field label="还箱堆场" value={detail.returnYard || "—"} />
             <Field label="结算币种" value={detail.orderCurrency || inferBillCurrency({ city: detail.pickupCity })} />
             <Field
@@ -331,6 +344,13 @@ export default function OperationsUseboxPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">客户申请已选箱源时会预填；登记箱号时仅匹配对应箱属。</p>
+              {boxSource === "租赁箱" && confirming && (
+                <p className="text-xs text-muted-foreground">
+                  {rentalPreviewContractNo
+                    ? `确认后将绑定供应合同 ${rentalPreviewContractNo} 并扣减合同余量 ${confirming.quantity} 箱。`
+                    : `当前无 ${confirming.containerType} × ${confirming.quantity} 的可用租赁合同，确认将失败。`}
+                </p>
+              )}
             </div>
             <div className="grid gap-2"><Label htmlFor="unit-price">成交单价（元 / 箱）</Label><Input id="unit-price" type="number" min="1" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="admin-remark">箱管备注</Label><Textarea id="admin-remark" value={adminRemark} onChange={(event) => setAdminRemark(event.target.value)} placeholder="确认信息将对客户可见" /></div>

@@ -4,6 +4,7 @@ import {
   ensureAccountApplicationsSchema,
   ensureAccountApplicationCredentialColumns,
 } from "@/lib/ensure-account-applications-schema"
+import { checkRateLimit, clientIpFromRequest } from "@/lib/rate-limit"
 import type { AccountApplication } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -18,6 +19,15 @@ export async function POST(req: NextRequest) {
   const phone = typeof body.phone === "string" ? body.phone.replace(/\D/g, "") : ""
   if (!email || phone.length < 6) {
     return NextResponse.json({ error: "请填写申请时的邮箱与手机号" }, { status: 400 })
+  }
+
+  const ip = clientIpFromRequest(req)
+  const limited = checkRateLimit(`aa:status:${ip}:${email}`, 20, 60 * 60 * 1000)
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: `查询过于频繁，请 ${limited.retryAfterSec} 秒后再试` },
+      { status: 429 },
+    )
   }
 
   const apps = (await list("accountApplications")) as AccountApplication[]
