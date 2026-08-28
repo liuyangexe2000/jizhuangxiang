@@ -31,3 +31,8 @@ export function filterInventoryByBoxSource<T extends WithBoxSource>(
     return hit === source
   })
 }
+
+/** 订单箱源展示文案 */
+export function boxSourceLabel(source?: BoxSource | string | null): BoxSource | null {
+  return isBoxSource(source) ? source : null
+}

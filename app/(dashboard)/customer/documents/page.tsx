@@ -75,6 +75,8 @@ import {
   relocateReserved,
 } from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
+import { boxSourceLabel } from "@/lib/domain/box-source"
+import { Badge } from "@/components/ui/badge"
 import {
   downloadPrintAreaAs,
   printPrintArea,
@@ -280,6 +282,7 @@ export default function DocumentsPage() {
       yard,
       city,
       containerType: order.containerType,
+      boxSource: boxSourceLabel(order.boxSource),
     })
   }, [registerTarget, containers, yards])
 
@@ -1198,6 +1201,9 @@ export default function DocumentsPage() {
             <DialogDescription>
               订单 {registerTarget?.orderNo} · 随机出场完成后，由堆场补录实际箱号与提箱时间（须录满{" "}
               {registerTarget?.quantity ?? 0} 个）。
+              {registerTarget && boxSourceLabel(registerTarget.boxSource) ? (
+                <> · 箱源限制：<strong>{registerTarget.boxSource}</strong></>
+              ) : null}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -1835,6 +1841,7 @@ function WorkTable(props: {
                 <SortableTableHead label="订单号" columnKey="orderNo" sortKey={props.list.sortKey} sortDir={props.list.sortDir} onSort={props.list.toggleSort} />
                 {pickup && <th className="p-3 text-left">提箱单号</th>}
                 {pickup && <th className="p-3 text-left">柜数</th>}
+                <th className="p-3 text-left">箱源</th>
                 <SortableTableHead label="客户" columnKey="customer" sortKey={props.list.sortKey} sortDir={props.list.sortDir} onSort={props.list.toggleSort} />
                 <SortableTableHead label={pickup ? "提箱堆场" : "还箱堆场"} columnKey={pickup ? "pickupYard" : "returnYard"} sortKey={props.list.sortKey} sortDir={props.list.sortDir} onSort={props.list.toggleSort} />
                 <SortableTableHead label="状态" columnKey="status" sortKey={props.list.sortKey} sortDir={props.list.sortDir} onSort={props.list.toggleSort} />
@@ -1895,6 +1902,13 @@ function WorkTable(props: {
                       </div>
                     </td>
                   )}
+                  <td className="whitespace-nowrap p-3">
+                    {boxSourceLabel(order.boxSource) ? (
+                      <Badge variant="outline">{order.boxSource}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">不限</span>
+                    )}
+                  </td>
                   <td className="whitespace-nowrap p-3">{order.customer}</td>
                   <td className="whitespace-nowrap p-3">{pickup ? order.pickupYard || "待确认" : order.returnYard || "待确认"}</td>
                   <td className="whitespace-nowrap p-3">

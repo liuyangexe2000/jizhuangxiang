@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { ListPagination } from "@/components/list-pagination"
@@ -41,6 +41,14 @@ import { useDictionary } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
 import { findProxyCompanyByName } from "@/lib/proxy-company"
 import { downloadCsv } from "@/lib/csv"
+import {
+  applyYardFeePatch,
+  findYardForFeePatch,
+  parseYardFeeCsv,
+  yardFeeToCsvRow,
+  YARD_FEE_CSV_HEADERS,
+  YARD_FEE_CSV_TEMPLATE_ROWS,
+} from "@/lib/domain/yard-fee-csv"
 import type { InventoryRow, ProxyCompany, Yard } from "@/lib/types"
 import { Warehouse, MapPin, Mail, Phone, PackageOpen, Pencil, Plus, Download, Upload } from "lucide-react"
 import { toast } from "sonner"
@@ -61,6 +69,8 @@ type YardForm = {
   boardingFee: string
   /** 下车费 */
   alightingFee: string
+  /** 二次搬移费 */
+  secondaryRemovalFee: string
 }
 
 const emptyForm: YardForm = {
@@ -75,16 +85,8 @@ const emptyForm: YardForm = {
   freeDuration: "",
   boardingFee: "",
   alightingFee: "",
+  secondaryRemovalFee: "",
 }
-
-const YARD_FEE_CSV_HEADERS = [
-  "堆场名称",
-  "城市",
-  "堆存日费用",
-  "免堆天数",
-  "上车费",
-  "下车费",
-] as const
 
 function numOrNull(raw: string): number | null {
   const t = raw.trim()
@@ -107,6 +109,8 @@ export default function YardsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Yard | null>(null)
   const [form, setForm] = useState<YardForm>(emptyForm)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const isAdd = dialogOpen && !editing
 
   const enabledProxies = useMemo(
@@ -201,6 +205,7 @@ export default function YardsPage() {
       freeDuration: numToForm(y.freeDuration),
       boardingFee: numToForm(y.boardingFee),
       alightingFee: numToForm(y.alightingFee),
+      secondaryRemovalFee: numToForm(y.secondaryRemovalFee),
     })
     setDialogOpen(true)
   }
@@ -210,21 +215,61 @@ export default function YardsPage() {
     downloadCsv(
       `堆场费用_${new Date().toISOString().slice(0, 10)}.csv`,
       [...YARD_FEE_CSV_HEADERS],
-      source.map((y) => [
-        y.name,
-        y.city,
-        y.dailyExpenses ?? "",
-        y.freeDuration ?? "",
-        y.boardingFee ?? "",
-        y.alightingFee ?? "",
-      ]),
+      source.map((y) => yardFeeToCsvRow(y)),
     )
     toast.success(`已导出 ${source.length} 条堆场费用 CSV`)
   }
 
-  function importFeeCsvStub() {
-    // TODO: 解析 CSV 批量更新 dailyExpenses / freeDuration / boardingFee / alightingFee
-    toast.info("费用 CSV 导入功能开发中")
+  function downloadFeeTemplate() {
+    downloadCsv("堆场费用_导入模板.csv", [...YARD_FEE_CSV_HEADERS], YARD_FEE_CSV_TEMPLATE_ROWS)
+    toast.success("已下载费用导入模板", {
+      description: "按堆场名称或编码匹配；空单元格保留原值",
+    })
+  }
+
+  async function handleImportFeeFile(file: File) {
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const { rows: parsed, errors } = parseYardFeeCsv(text)
+      if (parsed.length === 0) {
+        toast.error(errors[0] || "CSV 无有效数据")
+        return
+      }
+      let updated = 0
+      let skipped = 0
+      let failed = 0
+      for (const patch of parsed) {
+        const yard = findYardForFeePatch(rows, patch)
+        if (!yard) {
+          skipped += 1
+          errors.push(`未找到堆场：${patch.matchKey}`)
+          continue
+        }
+        try {
+          await update(yard.id, {
+            ...applyYardFeePatch(yard, patch),
+            __auditAction: "修改",
+            __auditDetail: `CSV 导入更新堆场费用「${yard.name}」`,
+          })
+          updated += 1
+        } catch {
+          failed += 1
+        }
+      }
+      toast.success(`导入完成：更新 ${updated}${skipped ? ` · 未匹配 ${skipped}` : ""}${failed ? ` · 失败 ${failed}` : ""}`, {
+        description: errors.slice(0, 2).join("；") || undefined,
+      })
+    } catch (e) {
+      toast.error((e as Error).message || "导入失败")
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
+  function fmtFee(v: number | null | undefined) {
+    return v == null ? "—" : `¥${Number(v).toLocaleString()}`
   }
 
   function closeDialog() {
@@ -273,11 +318,13 @@ export default function YardsPage() {
     const freeDuration = numOrNull(form.freeDuration)
     const boardingFee = numOrNull(form.boardingFee)
     const alightingFee = numOrNull(form.alightingFee)
+    const secondaryRemovalFee = numOrNull(form.secondaryRemovalFee)
     if (
       (form.dailyExpenses.trim() && dailyExpenses == null) ||
       (form.freeDuration.trim() && freeDuration == null) ||
       (form.boardingFee.trim() && boardingFee == null) ||
-      (form.alightingFee.trim() && alightingFee == null)
+      (form.alightingFee.trim() && alightingFee == null) ||
+      (form.secondaryRemovalFee.trim() && secondaryRemovalFee == null)
     ) {
       toast.error("费用字段须为数字（可留空）")
       return
@@ -301,6 +348,7 @@ export default function YardsPage() {
           freeDuration,
           boardingFee,
           alightingFee,
+          secondaryRemovalFee,
           __auditAction: "修改",
           __auditDetail: `更新堆场「${name}」`,
         })
@@ -330,7 +378,7 @@ export default function YardsPage() {
           freeDuration,
           boardingFee,
           alightingFee,
-          secondaryRemovalFee: null,
+          secondaryRemovalFee,
           hasSeal: false,
           capacity,
           current: 0,
@@ -380,6 +428,16 @@ export default function YardsPage() {
 
   return (
     <div className="space-y-6">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) void handleImportFeeFile(file)
+        }}
+      />
       <PageHeader
         title="堆场信息维护"
         description="M04-F03 境内外堆场动态维护 — 含老系统原 id（legacyId）便于跨系统匹配；联系方式、容量、代管公司与启用状态"
@@ -411,13 +469,23 @@ export default function YardsPage() {
               onChange={(e) => setKeyword(e.target.value)}
               className="sm:max-w-xs"
             />
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadFeeTemplate}>
+              <Download className="size-4" />
+              下载模板
+            </Button>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={exportFeeCsv}>
               <Download className="size-4" />
               导出费用 CSV
             </Button>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={importFeeCsvStub}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              disabled={importing}
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Upload className="size-4" />
-              导入费用 CSV
+              {importing ? "导入中…" : "导入费用 CSV"}
             </Button>
             <Button size="sm" className="gap-1.5" onClick={openAdd}>
               <Plus className="size-4" />
@@ -437,6 +505,10 @@ export default function YardsPage() {
                   <SortableTableHead label="代管公司" columnKey="agent" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="联系方式" columnKey="phone" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="容量利用" columnKey="occupancy" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                  <SortableTableHead label="日费用" columnKey="dailyExpenses" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} className="text-right" />
+                  <SortableTableHead label="免堆" columnKey="freeDuration" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} className="text-right" />
+                  <SortableTableHead label="上车" columnKey="boardingFee" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} className="text-right" />
+                  <SortableTableHead label="下车" columnKey="alightingFee" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} className="text-right" />
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -494,6 +566,12 @@ export default function YardsPage() {
                           </div>
                         </div>
                       </TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{fmtFee(y.dailyExpenses)}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">
+                        {y.freeDuration == null ? "—" : `${y.freeDuration}天`}
+                      </TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{fmtFee(y.boardingFee)}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{fmtFee(y.alightingFee)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(y)}>
@@ -508,7 +586,7 @@ export default function YardsPage() {
                 })}
                 {list.total === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={12} className="py-10 text-center text-sm text-muted-foreground">
                       未找到匹配的堆场
                     </TableCell>
                   </TableRow>
@@ -703,6 +781,18 @@ export default function YardsPage() {
                     step="0.01"
                     value={form.alightingFee}
                     onChange={(e) => setForm((f) => ({ ...f, alightingFee: e.target.value }))}
+                    placeholder="元"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="yard-secondary">二次搬移费</Label>
+                  <Input
+                    id="yard-secondary"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.secondaryRemovalFee}
+                    onChange={(e) => setForm((f) => ({ ...f, secondaryRemovalFee: e.target.value }))}
                     placeholder="元"
                   />
                 </div>

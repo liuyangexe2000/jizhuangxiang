@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { ListPagination } from "@/components/list-pagination"
 import { SortableTableHead } from "@/components/sortable-table-head"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,6 +46,8 @@ import { attachBillFx, formatExchangeRate, inferBillCurrency } from "@/lib/domai
 import { issuePickupDocSlip } from "@/lib/domain/pickup-doc"
 import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { pushNotification } from "@/lib/domain/notify"
+import type { BoxSource } from "@/lib/domain/box-source"
+import { boxSourceLabel } from "@/lib/domain/box-source"
 import type { Customer, InventoryRow, Notification, UseBoxOrder, Yard } from "@/lib/types"
 
 const statusFilters = ["待确认", "全部", "已确认", "提箱中", "还箱中", "已完成", "已取消", "超时取消"]
@@ -65,6 +68,7 @@ export default function OperationsUseboxPage() {
   const [returnYard, setReturnYard] = useState("")
   const [unitPrice, setUnitPrice] = useState("")
   const [adminRemark, setAdminRemark] = useState("")
+  const [boxSource, setBoxSource] = useState<"" | BoxSource>("")
   const [submitting, setSubmitting] = useState(false)
   const pendingCount = useMemo(() => orders.filter((order) => order.status === "待确认").length, [orders])
 
@@ -114,6 +118,7 @@ export default function OperationsUseboxPage() {
     setReturnYard(order.returnYard || returnOptions[0]?.name || "")
     setUnitPrice(String(order.quotedUnitPrice ?? order.unitPrice))
     setAdminRemark(order.adminRemark || "")
+    setBoxSource(boxSourceLabel(order.boxSource) ?? "")
   }
 
   async function submitConfirm() {
@@ -160,6 +165,7 @@ export default function OperationsUseboxPage() {
       orderCurrency: fx.currency,
       exchangeRate: fx.exchangeRate,
       adminRemark,
+      ...(boxSource ? { boxSource } : {}),
       confirmedAt,
       confirmedBy,
       cancelDeadline: fmtDeadline(now, settings?.cancelFreeHours ?? 24),
@@ -175,6 +181,7 @@ export default function OperationsUseboxPage() {
         orderCurrency: fx.currency,
         exchangeRate: fx.exchangeRate,
         adminRemark,
+        ...(boxSource ? { boxSource } : {}),
         confirmedAt,
         confirmedBy: nextOrder.confirmedBy,
         cancelDeadline: nextOrder.cancelDeadline,
@@ -246,6 +253,7 @@ export default function OperationsUseboxPage() {
                 <SortableTableHead label="提箱城市" columnKey="pickupCity" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="还箱城市" columnKey="returnCity" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="箱型 / 数量" columnKey="qty" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                <SortableTableHead label="箱源" columnKey="boxSource" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="金额" columnKey="price" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="状态" columnKey="status" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                 <SortableTableHead label="创建时间" columnKey="createdAt" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
@@ -259,6 +267,13 @@ export default function OperationsUseboxPage() {
                     <TableCell>{order.pickupCity}</TableCell>
                     <TableCell>{order.returnCity}</TableCell>
                     <TableCell>{order.containerType} × {order.quantity}</TableCell>
+                    <TableCell>
+                      {boxSourceLabel(order.boxSource) ? (
+                        <Badge variant="outline">{order.boxSource}</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">不限</span>
+                      )}
+                    </TableCell>
                     <TableCell>¥{(order.unitPrice * order.quantity).toLocaleString()}</TableCell>
                     <TableCell><StatusBadge status={order.status} /></TableCell>
                     <TableCell className="text-muted-foreground">{order.createdAt}</TableCell>
@@ -268,7 +283,7 @@ export default function OperationsUseboxPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {list.total === 0 && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">未找到匹配的用箱订单</TableCell></TableRow>}
+                {list.total === 0 && <TableRow><TableCell colSpan={10} className="py-10 text-center text-muted-foreground">未找到匹配的用箱订单</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
@@ -282,6 +297,7 @@ export default function OperationsUseboxPage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <Field label="提箱城市" value={detail.pickupCity} /><Field label="还箱城市" value={detail.returnCity} />
             <Field label="箱型 / 数量" value={`${detail.containerType} × ${detail.quantity}`} /><Field label="成交单价" value={`¥${detail.unitPrice.toLocaleString()}`} />
+            <Field label="箱源" value={boxSourceLabel(detail.boxSource) || "不限"} />
             <Field label="提箱堆场" value={detail.pickupYard || "—"} /><Field label="还箱堆场" value={detail.returnYard || "—"} />
             <Field label="结算币种" value={detail.orderCurrency || inferBillCurrency({ city: detail.pickupCity })} />
             <Field
@@ -304,6 +320,18 @@ export default function OperationsUseboxPage() {
           <div className="grid gap-4 py-2">
             <div className="grid gap-2"><Label>提箱堆场</Label><Select value={pickupYard} onValueChange={(value) => setPickupYard(value ?? "")}><SelectTrigger><SelectValue placeholder="选择提箱堆场" /></SelectTrigger><SelectContent>{pickupYards.map((yard) => <SelectItem key={yard.id} value={yard.name}>{yard.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-2"><Label>还箱堆场</Label><Select value={returnYard} onValueChange={(value) => setReturnYard(value ?? "")}><SelectTrigger><SelectValue placeholder="选择还箱堆场" /></SelectTrigger><SelectContent>{returnYards.map((yard) => <SelectItem key={yard.id} value={yard.name}>{yard.name}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-2">
+              <Label>箱源</Label>
+              <Select value={boxSource || "__none__"} onValueChange={(v) => setBoxSource(v === "__none__" ? "" : (v as BoxSource))}>
+                <SelectTrigger><SelectValue placeholder="不限（登记时不按箱属过滤）" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">不限</SelectItem>
+                  <SelectItem value="自有箱">自有箱</SelectItem>
+                  <SelectItem value="租赁箱">租赁箱</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">客户申请已选箱源时会预填；登记箱号时仅匹配对应箱属。</p>
+            </div>
             <div className="grid gap-2"><Label htmlFor="unit-price">成交单价（元 / 箱）</Label><Input id="unit-price" type="number" min="1" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="admin-remark">箱管备注</Label><Textarea id="admin-remark" value={adminRemark} onChange={(event) => setAdminRemark(event.target.value)} placeholder="确认信息将对客户可见" /></div>
           </div>

@@ -104,17 +104,24 @@ export function buildUseBoxGate(
   }
 }
 
-/** 提箱堆场可用真实箱（在场、箱型匹配） */
+/** 提箱堆场可用真实箱（在场、箱型匹配；可选按订单箱源过滤 ownership） */
 export function listAvailableUseboxContainers(
   containers: ContainerMaster[],
-  opts: { yard: string; city: string; containerType: string },
+  opts: {
+    yard: string
+    city: string
+    containerType: string
+    /** 订单箱源；空则不过滤 */
+    boxSource?: "自有箱" | "租赁箱" | null
+  },
 ): ContainerMaster[] {
   return containers.filter(
     (c) =>
       !c.deleted &&
       c.status === "在场" &&
       c.type === opts.containerType &&
-      (c.currentYard === opts.yard || c.currentCity === opts.city),
+      (c.currentYard === opts.yard || c.currentCity === opts.city) &&
+      (!opts.boxSource || c.ownership === opts.boxSource),
   )
 }
 

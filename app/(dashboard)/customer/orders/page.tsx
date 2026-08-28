@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { ListPagination } from "@/components/list-pagination"
 import { SortableTableHead } from "@/components/sortable-table-head"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -48,6 +49,7 @@ import {
   inventoryId,
 } from "@/lib/domain/dispatch-ops"
 import { pushNotification } from "@/lib/domain/notify"
+import { boxSourceLabel } from "@/lib/domain/box-source"
 
 const statusFilters = ["全部", "待确认", "已确认", "提箱中", "还箱中", "已完成", "已取消", "超时取消"]
 
@@ -214,6 +216,7 @@ export default function OrdersPage() {
                   <SortableTableHead label="订单号" columnKey="orderNo" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="线路" columnKey="route" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="箱型/数量" columnKey="qty" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
+                  <SortableTableHead label="箱源" columnKey="boxSource" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="金额" columnKey="amount" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="状态" columnKey="status" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
                   <SortableTableHead label="创建时间" columnKey="createdAt" sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort} />
@@ -233,6 +236,13 @@ export default function OrdersPage() {
                       <TableCell>
                         {o.containerType} × {o.quantity}
                       </TableCell>
+                      <TableCell>
+                        {boxSourceLabel(o.boxSource) ? (
+                          <Badge variant="outline">{o.boxSource}</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>{formatMoney(displayPrice * o.quantity, currency)}</TableCell>
                       <TableCell>
                         <StatusBadge status={o.status} />
@@ -248,7 +258,7 @@ export default function OrdersPage() {
                 })}
                 {list.total === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                       未找到匹配的订单
                     </TableCell>
                   </TableRow>
@@ -281,6 +291,7 @@ export default function OrdersPage() {
                 <Field label="提箱城市" value={detail.pickupCity} />
                 <Field label="还箱城市" value={detail.returnCity} />
                 <Field label="箱型 / 数量" value={`${detail.containerType} × ${detail.quantity}`} />
+                <Field label="箱源" value={boxSourceLabel(detail.boxSource) || "不限"} />
                 <Field
                   label={confirmedLike(detail) ? "成交单价" : "系统报价"}
                   value={formatMoney(

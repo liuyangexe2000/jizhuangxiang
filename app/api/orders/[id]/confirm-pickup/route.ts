@@ -15,6 +15,7 @@ import {
 } from "@/lib/domain/dispatch-ops"
 import { ensureOrdersContainerNosColumn } from "@/lib/ensure-orders-schema"
 import { buildUseBoxBill } from "@/lib/domain/order-ops"
+import { boxSourceLabel } from "@/lib/domain/box-source"
 import { parseOptionalContainerNos } from "@/lib/domain/pickup-containers"
 import type { Bill, ContainerMaster, InventoryRow, UseBoxOrder } from "@/lib/types"
 
@@ -123,12 +124,14 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       yard,
       city,
       containerType: order.containerType,
+      boxSource: boxSourceLabel(order.boxSource),
     })
     const availSet = new Set(available.map((c) => c.containerNo.toUpperCase()))
     for (const no of containerNos) {
       if (!availSet.has(no)) {
+        const srcHint = order.boxSource ? `，箱源须为「${order.boxSource}」` : ""
         return NextResponse.json(
-          { error: `箱号 ${no} 不可用：须为提箱堆场「${yard}」在场且箱型 ${order.containerType}` },
+          { error: `箱号 ${no} 不可用：须为提箱堆场「${yard}」在场且箱型 ${order.containerType}${srcHint}` },
           { status: 400 },
         )
       }
