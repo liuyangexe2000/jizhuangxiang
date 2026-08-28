@@ -23,7 +23,7 @@ const ALLOWED_ROLES = ["R00", "R01", "R03", "R04", "R06"] as const
 
 /**
  * 客户/箱管上传随箱资料或还箱证明（multipart）：落盘 + 写 attachments + 标记订单标志位。
- * 不推进订单执行状态（放箱/收箱仍由现场 confirm-* 驱动）。
+ * 还箱证明上传后：若订单尚在提箱中/已提箱，推进为「还箱中」（收箱仍由现场 confirm-return 完成）。
  */
 export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params
@@ -92,7 +92,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
           conditionCheck: "通过",
           ...(note ? { conditionNote: note } : {}),
         }
-      : { returnProofUploaded: true }
+      : {
+          returnProofUploaded: true,
+          ...(["提箱中", "已提箱"].includes(order.status) ? { status: "还箱中" as const } : {}),
+        }
 
   await update("orders", order.id, orderPatch)
 
@@ -104,7 +107,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     detail:
       kind === "stuffing_list"
         ? `上传随箱资料 ${fileName}`
-        : `上传还箱证明 ${fileName}`,
+        : `上传还箱证明 ${fileName}${
+            ["提箱中", "已提箱"].includes(order.status) ? "，订单进入还箱中" : ""
+          }`,
     ip: clientIp(req),
   })
 
@@ -117,6 +122,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       size: saved.size,
       stuffingListUploaded: kind === "stuffing_list" ? true : order.stuffingListUploaded,
       returnProofUploaded: kind === "return_proof" ? true : order.returnProofUploaded,
+      status:
+        kind === "return_proof" && ["提箱中", "已提箱"].includes(order.status)
+          ? "还箱中"
+          : order.status,
     },
     { status: 201 },
   )

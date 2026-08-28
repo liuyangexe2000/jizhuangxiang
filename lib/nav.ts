@@ -86,6 +86,7 @@ export const navGroups: NavGroup[] = [
     label: "核心业务与调运管理系统",
     items: [
       { title: "调运申请", href: "/dispatch/apply", icon: Send, roles: ["R01"], desc: "发起调运申请与线路配置" },
+      { title: "调运价目", href: "/config/dispatch-prices", icon: Tags, roles: ["R00", "R01"], desc: "维护调运报价（提箱堆场 + 还箱城市 + 单价）" },
       { title: "审批中心", href: "/dispatch/approvals", icon: CheckSquare, roles: ["R01", "R02"], desc: "多级动态审批引擎" },
       { title: "承运任务", href: "/dispatch/tasks", icon: Truck, roles: ["R01", "R04", "R05"], desc: "任务下发与提箱预约" },
       { title: "还箱审核", href: "/dispatch/returns", icon: PackageCheck, roles: ["R01", "R05"], desc: "还箱申请与审核" },

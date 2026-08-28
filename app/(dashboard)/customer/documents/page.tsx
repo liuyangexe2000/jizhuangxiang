@@ -533,7 +533,11 @@ export default function DocumentsPage() {
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || "上传失败")
       await Promise.all([revalidateResource("attachments"), revalidateResource("orders")])
-      toast.success("还箱证明已上传，请等待现场确认收箱")
+      toast.success(
+        data.status === "还箱中"
+          ? "还箱证明已上传，订单进入「还箱中」，请等待现场确认收箱"
+          : "还箱证明已上传，请等待现场确认收箱",
+      )
       setReturnProofTarget(null)
       setReturnProofFile(null)
     } catch (error) {
@@ -1111,6 +1115,7 @@ export default function DocumentsPage() {
             attachmentCount={attachmentCount}
             canExecuteGate={canExecuteGate}
             isYardAdmin={isYardAdmin}
+            roleId={roleId}
             onCondition={openCondition}
             onRegisterContainers={openRegisterContainers}
             onBook={(o) => {
@@ -1134,6 +1139,7 @@ export default function DocumentsPage() {
             attachmentCount={attachmentCount}
             canExecuteGate={canExecuteGate}
             isYardAdmin={isYardAdmin}
+            roleId={roleId}
             onCondition={openCondition}
             onBook={(o) => {
               setBookingTarget({ order: o, phase: "return" })
@@ -1771,15 +1777,38 @@ function StepCards({ phase }: { phase: Phase }) {
     ? ["打印提箱单", "预约堆场", "现场确认放箱", "登记箱号"]
     : ["打印还箱单", "预约还箱堆场", "上传还箱证明", "现场确认收箱"]
   return (
-    <div className="mb-4 grid gap-3 sm:grid-cols-4">
-      {steps.map((step, index) => (
-        <Card key={step}>
-          <CardContent className="p-3 text-sm">
-            <span className="mr-2 text-primary">{index + 1}</span>
-            {step}
+    <div className="mb-4 space-y-3">
+      <div className="grid gap-3 sm:grid-cols-4">
+        {steps.map((step, index) => (
+          <Card key={step}>
+            <CardContent className="p-3 text-sm">
+              <span className="mr-2 text-primary">{index + 1}</span>
+              {step}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {!pickup && (
+        <Card className="border-dashed">
+          <CardContent className="space-y-2 p-4 text-xs text-muted-foreground">
+            <p className="text-sm font-medium text-foreground">还箱协作 · 角色操作点</p>
+            <ul className="list-inside list-disc space-y-1">
+              <li>
+                <span className="font-medium text-foreground">客户 R03</span>
+                ：「更多」→ 上传还箱证明（上传后订单进入「还箱中」）
+              </li>
+              <li>
+                <span className="font-medium text-foreground">堆场 / 代管 R04·R06</span>
+                ：点「确认收箱」完成验箱进场（成功后订单「已完成」）
+              </li>
+              <li>
+                <span className="font-medium text-foreground">箱管 R01</span>
+                ：可代为确认收箱；收箱后可自动出超期费 / 上下车费
+              </li>
+            </ul>
           </CardContent>
         </Card>
-      ))}
+      )}
     </div>
   )
 }
@@ -1793,6 +1822,35 @@ function needsPickupContainerRegister(order: UseBoxOrder) {
   )
 }
 
+/** 按角色给出还箱阶段「下一步」提示 */
+function returnNextStepHint(
+  order: UseBoxOrder,
+  roleId: string,
+  canExecuteGate: boolean,
+): string | null {
+  if (order.status === "已完成" || order.returnGateAt) return null
+  if (!["提箱中", "已提箱", "还箱中"].includes(order.status)) return null
+
+  const needProof = !order.returnProofUploaded
+  const canConfirm =
+    canExecuteGate &&
+    (order.status === "提箱中" || order.status === "已提箱" || order.status === "还箱中")
+
+  if (roleId === "R03") {
+    if (needProof) return "请上传还箱证明"
+    return "已上传证明，等待堆场确认收箱"
+  }
+  if (canConfirm) {
+    if (needProof) return "可确认收箱（客户证明可选）"
+    return "请现场确认收箱"
+  }
+  if (roleId === "R01" || roleId === "R00") {
+    if (needProof) return "督促客户上传证明或代为确认收箱"
+    return "可代为确认收箱"
+  }
+  return "等待还箱闭环"
+}
+
 function canChangeYard(o: UseBoxOrder) {
   return o.status === "已确认" && !(o.containerNos?.length)
 }
@@ -1804,6 +1862,7 @@ function WorkTable(props: {
   attachmentCount: (o: UseBoxOrder) => number
   canExecuteGate: boolean
   isYardAdmin: boolean
+  roleId: string
   overdue?: UseBoxOrder[]
   onCondition: (o: UseBoxOrder, p: Phase) => void
   onRegisterContainers?: (o: UseBoxOrder) => void
@@ -1862,6 +1921,9 @@ function WorkTable(props: {
                   (pickup ? order.status === "已确认" : order.status === "提箱中" || order.status === "已提箱" || order.status === "还箱中")
                 const showRegister =
                   pickup && props.canExecuteGate && props.onRegisterContainers && needsPickupContainerRegister(order)
+                const nextHint = !pickup
+                  ? returnNextStepHint(order, props.roleId, props.canExecuteGate)
+                  : null
                 return (
                 <Fragment key={order.id}>
                 <tr className="border-t">
@@ -1916,6 +1978,9 @@ function WorkTable(props: {
                       <StatusBadge status={order.status} />
                       {showRegister && (
                         <div className="text-[11px] text-amber-700 dark:text-amber-400">待登记箱号</div>
+                      )}
+                      {nextHint && (
+                        <div className="max-w-[11rem] text-[11px] font-medium text-primary">{nextHint}</div>
                       )}
                       {pickup && (order.containerNos?.length ?? 0) > 0 && (
                         <div className="max-w-[10rem] truncate font-mono text-[11px] text-muted-foreground" title={order.containerNos!.join("、")}>

@@ -65,7 +65,7 @@ export function formatMoney(amount: number, currency: BillCurrency | string = "C
 
 export function formatExchangeRate(rate: number, currency: BillCurrency | string = "CNY"): string {
   const cur = normalizeBillCurrency(currency)
-  if (cur === "CNY") return "1.0000（本币）"
+  if (cur === "CNY") return "本币（CNY = 1）"
   return `1 ${cur} = ${roundMoney(rate, 4).toFixed(4)} CNY`
 }
 

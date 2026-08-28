@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Send, Route, CalendarClock, Layers, Info, MapPin } from "lucide-react"
+import Link from "next/link"
+import { Send, Route, CalendarClock, Layers, Info, MapPin, Tags, ExternalLink } from "lucide-react"
 import { CitySearchSelect } from "@/components/city-search-select"
 import { useResource } from "@/lib/api"
 import { useDictionary } from "@/lib/dictionary-context"
@@ -214,8 +215,38 @@ export default function DispatchApplyPage() {
       <PageHeader
         module="M02 · 核心业务与调运管理系统"
         title="调运申请"
-        description="M02-F01 调运申请与线路配置 — 选择提箱地与还箱范围方案，系统按 BR-11 自动联动单价、超期费标准并计算调运总价。"
+        description="M02-F01 调运申请与线路配置 — 选择提箱地与调运报价方案，系统按 BR-11 自动联动单价、超期费标准并计算调运总价。"
+        actions={
+          <Link
+            href="/config/dispatch-prices"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent"
+          >
+            <Tags className="size-3.5" />
+            维护调运价目
+            <ExternalLink className="size-3 opacity-60" />
+          </Link>
+        }
       />
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex flex-wrap items-start gap-3 p-4 text-sm">
+          <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="font-medium text-foreground">测试 / 业务前请先配置调运报价</p>
+            <p className="text-xs text-muted-foreground">
+              路径：<span className="font-medium text-foreground">基础配置 → 调运价目</span>
+              （或点右上角「维护调运价目」）。按提箱堆场维护启用方案后，本页选堆场即可看到报价卡片并锁定还箱城市。
+            </p>
+          </div>
+          <Link
+            href="/config/dispatch-prices"
+            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-secondary px-3 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
+          >
+            <Tags className="size-3.5" />
+            打开调运价目
+          </Link>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <Card>
@@ -276,16 +307,20 @@ export default function DispatchApplyPage() {
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5 text-sm">
                 <MapPin className="size-4 text-primary" />
-                允许还箱城市方案 *
+                调运报价方案（还箱城市 + 单价）*
                 <span className="text-xs font-normal text-muted-foreground">（申请时锁定城市集合，还箱执行必须落在范围内）</span>
               </Label>
               {!form.pickupPlace ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-                  请先选择提箱城市与堆场，系统将列出对应的还箱城市与单价方案
+                  请先选择提箱城市与堆场，系统将列出对应的调运报价方案
                 </p>
               ) : rules.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-                  该提箱堆场暂无启用价目方案，请到「基础配置 → 调运价目」维护
+                  该提箱堆场暂无启用价目方案，请到
+                  <Link href="/config/dispatch-prices" className="mx-1 font-medium text-primary underline-offset-4 hover:underline">
+                    基础配置 → 调运价目
+                  </Link>
+                  维护后再回来选择
                 </p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -301,13 +336,14 @@ export default function DispatchApplyPage() {
                           active ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
                         }`}
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <Badge className={zoneTone[r.zone]}>{r.zone}</Badge>
                           <span className="text-sm font-semibold text-primary">
-                            ¥{r.unitPrice.toLocaleString()}
+                            ¥{Number(r.unitPrice).toLocaleString()}
                             <span className="text-xs font-normal text-muted-foreground">/箱</span>
                           </span>
                         </div>
+                        <p className="text-xs font-medium text-muted-foreground">报价单价</p>
                         <p className="text-sm font-medium leading-snug text-foreground">
                           {formatScopeCities(cities) || r.scope || "—"}
                         </p>
@@ -384,7 +420,7 @@ export default function DispatchApplyPage() {
             <CardContent className="space-y-2 p-4 text-xs text-muted-foreground">
               <p className="flex items-start gap-2">
                 <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                单价随允许还箱城市集合联动（BR-11）：选定方案后城市范围锁定到调运单，还箱只能选这些城市。
+                单价随调运报价方案联动（BR-11）：选定方案后还箱城市范围锁定到调运单，还箱只能选这些城市。价目维护入口：基础配置 → 调运价目。
               </p>
               <p className="flex items-start gap-2">
                 <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-primary" />

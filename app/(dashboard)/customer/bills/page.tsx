@@ -62,6 +62,7 @@ function billFx(b: Bill) {
 }
 
 const statusFilters = ["全部", "待确认", "已确认", "有异议", "已支付", "超时默认确认"]
+const currencyFilters = ["全部币种", "外币账单", "本币 CNY"] as const
 
 export default function BillsPage() {
   const { roleId, user } = useRole()
@@ -71,6 +72,7 @@ export default function BillsPage() {
   const { create: createOutbound } = useResource<OutboundEvent>("outboundEvents")
   const [keyword, setKeyword] = useState("")
   const [status, setStatus] = useState("全部")
+  const [currencyFilter, setCurrencyFilter] = useState<(typeof currencyFilters)[number]>("全部币种")
   const [detail, setDetail] = useState<Bill | null>(null)
   const [disputeFor, setDisputeFor] = useState<Bill | null>(null)
   const [disputeText, setDisputeText] = useState("")
@@ -88,9 +90,14 @@ export default function BillsPage() {
         b.party.includes(keyword) ||
         b.type.includes(keyword)
       const matchStatus = status === "全部" || b.status === status
-      return matchKw && matchStatus
+      const cur = normalizeBillCurrency(b.currency)
+      const matchCur =
+        currencyFilter === "全部币种" ||
+        (currencyFilter === "外币账单" && cur !== "CNY") ||
+        (currencyFilter === "本币 CNY" && cur === "CNY")
+      return matchKw && matchStatus && matchCur
     })
-  }, [bills, keyword, status])
+  }, [bills, keyword, status, currencyFilter])
 
   const list = useListQuery({
     data: filtered,
@@ -321,6 +328,21 @@ export default function BillsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select
+              value={currencyFilter}
+              onValueChange={(v) => setCurrencyFilter((v as typeof currencyFilter) ?? "全部币种")}
+            >
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {currencyFilters.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -362,7 +384,13 @@ export default function BillsPage() {
                     <TableCell>{b.party}</TableCell>
                     <TableCell className="font-mono text-xs">{fx.currency}</TableCell>
                     <TableCell className="whitespace-nowrap">{formatMoney(fx.amount, fx.currency)}</TableCell>
-                    <TableCell className="max-w-[9rem] text-xs text-muted-foreground">
+                    <TableCell
+                      className={
+                        fx.currency !== "CNY"
+                          ? "max-w-[10rem] text-xs font-medium text-primary"
+                          : "max-w-[9rem] text-xs text-muted-foreground"
+                      }
+                    >
                       {formatExchangeRate(fx.exchangeRate, fx.currency)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap font-medium">{formatMoney(fx.amountCny, "CNY")}</TableCell>
@@ -439,7 +467,7 @@ export default function BillsPage() {
               <div className="print-area doc-print-sheet space-y-4 bg-white p-2 text-zinc-900 sm:p-0">
                 <header className="border-b-2 border-zinc-900 pb-3 text-center">
                   <p className="text-sm text-zinc-600">中欧班列平台公司 · 集装箱管理部</p>
-                  <h2 className="mt-1 text-xl font-bold tracking-[0.15em]">用箱账单</h2>
+                  <h2 className="mt-1 text-xl font-bold tracking-[0.15em]">{detail.type}</h2>
                   <p className="mt-2 font-mono text-xs text-zinc-600">{detail.billNo}</p>
                 </header>
                 <table className="w-full border-collapse text-sm">

@@ -10,10 +10,14 @@ import {
   History,
   Plug,
   ArrowRight,
+  PackageCheck,
 } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RESOURCES } from "@/lib/resources"
+import { useResource } from "@/lib/api"
+import type { UseBoxOrder } from "@/lib/types"
+import { useMemo } from "react"
 
 const tiles = [
   {
@@ -56,6 +60,20 @@ const tiles = [
 ]
 
 export default function AdminHubPage() {
+  const { data: orders } = useResource<UseBoxOrder>("orders")
+  const returnPending = useMemo(
+    () =>
+      orders.filter(
+        (o) =>
+          ["提箱中", "已提箱", "还箱中"].includes(o.status) &&
+          !!o.pickupGateAt &&
+          !o.returnGateAt,
+      ),
+    [orders],
+  )
+  const awaitingProof = returnPending.filter((o) => !o.returnProofUploaded).length
+  const awaitingGate = returnPending.filter((o) => !!o.returnProofUploaded).length
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -63,6 +81,39 @@ export default function AdminHubPage() {
         title="管理中枢"
         description="R00 总后台入口：数据治理、权限矩阵、系统参数与审计集成一站式到达。"
       />
+
+      <Card className="border-primary/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <PackageCheck className="size-4 text-primary" />
+            还箱阶段待办
+          </CardTitle>
+          <CardDescription>
+            已提箱但未确认收箱的订单。客户上传证明 → 堆场确认收箱；操作入口在「提还箱作业」还箱 Tab。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-4">
+          <div className="rounded-lg border bg-muted/40 px-4 py-3">
+            <p className="text-2xl font-semibold tabular-nums">{returnPending.length}</p>
+            <p className="text-xs text-muted-foreground">待还箱闭环</p>
+          </div>
+          <div className="rounded-lg border px-4 py-3">
+            <p className="text-lg font-semibold tabular-nums">{awaitingProof}</p>
+            <p className="text-xs text-muted-foreground">待上传还箱证明</p>
+          </div>
+          <div className="rounded-lg border px-4 py-3">
+            <p className="text-lg font-semibold tabular-nums">{awaitingGate}</p>
+            <p className="text-xs text-muted-foreground">待现场确认收箱</p>
+          </div>
+          <Link
+            href="/customer/documents"
+            className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            打开提还箱作业
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2">

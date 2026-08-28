@@ -5,7 +5,7 @@
 import type { Bill, BillType, RepairOrder, UseBoxOrder, Yard } from "../types"
 import { fmtDeadline } from "./order-ops"
 import { nowLocalStr } from "./dispatch-ops"
-import { attachBillFx, formatMoney } from "./money"
+import { attachBillFx, billFxItems, formatMoney } from "./money"
 
 export type GenerateBillInput = {
   relatedOrderNo?: string
@@ -53,6 +53,7 @@ export function generateRepairBill(
         label: `明细${i + 1}`,
         value: `${line.label} ×${line.qty} @${line.unitPrice}`,
       })),
+      ...billFxItems(fx),
     ],
   }
 }
@@ -93,6 +94,7 @@ export function generateBoardingAlightingBill(
     items.push({ label: "下车费单价", value: formatMoney(alighting, "CNY") })
     items.push({ label: "下车费小计", value: formatMoney(alighting * qty, "CNY") })
   }
+  items.push(...billFxItems(fx))
 
   return {
     billNo: `BILL${Date.now().toString().slice(-8)}`,
@@ -124,8 +126,11 @@ export function generateAbnormalBill(input: GenerateBillInput): Omit<Bill, "id">
     status: "待确认",
     issuedAt,
     confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
-    items: input.items?.length
-      ? input.items
-      : [{ label: "说明", value: "异常进出场计费" }],
+    items: [
+      ...(input.items?.length
+        ? input.items
+        : [{ label: "说明", value: "异常进出场计费" }]),
+      ...billFxItems(fx),
+    ],
   }
 }

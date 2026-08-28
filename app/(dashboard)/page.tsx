@@ -14,6 +14,7 @@ import {
   Clock3,
   Plug,
   CheckCircle2,
+  Tags,
 } from "lucide-react"
 import { useRole } from "@/lib/role-context"
 import { canAccessResource } from "@/lib/acl"
@@ -48,6 +49,7 @@ export default function DashboardPage() {
 
   const canOrders = canAccessResource("orders", roleId, "read")
   const canDispatch = canAccessResource("dispatch", roleId, "read")
+  const canDispatchPrices = canAccessResource("dispatchPriceRules", roleId, "read")
   const canBills = canAccessResource("bills", roleId, "read")
   const canInventory = canAccessResource("inventory", roleId, "read")
 
@@ -116,6 +118,41 @@ export default function DashboardPage() {
           hint={canBills ? "待确认或有异议" : "当前角色无账单权限"}
         />
       </div>
+
+      {(canDispatch || canDispatchPrices) && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center gap-3 p-4">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Tags className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">调运业务测试前：先维护调运价目</p>
+              <p className="text-xs text-muted-foreground">
+                在「调运价目」按提箱堆场配置报价方案后，再到「调运申请」选方案提交。价目也在侧栏「核心业务与调运」或「基础配置」下。
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {canDispatchPrices && (
+                <Link
+                  href="/config/dispatch-prices"
+                  className="inline-flex h-8 items-center gap-1 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  调运价目维护
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              )}
+              {canDispatch && (
+                <Link
+                  href="/dispatch/apply"
+                  className="inline-flex h-8 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent"
+                >
+                  去调运申请
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {effectiveAdmin && (
         <Card>
