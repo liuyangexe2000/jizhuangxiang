@@ -16,6 +16,7 @@ import {
   l8Admin,
   l9GapFill,
   l10AdminConfig,
+  l11RentalContract,
 } from "./scenarios/all"
 
 async function ping() {
@@ -45,6 +46,7 @@ async function main() {
     ["L8 管理与集成", l8Admin],
     ["L9 缺口补齐", l9GapFill],
     ["L10 管理配置", l10AdminConfig],
+    ["L11 租赁箱合同", l11RentalContract],
   ] as const
 
   const results = []

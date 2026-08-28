@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CheckCircle2, Eye, Search } from "lucide-react"
+import Link from "next/link"
+import { CheckCircle2, Eye, Search, PackageCheck, ArrowRight } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { ListPagination } from "@/components/list-pagination"
@@ -73,6 +74,18 @@ export default function OperationsUseboxPage() {
   const [boxSource, setBoxSource] = useState<"" | BoxSource>("")
   const [submitting, setSubmitting] = useState(false)
   const pendingCount = useMemo(() => orders.filter((order) => order.status === "待确认").length, [orders])
+  const returnPending = useMemo(
+    () =>
+      orders.filter(
+        (o) =>
+          ["提箱中", "已提箱", "还箱中"].includes(o.status) &&
+          !!o.pickupGateAt &&
+          !o.returnGateAt,
+      ),
+    [orders],
+  )
+  const awaitingProof = returnPending.filter((o) => !o.returnProofUploaded).length
+  const awaitingGate = returnPending.filter((o) => !!o.returnProofUploaded).length
 
   function yardsForCity(city: string) {
     return yards.filter((yard) => yard.enabled && !yard.deleted && yard.city === city)
@@ -237,6 +250,29 @@ export default function OperationsUseboxPage() {
         description="确认待处理用箱申请，分配提、还箱堆场和成交价格，同步库存预占与提箱单；用箱账单在现场完成提箱后生成。"
       />
       <p className="text-sm text-muted-foreground">待确认订单 <span className="font-semibold text-foreground">{pendingCount}</span> 笔</p>
+
+      {returnPending.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center gap-4 p-4">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <PackageCheck className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">还箱阶段待办 · {returnPending.length} 单</p>
+              <p className="text-xs text-muted-foreground">
+                待上传证明 {awaitingProof} · 待现场确认收箱 {awaitingGate}
+              </p>
+            </div>
+            <Link
+              href="/customer/documents"
+              className="inline-flex h-8 items-center gap-1 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              提还箱作业
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-4">

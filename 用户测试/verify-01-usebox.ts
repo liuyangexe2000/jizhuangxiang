@@ -110,15 +110,22 @@ async function main() {
   })
   mark("UT-UB-01#6", !!booking.ok, booking.ok ? "提箱预约已创建" : "预约失败")
 
-  // 阶段B：客户上传随箱资料仅存档，不再驱动状态
-  const stuffing = await r03.patch("orders", created.data.id, {
+  // 阶段B：客户上传随箱资料须走 upload-doc
+  const stuffingDenied = await r03.patch("orders", created.data.id, {
     conditionCheck: "通过",
     stuffingListUploaded: true,
   })
+  mark("UT-UB-01#7a-pre", stuffingDenied.status === 403, "客户不可 PATCH 随箱资料，须走 upload-doc")
+
+  const stuffing = await r03.uploadOrderDoc(
+    created.data.id,
+    "stuffing_list",
+    `stuffing_${orderNo}.pdf`,
+  )
   mark(
     "UT-UB-01#7a",
-    !!stuffing.ok && stuffing.data?.status === "已确认",
-    "客户上传随箱资料，订单仍为已确认（不越权）",
+    !!stuffing.ok && stuffing.data?.status === "已确认" && stuffing.data?.stuffingListUploaded === true,
+    stuffing.ok ? "upload-doc 上传随箱资料，订单仍为已确认" : `上传随箱资料失败 ${stuffing.status}`,
   )
 
   const blockedAdvance = await r03.patch("orders", created.data.id, { status: "提箱中" })

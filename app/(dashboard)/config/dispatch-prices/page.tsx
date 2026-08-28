@@ -40,6 +40,8 @@ import { CitySearchSelect } from "@/components/city-search-select"
 import { useDictionary } from "@/lib/dictionary-context"
 import { useResource } from "@/lib/api"
 import { useListQuery } from "@/lib/list-query"
+import { useRole } from "@/lib/role-context"
+import { canAccessResource } from "@/lib/acl"
 import {
   formatScopeCities,
   resolveRuleReturnCities,
@@ -74,6 +76,8 @@ const emptyForm: FormState = {
 }
 
 export default function DispatchPricesPage() {
+  const { roleId } = useRole()
+  const canWrite = canAccessResource("dispatchPriceRules", roleId, "write")
   const { pickupCities, returnCities } = useDictionary()
   const { data: rows, create, update, remove } = useResource<DispatchPriceRule>("dispatchPriceRules")
   const { data: yards } = useResource<Yard>("yards")
@@ -272,12 +276,20 @@ export default function DispatchPricesPage() {
         title="调运价目"
         description="按提箱堆场 + 可选还箱城市集合维护单价方案。申请时锁定城市范围，还箱执行必须落在该范围内。"
         actions={
-          <Button size="sm" className="gap-1.5" onClick={openAdd}>
-            <Plus className="size-4" />
-            新增价目
-          </Button>
+          canWrite ? (
+            <Button size="sm" className="gap-1.5" onClick={openAdd}>
+              <Plus className="size-4" />
+              新增价目
+            </Button>
+          ) : undefined
         }
       />
+
+      {!canWrite && (
+        <p className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+          当前为只读查看模式（审批角色可核对调运报价，维护请由箱管操作）。
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="价目条数" value={stats.total} icon={Tags} />
@@ -351,28 +363,36 @@ export default function DispatchPricesPage() {
                       <TableCell className="text-right tabular-nums">{r.suggestTerm} 天</TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{r.overdue}</TableCell>
                       <TableCell className="text-center">
-                        <Switch
-                          checked={r.enabled !== false}
-                          onCheckedChange={(enabled) => {
-                            void update(r.id, {
-                              enabled,
-                              __auditAction: "修改",
-                              __auditDetail: `${enabled ? "启用" : "停用"}调运价目 ${r.pickupPlace} · ${r.scope}`,
-                            }).catch((e) => toast.error((e as Error).message))
-                          }}
-                        />
+                        {canWrite ? (
+                          <Switch
+                            checked={r.enabled !== false}
+                            onCheckedChange={(enabled) => {
+                              void update(r.id, {
+                                enabled,
+                                __auditAction: "修改",
+                                __auditDetail: `${enabled ? "启用" : "停用"}调运价目 ${r.pickupPlace} · ${r.scope}`,
+                              }).catch((e) => toast.error((e as Error).message))
+                            }}
+                          />
+                        ) : (
+                          <Badge variant={r.enabled !== false ? "default" : "secondary"}>
+                            {r.enabled !== false ? "启用" : "停用"}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(r)}>
-                            <Pencil className="size-4" />
-                            <span className="sr-only">编辑</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="size-8" onClick={() => handleDelete(r)}>
-                            <Trash2 className="size-4" />
-                            <span className="sr-only">删除</span>
-                          </Button>
-                        </div>
+                        {canWrite && (
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(r)}>
+                              <Pencil className="size-4" />
+                              <span className="sr-only">编辑</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" className="size-8" onClick={() => handleDelete(r)}>
+                              <Trash2 className="size-4" />
+                              <span className="sr-only">删除</span>
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

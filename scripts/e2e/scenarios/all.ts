@@ -74,9 +74,16 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
     fail,
   )
 
-  // 阶段B：客户上传随箱资料仅存档，不驱动状态；执行态须由堆场/代管现场「确认放箱/收箱」驱动
-  const stuffing = await r03.patch("orders", created.data.id, { stuffingListUploaded: true })
-  await expectOk("客户上传 stuffing 资料（不驱动状态）", stuffing, fail)
+  // 阶段B：客户上传随箱资料须走 upload-doc，不可 PATCH
+  const stuffingDenied = await r03.patch("orders", created.data.id, { stuffingListUploaded: true })
+  assert(stuffingDenied.status === 403, "客户不可 PATCH 随箱资料，须走 upload-doc", fail)
+  const stuffing = await r03.uploadOrderDoc(
+    created.data.id,
+    "stuffing_list",
+    `stuffing_${orderNo}.pdf`,
+  )
+  await expectOk("客户 upload-doc 上传随箱资料", stuffing, fail)
+  assert(stuffing.data?.stuffingListUploaded === true, "应标记随箱资料已上传", fail)
   assert(stuffing.data?.status === "已确认", "客户上传资料不应改变订单状态", fail)
 
   const blockedAdvance = await r03.patch("orders", created.data.id, { status: "提箱中" })
@@ -151,9 +158,16 @@ export const l1M01UseBox: ScenarioFn = async ({ fail, pass }) => {
     fail,
   )
 
-  const returnProof = await r03.patch("orders", created.data.id, { returnProofUploaded: true })
-  await expectOk("客户上传还箱证明（不驱动状态）", returnProof, fail)
-  assert(returnProof.data?.status === "提箱中", "客户上传还箱证明不应改变订单状态", fail)
+  const returnProofDenied = await r03.patch("orders", created.data.id, { returnProofUploaded: true })
+  assert(returnProofDenied.status === 403, "客户不可 PATCH 还箱证明，须走 upload-doc", fail)
+  const returnProof = await r03.uploadOrderDoc(
+    created.data.id,
+    "return_proof",
+    `return_${orderNo}.pdf`,
+  )
+  await expectOk("客户 upload-doc 上传还箱证明", returnProof, fail)
+  assert(returnProof.data?.returnProofUploaded === true, "应标记还箱证明已上传", fail)
+  assert(returnProof.data?.status === "还箱中", "上传还箱证明后订单应进入还箱中", fail)
 
   const returnConfirm = await r01.api(
     "POST",
@@ -1097,5 +1111,89 @@ export const l10AdminConfig: ScenarioFn = async ({ fail, pass }) => {
   assert(settingsList.ok, "R00 应可读 settings 资源", fail)
 
   pass("L10 系统参数：公开 API + 演示开关 + 菜单策略")
+}
+
+/** L11: 租赁箱确认扣减合同余量 + 取消回滚 */
+export const l11RentalContract: ScenarioFn = async ({ fail, pass }) => {
+  const r01 = new Client("R01")
+  const r03 = new Client("R03")
+  await r01.login("zhangwei")
+  await r03.login("customer_xa")
+
+  const contractNo = `RL${uid("").slice(0, 10)}`
+  const today = nowStr().slice(0, 10)
+  const planNo = `SP${uid("P").slice(0, 10)}`
+  const contract = await r01.create("supplyContracts", {
+    contractNo,
+    type: "租赁",
+    relatedPlanNo: planNo,
+    supplier: "E2E租赁供应商",
+    containerType: "40HQ",
+    quantity: 10,
+    unitPrice: 500,
+    currency: "CNY",
+    amount: 5000,
+    signedAt: today,
+    startDate: today,
+    endDate: "2027-12-31",
+    deliveredQty: 0,
+    status: "履行中",
+  })
+  await expectOk("创建租赁合同", contract, fail)
+
+  const orderNo = `UB${uid("R").slice(0, 9)}`
+  const created = await r03.create("orders", {
+    orderNo,
+    customer: "西安国际陆港集团",
+    customerType: "班列客户",
+    pickupCity: "西安",
+    returnCity: "汉堡",
+    containerType: "40HQ",
+    quantity: 2,
+    unitPrice: 3000,
+    quotedUnitPrice: 3000,
+    boxSource: "租赁箱",
+    status: "待确认",
+    createdAt: nowStr(),
+    releaseDocReady: false,
+    stuffingListUploaded: false,
+    returnProofUploaded: false,
+    channel: "订舱后新增",
+    remark: "E2E L11 租赁箱",
+  })
+  await expectOk("创建租赁箱订单", created, fail)
+
+  const d = new Date(Date.now() + 86400000)
+  const p = (n: number) => String(n).padStart(2, "0")
+  const cancelDeadline = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+
+  const conf = await r01.patch("orders", created.data.id, {
+    status: "已确认",
+    boxSource: "租赁箱",
+    confirmedAt: nowStr(),
+    confirmedBy: "张伟",
+    pickupYard: "陆港堆场",
+    returnYard: "汉堡HCS",
+    unitPrice: 3000,
+    quotedUnitPrice: 3000,
+    releaseDocReady: true,
+    cancelDeadline,
+  })
+  await expectOk("确认租赁箱订单", conf, fail)
+  assert(conf.data?.supplyContractNo === contractNo, "确认后应绑定供应合同号", fail)
+
+  const contractsAfter = await r01.list("supplyContracts")
+  const hit = (contractsAfter.data as any[] | null)?.find((c) => c.contractNo === contractNo)
+  assert(Number(hit?.deliveredQty) === 2, `合同 deliveredQty 应为 2，实际 ${hit?.deliveredQty}`, fail)
+
+  const cancelRes = await r03.api("POST", `/api/orders/${encodeURIComponent(created.data.id)}/cancel`)
+  await expectOk("取消已确认租赁单", cancelRes, fail)
+  assert(cancelRes.data?.rentalContractReleased === true, "取消应回滚租赁合同余量", fail)
+
+  const contractsAfterCancel = await r01.list("supplyContracts")
+  const hit2 = (contractsAfterCancel.data as any[] | null)?.find((c) => c.contractNo === contractNo)
+  assert(Number(hit2?.deliveredQty) === 0, `取消后 deliveredQty 应回滚为 0，实际 ${hit2?.deliveredQty}`, fail)
+
+  pass("L11 租赁箱确认扣合同余量与取消回滚")
 }
 
