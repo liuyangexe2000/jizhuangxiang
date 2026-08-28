@@ -40,8 +40,9 @@ import { useResource } from "@/lib/api"
 import { useDictionary } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
 import { findProxyCompanyByName } from "@/lib/proxy-company"
+import { downloadCsv } from "@/lib/csv"
 import type { InventoryRow, ProxyCompany, Yard } from "@/lib/types"
-import { Warehouse, MapPin, Mail, Phone, PackageOpen, Pencil, Plus } from "lucide-react"
+import { Warehouse, MapPin, Mail, Phone, PackageOpen, Pencil, Plus, Download, Upload } from "lucide-react"
 import { toast } from "sonner"
 
 type YardForm = {
@@ -52,6 +53,14 @@ type YardForm = {
   capacity: string
   address: string
   factoryCode: string
+  /** 堆存日费用 */
+  dailyExpenses: string
+  /** 免堆天数 */
+  freeDuration: string
+  /** 上车费 */
+  boardingFee: string
+  /** 下车费 */
+  alightingFee: string
 }
 
 const emptyForm: YardForm = {
@@ -62,6 +71,30 @@ const emptyForm: YardForm = {
   capacity: "",
   address: "",
   factoryCode: "",
+  dailyExpenses: "",
+  freeDuration: "",
+  boardingFee: "",
+  alightingFee: "",
+}
+
+const YARD_FEE_CSV_HEADERS = [
+  "堆场名称",
+  "城市",
+  "堆存日费用",
+  "免堆天数",
+  "上车费",
+  "下车费",
+] as const
+
+function numOrNull(raw: string): number | null {
+  const t = raw.trim()
+  if (!t) return null
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}
+
+function numToForm(v: number | null | undefined): string {
+  return v == null ? "" : String(v)
 }
 
 export default function YardsPage() {
@@ -164,8 +197,34 @@ export default function YardsPage() {
       capacity: String(y.capacity),
       address: y.address,
       factoryCode: y.factoryCode,
+      dailyExpenses: numToForm(y.dailyExpenses),
+      freeDuration: numToForm(y.freeDuration),
+      boardingFee: numToForm(y.boardingFee),
+      alightingFee: numToForm(y.alightingFee),
     })
     setDialogOpen(true)
+  }
+
+  function exportFeeCsv() {
+    const source = filtered.length ? filtered : rows
+    downloadCsv(
+      `堆场费用_${new Date().toISOString().slice(0, 10)}.csv`,
+      [...YARD_FEE_CSV_HEADERS],
+      source.map((y) => [
+        y.name,
+        y.city,
+        y.dailyExpenses ?? "",
+        y.freeDuration ?? "",
+        y.boardingFee ?? "",
+        y.alightingFee ?? "",
+      ]),
+    )
+    toast.success(`已导出 ${source.length} 条堆场费用 CSV`)
+  }
+
+  function importFeeCsvStub() {
+    // TODO: 解析 CSV 批量更新 dailyExpenses / freeDuration / boardingFee / alightingFee
+    toast.info("费用 CSV 导入功能开发中")
   }
 
   function closeDialog() {
@@ -210,6 +269,19 @@ export default function YardsPage() {
     const phone = proxy?.phone ?? ""
     const email = proxy?.email ?? ""
     const proxyCompanyId = proxy?.id ?? ""
+    const dailyExpenses = numOrNull(form.dailyExpenses)
+    const freeDuration = numOrNull(form.freeDuration)
+    const boardingFee = numOrNull(form.boardingFee)
+    const alightingFee = numOrNull(form.alightingFee)
+    if (
+      (form.dailyExpenses.trim() && dailyExpenses == null) ||
+      (form.freeDuration.trim() && freeDuration == null) ||
+      (form.boardingFee.trim() && boardingFee == null) ||
+      (form.alightingFee.trim() && alightingFee == null)
+    ) {
+      toast.error("费用字段须为数字（可留空）")
+      return
+    }
 
     try {
       if (editing) {
@@ -225,6 +297,10 @@ export default function YardsPage() {
           address: form.address.trim(),
           contactUser,
           factoryCode: form.factoryCode.trim(),
+          dailyExpenses,
+          freeDuration,
+          boardingFee,
+          alightingFee,
           __auditAction: "修改",
           __auditDetail: `更新堆场「${name}」`,
         })
@@ -250,10 +326,10 @@ export default function YardsPage() {
           email,
           creditCode: "",
           currencyId: null,
-          dailyExpenses: null,
-          freeDuration: null,
-          boardingFee: null,
-          alightingFee: null,
+          dailyExpenses,
+          freeDuration,
+          boardingFee,
+          alightingFee,
           secondaryRemovalFee: null,
           hasSeal: false,
           capacity,
@@ -335,6 +411,14 @@ export default function YardsPage() {
               onChange={(e) => setKeyword(e.target.value)}
               className="sm:max-w-xs"
             />
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={exportFeeCsv}>
+              <Download className="size-4" />
+              导出费用 CSV
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={importFeeCsvStub}>
+              <Upload className="size-4" />
+              导入费用 CSV
+            </Button>
             <Button size="sm" className="gap-1.5" onClick={openAdd}>
               <Plus className="size-4" />
               新增堆场
@@ -570,6 +654,59 @@ export default function YardsPage() {
                 value={form.address}
                 onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
               />
+            </div>
+            <div className="col-span-full space-y-2 rounded-md border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">堆场费用（可空）</p>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="yard-daily">堆存日费用</Label>
+                  <Input
+                    id="yard-daily"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.dailyExpenses}
+                    onChange={(e) => setForm((f) => ({ ...f, dailyExpenses: e.target.value }))}
+                    placeholder="元/天"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="yard-free">免堆天数</Label>
+                  <Input
+                    id="yard-free"
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={form.freeDuration}
+                    onChange={(e) => setForm((f) => ({ ...f, freeDuration: e.target.value }))}
+                    placeholder="天"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="yard-board">上车费</Label>
+                  <Input
+                    id="yard-board"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.boardingFee}
+                    onChange={(e) => setForm((f) => ({ ...f, boardingFee: e.target.value }))}
+                    placeholder="元"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="yard-alight">下车费</Label>
+                  <Input
+                    id="yard-alight"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.alightingFee}
+                    onChange={(e) => setForm((f) => ({ ...f, alightingFee: e.target.value }))}
+                    placeholder="元"
+                  />
+                </div>
+              </div>
             </div>
             {editing && (
               <p className="col-span-full text-xs text-muted-foreground">

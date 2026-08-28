@@ -72,9 +72,13 @@ export function buildUseBoxBill(o: UseBoxOrder): Omit<Bill, "id"> {
   }
 }
 
-export function buildCancelFeeBill(o: UseBoxOrder): Omit<Bill, "id"> {
+export function buildCancelFeeBill(o: UseBoxOrder, feeLabel = "超时取消取消费（20%）"): Omit<Bill, "id"> {
   const currency = orderBillCurrency(o)
-  const fx = attachBillFx({ amount: Math.round(o.unitPrice * o.quantity * 0.2), currency })
+  const fx = attachBillFx({
+    amount: Math.round(o.unitPrice * o.quantity * 0.2),
+    currency,
+    exchangeRate: o.exchangeRate,
+  })
   const issuedAt = nowLocalStr().slice(0, 10)
   return {
     billNo: `BILL${Date.now().toString().slice(-8)}`,
@@ -87,12 +91,17 @@ export function buildCancelFeeBill(o: UseBoxOrder): Omit<Bill, "id"> {
     issuedAt,
     confirmDeadline: fmtDeadline(new Date(), 72).slice(0, 10),
     items: [
-      { label: "费用类型", value: "超时取消取消费（20%）" },
+      { label: "费用类型", value: feeLabel },
       { label: "关联订单", value: o.orderNo },
       { label: "原金额", value: formatMoney(o.unitPrice * o.quantity, currency) },
       ...billFxItems(fx),
     ],
   }
+}
+
+/** 提箱中取消：默认收取 20% 变更费 */
+export function buildPostPickupCancelFeeBill(o: UseBoxOrder, feeRate = 0.2): Omit<Bill, "id"> {
+  return buildCancelFeeBill(o, `提箱后取消变更费（${Math.round(feeRate * 100)}%）`)
 }
 
 /** 用箱天数（自提箱/确认日起算），不足一天按一天 */

@@ -196,13 +196,19 @@ function ContainerMasterTable() {
   const { data: listData, update } = useResource<ContainerMaster>("containers")
   const { data: gateRecords, update: updateGate } = useResource<GateRecord>("gate")
   const [kw, setKw] = useState("")
+  const [statusTab, setStatusTab] = useState<"全部" | "在场" | "已出场">("全部")
 
   const filtered = useMemo(
     () =>
-      listData.filter(
-        (c) => !kw || c.containerNo.includes(kw.toUpperCase()) || c.currentCity.includes(kw),
-      ),
-    [listData, kw],
+      listData.filter((c) => {
+        const matchKw =
+          !kw || c.containerNo.includes(kw.toUpperCase()) || c.currentCity.includes(kw)
+        if (!matchKw) return false
+        if (statusTab === "在场") return c.status === "在场"
+        if (statusTab === "已出场") return c.status !== "在场"
+        return true
+      }),
+    [listData, kw, statusTab],
   )
 
   const list = useListQuery({
@@ -262,9 +268,23 @@ function ContainerMasterTable() {
           订单生成后仍支持在订单层面切换集装箱「自有箱 / 租赁箱」属性，切换后系统自动同步库存映射与费用口径。
         </div>
 
-        <div className="relative sm:max-w-xs">
-          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="搜索箱号 / 城市" className="pl-8" value={kw} onChange={(e) => setKw(e.target.value)} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative sm:max-w-xs sm:flex-1">
+            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="搜索箱号 / 城市" className="pl-8" value={kw} onChange={(e) => setKw(e.target.value)} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(["全部", "在场", "已出场"] as const).map((tab) => (
+              <Button
+                key={tab}
+                size="sm"
+                variant={statusTab === tab ? "default" : "outline"}
+                onClick={() => setStatusTab(tab)}
+              >
+                {tab}
+              </Button>
+            ))}
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-border">

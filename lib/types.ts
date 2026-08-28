@@ -43,6 +43,12 @@ export interface UseBoxOrder {
   unitPrice: number
   /** 客户提交时系统报价 */
   quotedUnitPrice?: number
+  /** 下单时锁定的对人民币汇率 */
+  exchangeRate?: number
+  /** 下单/结算币种 */
+  orderCurrency?: BillCurrency
+  /** 箱源（自有箱 / 租赁箱，申请可选） */
+  boxSource?: "自有箱" | "租赁箱"
   status: OrderStatus
   createdAt: string
   confirmedAt?: string
@@ -73,6 +79,14 @@ export interface UseBoxOrder {
    * 每张有独立提箱单号，打印/下载按单号出单。
    */
   pickupDocs?: {
+    docNo: string
+    issuedAt: string
+    issuedBy: string
+    quantity: number
+    remark?: string
+  }[]
+  /** 还箱单列表（类比 pickupDocs） */
+  returnDocs?: {
     docNo: string
     issuedAt: string
     issuedBy: string
@@ -132,6 +146,9 @@ export interface ApprovalStep {
   time?: string
 }
 
+/** 用箱价目类型：标准单价 / 回程箱贴（可为负） */
+export type UseBoxPriceKind = "standard" | "subsidy"
+
 /** 用箱单价方案（按提箱城市 + 还箱城市 + 箱型） */
 export interface UseBoxPriceRule {
   id: string
@@ -139,6 +156,12 @@ export interface UseBoxPriceRule {
   returnCity: string
   containerType: ContainerType
   unitPrice: number
+  /** 免费用箱期（天） */
+  freeDays?: number
+  /** 超期费标准（元/箱/天） */
+  overdueDailyRate?: number
+  /** 标准价 / 回程补贴（补贴单价可为负） */
+  priceKind?: UseBoxPriceKind
   enabled: boolean
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
@@ -37,11 +37,24 @@ import {
 } from "@/components/ui/dialog"
 import { CitySearchSelect } from "@/components/city-search-select"
 import { useResource, revalidateResource } from "@/lib/api"
+import { downloadCsv, parseCsv } from "@/lib/csv"
 import { useDictionary } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
 import type { ContainerMaster, DispatchOrder, GateRecord, InventoryRow, UseBoxOrder, Yard } from "@/lib/types"
 import { applyPickupInventory, applyReturnInventory, findInventoryRow, nowLocalStr } from "@/lib/domain/dispatch-ops"
-import { AlertTriangle, Plus, Wrench, CheckCircle2, Search } from "lucide-react"
+import { AlertTriangle, Download, Plus, Upload, Wrench, CheckCircle2, Search } from "lucide-react"
+
+function toInputTime(time: string) {
+  return time.replace(" ", "T").slice(0, 16)
+}
+
+function fromInputTime(time: string) {
+  const t = time.trim()
+  if (!t) return nowLocalStr()
+  return t.replace("T", " ").slice(0, 16)
+}
+
+const GATE_CSV_HEADERS = ["箱号", "类型", "城市", "堆场", "时间"] as const
 
 export default function ExceptionsPage() {
   const { pickupCities } = useDictionary()
@@ -51,13 +64,21 @@ export default function ExceptionsPage() {
   const { data: dispatches } = useResource<DispatchOrder>("dispatch")
   const { data: orders } = useResource<UseBoxOrder>("orders")
   const { data: yardRows } = useResource<Yard>("yards")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
   const enabledYards = useMemo(
     () => yardRows.filter((y) => y.enabled !== false && y.deleted !== true),
     [yardRows],
   )
   const [keyword, setKeyword] = useState("")
   const [addOpen, setAddOpen] = useState(false)
-  const [form, setForm] = useState({ containerNo: "", type: "进场", city: "", yard: "" })
+  const [form, setForm] = useState({
+    containerNo: "",
+    type: "进场",
+    city: "",
+    yard: "",
+    gateTime: toInputTime(nowLocalStr()),
+  })
 
   const yardsInCity = useMemo(
     () => (form.city ? enabledYards.filter((y) => y.city === form.city) : []),
@@ -168,7 +189,7 @@ export default function ExceptionsPage() {
       await create({
         containerNo: form.containerNo.toUpperCase(),
         type: form.type as "进场" | "出场",
-        time: nowLocalStr(),
+        time: fromInputTime(form.gateTime),
         yard: form.yard,
         city,
         source: "手工补录异常",
@@ -179,80 +200,215 @@ export default function ExceptionsPage() {
       })
       toast.success("手工补录成功，已加入异常排查池待映射")
       setAddOpen(false)
-      setForm({ containerNo: "", type: "进场", city: "", yard: "" })
+      setForm({
+        containerNo: "",
+        type: "进场",
+        city: "",
+        yard: "",
+        gateTime: toInputTime(nowLocalStr()),
+      })
     } catch (e) {
       toast.error((e as Error).message)
     }
   }
 
+  function handleDownloadTemplate() {
+    downloadCsv("进出场异常_导入模板.csv", [...GATE_CSV_HEADERS], [
+      ["TCLU1234567", "进场", "西安", "西安中心站堆场", "2026-08-28 10:00"],
+    ])
+    toast.success("已下载导入模板")
+  }
+
+  async function handleImportFile(file: File) {
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const matrix = parseCsv(text)
+      if (matrix.length < 2) {
+        toast.error("CSV 无有效数据行")
+        return
+      }
+      const header = matrix[0]!.map((h) => h.trim())
+      const idx = (name: string) => header.indexOf(name)
+      const iNo = idx("箱号")
+      const iType = idx("类型")
+      const iCity = idx("城市")
+      const iYard = idx("堆场")
+      const iTime = idx("时间")
+      if ([iNo, iType, iCity, iYard, iTime].some((i) => i < 0)) {
+        toast.error("CSV 表头须包含：箱号,类型,城市,堆场,时间")
+        return
+      }
+      let created = 0
+      let failed = 0
+      const errors: string[] = []
+      for (let r = 1; r < matrix.length; r++) {
+        const row = matrix[r]!
+        const containerNo = (row[iNo] || "").trim().toUpperCase()
+        const typeRaw = (row[iType] || "").trim()
+        const city = (row[iCity] || "").trim()
+        const yard = (row[iYard] || "").trim()
+        const timeRaw = (row[iTime] || "").trim()
+        if (!containerNo || !city || !yard) {
+          failed += 1
+          errors.push(`第 ${r + 1} 行缺少箱号/城市/堆场`)
+          continue
+        }
+        const type = typeRaw === "出场" ? "出场" : typeRaw === "进场" ? "进场" : null
+        if (!type) {
+          failed += 1
+          errors.push(`第 ${r + 1} 行类型须为进场或出场`)
+          continue
+        }
+        const time = timeRaw.includes("T")
+          ? fromInputTime(timeRaw)
+          : timeRaw || nowLocalStr()
+        try {
+          await create({
+            containerNo,
+            type,
+            time,
+            yard,
+            city,
+            source: "手工补录异常",
+            mappingStatus: "未映射",
+            ownership: "自有箱",
+            __auditAction: "新增",
+            __auditDetail: `CSV 导入进出场 ${containerNo}`,
+          })
+          created += 1
+        } catch {
+          failed += 1
+        }
+      }
+      await revalidateResource("gate")
+      toast.success(`导入完成：新增 ${created}${failed ? ` · 失败 ${failed}` : ""}`, {
+        description: errors.slice(0, 2).join("；") || undefined,
+      })
+    } catch (e) {
+      toast.error((e as Error).message || "导入失败")
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
   return (
     <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) void handleImportFile(file)
+        }}
+      />
       <PageHeader
         module="M03 · 资产与多维库存管理系统"
         title="异常进出场"
         description="M03-F03 手工补录与异常排查池 — 未映射/异常记录集中排查，支持手工补录进出场并重新匹配订单。"
         actions={
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
-            <DialogTrigger render={<Button className="gap-1.5" />}>
-              <Plus className="size-4" />手工补录
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>手工补录进出场</DialogTitle>
-                <DialogDescription>用于代管公司漏传或系统未捕获的进出场记录。</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label>箱号</Label>
-                  <Input placeholder="如 TCLU1234567" value={form.containerNo} onChange={(e) => setForm((f) => ({ ...f, containerNo: e.target.value }))} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 bg-transparent"
+              onClick={handleDownloadTemplate}
+            >
+              <Download className="size-4" />
+              下载模板
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 bg-transparent"
+              disabled={importing}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="size-4" />
+              {importing ? "导入中…" : "CSV 导入"}
+            </Button>
+            <Dialog
+              open={addOpen}
+              onOpenChange={(open) => {
+                setAddOpen(open)
+                if (open) {
+                  setForm((f) => ({ ...f, gateTime: toInputTime(nowLocalStr()) }))
+                }
+              }}
+            >
+              <DialogTrigger render={<Button className="gap-1.5" />}>
+                <Plus className="size-4" />手工补录
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>手工补录进出场</DialogTitle>
+                  <DialogDescription>用于代管公司漏传或系统未捕获的进出场记录。</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label>类型</Label>
-                    <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v ?? "进场" }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Label>箱号</Label>
+                    <Input placeholder="如 TCLU1234567" value={form.containerNo} onChange={(e) => setForm((f) => ({ ...f, containerNo: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>类型</Label>
+                      <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v ?? "进场" }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="进场">进场</SelectItem>
+                          <SelectItem value="出场">出场</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>城市</Label>
+                      <CitySearchSelect
+                        value={form.city}
+                        onValueChange={(city) => setForm((f) => ({ ...f, city, yard: "" }))}
+                        cities={pickupCities}
+                        placeholder="选择城市"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>堆场</Label>
+                    <Select
+                      value={form.yard}
+                      disabled={!form.city}
+                      onValueChange={(v) => setForm((f) => ({ ...f, yard: v ?? "" }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={form.city ? "选择该城市堆场" : "请先选择城市"} />
+                      </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="进场">进场</SelectItem>
-                        <SelectItem value="出场">出场</SelectItem>
+                        {yardsInCity.map((y) => (
+                          <SelectItem key={y.id} value={y.name}>
+                            {y.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>城市</Label>
-                    <CitySearchSelect
-                      value={form.city}
-                      onValueChange={(city) => setForm((f) => ({ ...f, city, yard: "" }))}
-                      cities={pickupCities}
-                      placeholder="选择城市"
+                    <Label htmlFor="gate-time">进出场时间</Label>
+                    <Input
+                      id="gate-time"
+                      type="datetime-local"
+                      value={form.gateTime}
+                      onChange={(e) => setForm((f) => ({ ...f, gateTime: e.target.value }))}
                     />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>堆场</Label>
-                  <Select
-                    value={form.yard}
-                    disabled={!form.city}
-                    onValueChange={(v) => setForm((f) => ({ ...f, yard: v ?? "" }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={form.city ? "选择该城市堆场" : "请先选择城市"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {yardsInCity.map((y) => (
-                        <SelectItem key={y.id} value={y.name}>
-                          {y.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAddOpen(false)}>取消</Button>
-                <Button onClick={addManual}>提交补录</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddOpen(false)}>取消</Button>
+                  <Button onClick={addManual}>提交补录</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 

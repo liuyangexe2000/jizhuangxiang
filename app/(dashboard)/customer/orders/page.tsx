@@ -35,7 +35,12 @@ import {
 import { useResource, revalidateResource } from "@/lib/api"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import type { Bill, InventoryRow, Notification, UseBoxOrder } from "@/lib/types"
-import { buildCancelFeeBill } from "@/lib/domain/order-ops"
+import { buildCancelFeeBill, buildPostPickupCancelFeeBill } from "@/lib/domain/order-ops"
+import {
+  formatExchangeRate,
+  formatMoney,
+  inferBillCurrency,
+} from "@/lib/domain/money"
 import {
   applyReleaseReserveInventory,
   cityFromPlace,
@@ -88,14 +93,20 @@ export default function OrdersPage() {
   const confirmedLike = (o: UseBoxOrder) =>
     ["已确认", "提箱中", "已提箱", "还箱中", "已完成"].includes(o.status)
 
+  function orderCurrencyOf(o: UseBoxOrder) {
+    return o.orderCurrency || inferBillCurrency({ city: o.pickupCity })
+  }
+
   async function cancelOrder(o: UseBoxOrder) {
-    if (!["待确认", "已确认"].includes(o.status)) {
+    if (!["待确认", "已确认", "提箱中"].includes(o.status)) {
       toast.error("当前状态不可取消")
       return
     }
+    const isPostPickup = o.status === "提箱中"
     const deadlineMs = o.cancelDeadline ? Date.parse(o.cancelDeadline.replace(/-/g, "/")) : NaN
-    const withinFree =
-      o.status === "待确认"
+    const withinFree = isPostPickup
+      ? false
+      : o.status === "待确认"
         ? true
         : Number.isFinite(deadlineMs)
           ? Date.now() <= deadlineMs
@@ -105,7 +116,9 @@ export default function OrdersPage() {
       await update(o.id, {
         status: nextStatus,
         __auditAction: "修改",
-        __auditDetail: `取消用箱订单 ${o.orderNo}（${nextStatus}）`,
+        __auditDetail: isPostPickup
+          ? `提箱中取消用箱订单 ${o.orderNo}（收取 20% 变更费）`
+          : `取消用箱订单 ${o.orderNo}（${nextStatus}）`,
       })
       if (o.status === "已确认" && o.pickupYard) {
         const inv = findInventoryRow(inventory, {
@@ -122,21 +135,30 @@ export default function OrdersPage() {
         }
       }
       if (!withinFree) {
+        const feeBill = isPostPickup ? buildPostPickupCancelFeeBill(o) : buildCancelFeeBill(o)
         await createBill({
-          ...buildCancelFeeBill(o),
+          ...feeBill,
           __auditAction: "新增",
-          __auditDetail: `超时取消取消费 ${o.orderNo}`,
+          __auditDetail: isPostPickup
+            ? `提箱后取消变更费 ${o.orderNo}`
+            : `超时取消取消费 ${o.orderNo}`,
         })
         await pushNotification(createNotif, {
           type: "账单",
           level: "重要",
-          title: `取消费账单 · ${o.orderNo}`,
-          desc: "订单超时取消，已生成变更费账单。",
+          title: isPostPickup ? `提箱后取消变更费 · ${o.orderNo}` : `取消费账单 · ${o.orderNo}`,
+          desc: isPostPickup
+            ? "订单提箱中取消，已生成 20% 变更费账单。"
+            : "订单超时取消，已生成变更费账单。",
           module: "M01 账单中心",
           href: "/customer/bills",
           roles: ["R01", "R03"],
         })
-        toast.warning(`订单 ${o.orderNo} 已超时取消，取消费账单已生成（BR-03）`)
+        toast.warning(
+          isPostPickup
+            ? `订单 ${o.orderNo} 已取消，已生成 20% 变更费账单`
+            : `订单 ${o.orderNo} 已超时取消，取消费账单已生成（BR-03）`,
+        )
       } else {
         toast.success(`订单 ${o.orderNo} 已免责取消`)
       }
@@ -201,6 +223,7 @@ export default function OrdersPage() {
               <TableBody>
                 {list.rows.map((o) => {
                   const displayPrice = confirmedLike(o) ? o.unitPrice : o.quotedUnitPrice ?? o.unitPrice
+                  const currency = orderCurrencyOf(o)
                   return (
                     <TableRow key={o.id}>
                       <TableCell className="font-mono text-xs">{o.orderNo}</TableCell>
@@ -210,7 +233,7 @@ export default function OrdersPage() {
                       <TableCell>
                         {o.containerType} × {o.quantity}
                       </TableCell>
-                      <TableCell>¥{(displayPrice * o.quantity).toLocaleString()}</TableCell>
+                      <TableCell>{formatMoney(displayPrice * o.quantity, currency)}</TableCell>
                       <TableCell>
                         <StatusBadge status={o.status} />
                       </TableCell>
@@ -260,7 +283,18 @@ export default function OrdersPage() {
                 <Field label="箱型 / 数量" value={`${detail.containerType} × ${detail.quantity}`} />
                 <Field
                   label={confirmedLike(detail) ? "成交单价" : "系统报价"}
-                  value={`¥${(confirmedLike(detail) ? detail.unitPrice : detail.quotedUnitPrice ?? detail.unitPrice).toLocaleString()}`}
+                  value={formatMoney(
+                    confirmedLike(detail) ? detail.unitPrice : detail.quotedUnitPrice ?? detail.unitPrice,
+                    orderCurrencyOf(detail),
+                  )}
+                />
+                <Field label="结算币种" value={orderCurrencyOf(detail)} />
+                <Field
+                  label="汇率（对人民币）"
+                  value={formatExchangeRate(
+                    detail.exchangeRate ?? 1,
+                    orderCurrencyOf(detail),
+                  )}
                 />
                 {confirmedLike(detail) && (
                   <>
@@ -289,6 +323,9 @@ export default function OrdersPage() {
                     {detail.cancelDeadline ? ` · 免责取消截止：${detail.cancelDeadline}` : ""}
                   </div>
                 )}
+                {detail.status === "提箱中" && (
+                  <p className="text-warning-foreground">提箱中取消将收取订单金额 20% 变更费</p>
+                )}
                 {detail.remark && <p className="text-muted-foreground">申请备注：{detail.remark}</p>}
                 {confirmedLike(detail) && detail.adminRemark && (
                   <p className="text-foreground">箱管备注：{detail.adminRemark}</p>
@@ -297,14 +334,14 @@ export default function OrdersPage() {
                   detail.quotedUnitPrice != null &&
                   detail.quotedUnitPrice !== detail.unitPrice && (
                     <p className="text-muted-foreground">
-                      报价 ¥{detail.quotedUnitPrice.toLocaleString()} → 成交 ¥
-                      {detail.unitPrice.toLocaleString()}
+                      报价 {formatMoney(detail.quotedUnitPrice, orderCurrencyOf(detail))} → 成交{" "}
+                      {formatMoney(detail.unitPrice, orderCurrencyOf(detail))}
                     </p>
                   )}
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {["待确认", "已确认"].includes(detail.status) && (
+                {["待确认", "已确认", "提箱中"].includes(detail.status) && (
                   <Button variant="destructive" className="gap-2" onClick={() => cancelOrder(detail)}>
                     <XCircle className="size-4" />
                     取消订单

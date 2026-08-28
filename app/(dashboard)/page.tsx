@@ -81,14 +81,16 @@ export default function DashboardPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="在场库存合计"
-          value={canInventory ? totalOnSite : "—"}
-          unit={canInventory ? "箱" : undefined}
-          icon={Boxes}
-          tone="primary"
-          hint={canInventory ? `可用库存 ${totalAvailable} 箱` : "当前角色无库存权限"}
-        />
+        {!(roleId === "R03" && !effectiveAdmin) && (
+          <StatCard
+            label="在场库存合计"
+            value={canInventory ? totalOnSite : "—"}
+            unit={canInventory ? "箱" : undefined}
+            icon={Boxes}
+            tone="primary"
+            hint={canInventory ? `可用库存 ${totalAvailable} 箱` : "当前角色无库存权限"}
+          />
+        )}
         <StatCard
           label="进行中用箱订单"
           value={canOrders ? activeOrders : "—"}

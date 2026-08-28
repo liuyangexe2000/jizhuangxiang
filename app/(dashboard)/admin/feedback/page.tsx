@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { ChevronLeft, ChevronRight, Eye, MessageSquarePlus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Eye, MessageSquarePlus } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useResource, revalidateResource } from "@/lib/api"
+import { downloadCsv } from "@/lib/csv"
 import { ticketScreenshots } from "@/lib/domain/feedback-screenshots"
 import type { FeedbackTicket, FeedbackTicketStatus } from "@/lib/types"
 
@@ -64,12 +65,40 @@ export default function AdminFeedbackPage() {
     }
   }
 
+  function handleExportCsv() {
+    const headers = ["工单号", "类型", "状态", "页面", "内容", "提交人", "创建时间"]
+    const rows = sorted.map((t) => [
+      t.ticketNo,
+      t.type,
+      t.status,
+      t.pageTitle || t.pagePath,
+      t.content,
+      `${t.userName}（${t.account}）`,
+      t.createdAt,
+    ])
+    const stamp = new Date().toISOString().slice(0, 10)
+    downloadCsv(`反馈工单_${stamp}.csv`, headers, rows)
+    toast.success(`已导出 ${sorted.length} 条工单 CSV`)
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         module="系统管理 · 系统管理员专区"
         title="反馈工单"
         description="汇总各角色从业务页提交的 Bug、业务需求与改进建议，便于持续完善系统。"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 bg-transparent"
+            disabled={sorted.length === 0}
+            onClick={handleExportCsv}
+          >
+            <Download className="size-4" />
+            导出 CSV
+          </Button>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-3">

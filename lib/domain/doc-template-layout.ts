@@ -22,6 +22,7 @@ export function kindLabel(kind: DocKind | undefined): string {
 export type DocFieldKey =
   | "orderNo"
   | "pickupDocNo"
+  | "returnDocNo"
   | "createdAt"
   | "confirmedAt"
   | "customer"
@@ -49,6 +50,7 @@ export interface DocFieldDef {
 export const DOC_FIELD_CATALOG: DocFieldDef[] = [
   { key: "orderNo", label: "订单号", kinds: ["pickup", "return", "other"] },
   { key: "pickupDocNo", label: "提箱单号", kinds: ["pickup", "other"] },
+  { key: "returnDocNo", label: "还箱单号", kinds: ["return", "other"] },
   { key: "createdAt", label: "创建时间", kinds: ["pickup", "return", "other"] },
   { key: "confirmedAt", label: "确认时间", kinds: ["pickup", "return", "other"] },
   { key: "customer", label: "客户", kinds: ["pickup", "return", "dispatch_approval", "business_entrust", "other"] },
@@ -123,12 +125,6 @@ export function defaultPickupLayout(title = "提 箱 单"): DocTemplateLayout {
         cells: [
           { key: "pickupDocNo", label: "提箱单号" },
           { key: "orderNo", label: "订单号" },
-        ],
-      },
-      {
-        cells: [
-          { key: "customer", label: "客户" },
-          { key: "customerType", label: "客户类型" },
         ],
       },
       {
@@ -220,12 +216,12 @@ export function defaultReturnLayout(title = "还 箱 单"): DocTemplateLayout {
     orgLine: "中欧班列平台公司 · 集装箱管理部",
     title,
     showTemplateName: true,
-    metaLine: "订单号：{{orderNo}}  |  生成时间：{{createdAt}}",
+    metaLine: "还箱单号：{{returnDocNo}}  |  订单号：{{orderNo}}  |  生成时间：{{createdAt}}",
     rows: [
       {
         cells: [
-          { key: "customer", label: "客户" },
-          { key: "customerType", label: "客户类型" },
+          { key: "returnDocNo", label: "还箱单号" },
+          { key: "orderNo", label: "订单号" },
         ],
       },
       {
@@ -242,8 +238,8 @@ export function defaultReturnLayout(title = "还 箱 单"): DocTemplateLayout {
       },
       {
         cells: [
-          { key: "pickupCity", label: "原提箱城市" },
           { key: "returnBooking", label: "预约还箱时间" },
+          { key: "returnGateAt", label: "收箱时间" },
         ],
       },
     ],
@@ -395,6 +391,11 @@ export function resolveDocField(
       const last = Array.isArray(docs) && docs.length > 0 ? docs[docs.length - 1]?.docNo : ""
       return last || "—"
     }
+    case "returnDocNo": {
+      const docs = order.returnDocs
+      const last = Array.isArray(docs) && docs.length > 0 ? docs[docs.length - 1]?.docNo : ""
+      return last || "—"
+    }
     case "createdAt":
       return order.createdAt || "—"
     case "confirmedAt":
@@ -446,9 +447,15 @@ export function interpolateDocText(
     (extras?.pickupDocNo?.trim() ||
       (Array.isArray(docs) && docs.length > 0 ? docs[docs.length - 1]?.docNo : "")) ||
     "—"
+  const retDocs = order.returnDocs
+  const lastReturnDoc =
+    (extras?.returnDocNo?.trim() ||
+      (Array.isArray(retDocs) && retDocs.length > 0 ? retDocs[retDocs.length - 1]?.docNo : "")) ||
+    "—"
   const map: Record<string, string> = {
     orderNo: order.orderNo,
     pickupDocNo: lastDoc,
+    returnDocNo: lastReturnDoc,
     createdAt: order.createdAt || "—",
     confirmedAt: order.confirmedAt ?? order.createdAt ?? "—",
     customer: order.customer,
@@ -486,10 +493,38 @@ export function fieldsFromLayout(layout: { rows: { cells: { label: string }[] }[
 
 /** 提箱单不展示还箱城市（兼容库内旧模板布局） */
 export function sanitizePickupLayout(layout: DocTemplateLayout): DocTemplateLayout {
-  const rows = layout.rows
+  let next = sanitizeCustomerDocLayout(layout)
+  const rows = next.rows
     .map((row) => ({
       cells: row.cells.filter((c) => c.key !== "returnCity" && c.label !== "还箱城市"),
     }))
     .filter((row) => row.cells.length > 0)
+  return { ...next, rows: rows.length > 0 ? rows : next.rows }
+}
+
+const HIDDEN_CUSTOMER_KEYS = new Set<DocFieldKey>(["customer", "customerType"])
+
+/** 提/还箱单默认不展示客户信息（兼容旧模板） */
+export function sanitizeCustomerDocLayout(layout: DocTemplateLayout): DocTemplateLayout {
+  const rows = layout.rows
+    .map((row) => ({
+      cells: row.cells.filter(
+        (c) => !HIDDEN_CUSTOMER_KEYS.has(c.key) && c.label !== "客户" && c.label !== "客户类型",
+      ),
+    }))
+    .filter((row) => row.cells.length > 0)
   return { ...layout, rows: rows.length > 0 ? rows : layout.rows }
+}
+
+/** 还箱单不展示原提箱城市（兼容旧模板） */
+export function sanitizeReturnLayout(layout: DocTemplateLayout): DocTemplateLayout {
+  let next = sanitizeCustomerDocLayout(layout)
+  const rows = next.rows
+    .map((row) => ({
+      cells: row.cells.filter(
+        (c) => c.key !== "pickupCity" && c.label !== "原提箱城市" && c.label !== "提箱城市",
+      ),
+    }))
+    .filter((row) => row.cells.length > 0)
+  return { ...next, rows: rows.length > 0 ? rows : next.rows }
 }

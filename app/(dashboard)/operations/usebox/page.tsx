@@ -41,6 +41,7 @@ import { usePublicSettings } from "@/lib/settings-client"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { applyReserveInventory, cityFromPlace, findInventoryRow, inventoryId, nowLocalStr } from "@/lib/domain/dispatch-ops"
 import { fmtDeadline } from "@/lib/domain/order-ops"
+import { attachBillFx, formatExchangeRate, inferBillCurrency } from "@/lib/domain/money"
 import { issuePickupDocSlip } from "@/lib/domain/pickup-doc"
 import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { pushNotification } from "@/lib/domain/notify"
@@ -142,6 +143,13 @@ export default function OperationsUseboxPage() {
       issuedAt: confirmedAt,
       remark: "订单确认时自动开具",
     })
+    const fx = attachBillFx({
+      amount: price * confirming.quantity,
+      currency:
+        confirming.orderCurrency ||
+        inferBillCurrency({ city: confirming.pickupCity }),
+      exchangeRate: confirming.exchangeRate,
+    })
     const nextOrder: UseBoxOrder = {
       ...confirming,
       customerId,
@@ -149,6 +157,8 @@ export default function OperationsUseboxPage() {
       pickupYard,
       returnYard,
       unitPrice: price,
+      orderCurrency: fx.currency,
+      exchangeRate: fx.exchangeRate,
       adminRemark,
       confirmedAt,
       confirmedBy,
@@ -162,6 +172,8 @@ export default function OperationsUseboxPage() {
         pickupYard,
         returnYard,
         unitPrice: price,
+        orderCurrency: fx.currency,
+        exchangeRate: fx.exchangeRate,
         adminRemark,
         confirmedAt,
         confirmedBy: nextOrder.confirmedBy,
@@ -271,6 +283,14 @@ export default function OperationsUseboxPage() {
             <Field label="提箱城市" value={detail.pickupCity} /><Field label="还箱城市" value={detail.returnCity} />
             <Field label="箱型 / 数量" value={`${detail.containerType} × ${detail.quantity}`} /><Field label="成交单价" value={`¥${detail.unitPrice.toLocaleString()}`} />
             <Field label="提箱堆场" value={detail.pickupYard || "—"} /><Field label="还箱堆场" value={detail.returnYard || "—"} />
+            <Field label="结算币种" value={detail.orderCurrency || inferBillCurrency({ city: detail.pickupCity })} />
+            <Field
+              label="汇率（对人民币）"
+              value={formatExchangeRate(
+                detail.exchangeRate ?? 1,
+                detail.orderCurrency || inferBillCurrency({ city: detail.pickupCity }),
+              )}
+            />
             <Field label="创建时间" value={detail.createdAt} /><Field label="状态" value={detail.status} />
           </div>
           {detail.remark && <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">客户备注：{detail.remark}</p>}

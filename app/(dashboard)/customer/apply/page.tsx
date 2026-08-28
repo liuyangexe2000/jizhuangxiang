@@ -24,6 +24,7 @@ import { pushNotification } from "@/lib/domain/notify"
 import { resolveCustomerId } from "@/lib/domain/resolve-customer"
 import { assertCustomerCanApply } from "@/lib/domain/customer-contract"
 import { CONTAINER_TYPES, DEFAULT_CONTAINER_TYPE } from "@/lib/container-types"
+import { attachBillFx, inferBillCurrency } from "@/lib/domain/money"
 import type {
   ContainerType,
   Customer,
@@ -66,8 +67,11 @@ export default function ApplyPage() {
   const [containerType, setContainerType] = useState(DEFAULT_CONTAINER_TYPE)
   const [quantity, setQuantity] = useState("")
   const [remark, setRemark] = useState("")
+  const [boxSource, setBoxSource] = useState<"" | "自有箱" | "租赁箱">("")
   const [quoted, setQuoted] = useState<number | null>(null)
   const [quotedUnit, setQuotedUnit] = useState<number | null>(null)
+  const [quotedFreeDays, setQuotedFreeDays] = useState<number | null>(null)
+  const [quotedOverdueRate, setQuotedOverdueRate] = useState<number | null>(null)
 
   const valid =
     pickupCity &&
@@ -106,6 +110,8 @@ export default function ApplyPage() {
       toast.error(gate.message, { description: gate.description })
       setQuoted(null)
       setQuotedUnit(null)
+      setQuotedFreeDays(null)
+      setQuotedOverdueRate(null)
       return false
     }
     return true
@@ -118,6 +124,8 @@ export default function ApplyPage() {
       })
       setQuoted(null)
       setQuotedUnit(null)
+      setQuotedFreeDays(null)
+      setQuotedOverdueRate(null)
       return false
     }
     if (pickupCity && !citiesWithYard.has(pickupCity)) {
@@ -126,6 +134,8 @@ export default function ApplyPage() {
       })
       setQuoted(null)
       setQuotedUnit(null)
+      setQuotedFreeDays(null)
+      setQuotedOverdueRate(null)
       return false
     }
     if (returnCity && !citiesWithYard.has(returnCity)) {
@@ -134,6 +144,8 @@ export default function ApplyPage() {
       })
       setQuoted(null)
       setQuotedUnit(null)
+      setQuotedFreeDays(null)
+      setQuotedOverdueRate(null)
       return false
     }
     return true
@@ -157,11 +169,15 @@ export default function ApplyPage() {
       })
       setQuoted(null)
       setQuotedUnit(null)
+      setQuotedFreeDays(null)
+      setQuotedOverdueRate(null)
       return
     }
     const unit = Number(rule.unitPrice)
     setQuotedUnit(unit)
     setQuoted(unit * Number(quantity))
+    setQuotedFreeDays(rule.freeDays ?? null)
+    setQuotedOverdueRate(rule.overdueDailyRate ?? null)
     toast.success("系统已反馈用箱服务价格")
   }
 
@@ -174,6 +190,8 @@ export default function ApplyPage() {
       toast.error("价目已变更，请重新获取用箱价格")
       setQuoted(null)
       setQuotedUnit(null)
+      setQuotedFreeDays(null)
+      setQuotedOverdueRate(null)
       return
     }
     if (isProxy && !customerOrg) {
@@ -186,6 +204,10 @@ export default function ApplyPage() {
       `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     const unit = quotedUnit
     const customer = resolveApplyCustomerName()
+    const fx = attachBillFx({
+      amount: quoted,
+      currency: inferBillCurrency({ city: pickupCity }),
+    })
     try {
       const created = await create({
         customer,
@@ -196,6 +218,9 @@ export default function ApplyPage() {
         quantity: Number(quantity),
         unitPrice: unit,
         quotedUnitPrice: unit,
+        orderCurrency: fx.currency,
+        exchangeRate: fx.exchangeRate,
+        ...(boxSource ? { boxSource } : {}),
         status: "待确认",
         createdAt: fmt(now),
         releaseDocReady: false,
@@ -225,7 +250,11 @@ export default function ApplyPage() {
       setContainerType(DEFAULT_CONTAINER_TYPE)
       setQuantity("")
       setRemark("")
+      setBoxSource("")
       setQuoted(null)
+      setQuotedUnit(null)
+      setQuotedFreeDays(null)
+      setQuotedOverdueRate(null)
       if (isProxy) setCustomerOrg("")
     } catch (e) {
       toast.error((e as Error).message)
@@ -346,6 +375,21 @@ export default function ApplyPage() {
                   onChange={(e) => setQuantity(e.target.value)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>箱源（可选）</Label>
+                <Select
+                  value={boxSource || undefined}
+                  onValueChange={(v) => setBoxSource((v as "" | "自有箱" | "租赁箱") ?? "")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="不指定 / 自有箱或租赁箱" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="自有箱">自有箱</SelectItem>
+                    <SelectItem value="租赁箱">租赁箱</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -388,6 +432,13 @@ export default function ApplyPage() {
                       label="用箱单价"
                       value={`¥${(quotedUnit ?? 0).toLocaleString()}`}
                     />
+                    {quotedFreeDays != null ? (
+                      <Row label="免费用箱期" value={`${quotedFreeDays} 天`} />
+                    ) : null}
+                    {quotedOverdueRate != null ? (
+                      <Row label="超期日费率" value={`¥${quotedOverdueRate.toLocaleString()}/箱/天`} />
+                    ) : null}
+                    {boxSource ? <Row label="箱源" value={boxSource} /> : null}
                     {isProxy && customerOrg ? <Row label="客户" value={customerOrg} /> : null}
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-primary/10 p-3">

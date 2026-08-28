@@ -60,7 +60,11 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const conditionNote: string | undefined =
     typeof body?.conditionNote === "string" && body.conditionNote ? body.conditionNote : undefined
   const actedBy = session.name || session.account
-  const actedAt = nowLocalStr()
+  const bodyReturnAt =
+    typeof body?.returnGateAt === "string" && body.returnGateAt.trim()
+      ? body.returnGateAt.trim().replace("T", " ").slice(0, 16)
+      : undefined
+  const actedAt = bodyReturnAt || nowLocalStr()
 
   if (conditionCheck === "异常") {
     await update("orders", order.id, {

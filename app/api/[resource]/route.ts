@@ -65,6 +65,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ res
     const { ensureDispatchScopeColumns } = await import("@/lib/ensure-dispatch-scope-schema")
     await ensureDispatchScopeColumns()
   }
+  if (resource === "useBoxPriceRules" || resource === "proxyCompanies" || resource === "dispatchPriceRules") {
+    const { ensureConfigTablesSchema } = await import("@/lib/ensure-config-tables-schema")
+    await ensureConfigTablesSchema()
+  }
   if (resource === "orders") {
     const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
     await ensureOrdersContainerNosColumn()
@@ -105,6 +109,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
   if (resource === "dispatch" || resource === "dispatchPriceRules") {
     const { ensureDispatchScopeColumns } = await import("@/lib/ensure-dispatch-scope-schema")
     await ensureDispatchScopeColumns()
+  }
+  if (resource === "useBoxPriceRules" || resource === "proxyCompanies" || resource === "dispatchPriceRules") {
+    const { ensureConfigTablesSchema } = await import("@/lib/ensure-config-tables-schema")
+    await ensureConfigTablesSchema()
   }
   if (resource === "orders") {
     const { ensureOrdersContainerNosColumn } = await import("@/lib/ensure-orders-schema")
