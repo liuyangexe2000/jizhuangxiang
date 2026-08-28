@@ -76,6 +76,10 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const { ensureAccountApplicationsSchema } = await import("@/lib/ensure-account-applications-schema")
     await ensureAccountApplicationsSchema()
   }
+  if (resource === "feedbackTickets") {
+    const { ensureFeedbackProcessFeedbackColumn } = await import("@/lib/ensure-feedback-schema")
+    await ensureFeedbackProcessFeedbackColumn()
+  }
   const item = await get(resource, decodeURIComponent(id))
   if (!item) return NextResponse.json({ error: "not found" }, { status: 404 })
   const ctx = await tenantContext(resource)
@@ -123,6 +127,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (resource === "accountApplications") {
     const { ensureAccountApplicationsSchema } = await import("@/lib/ensure-account-applications-schema")
     await ensureAccountApplicationsSchema()
+  }
+  if (resource === "feedbackTickets") {
+    const { ensureFeedbackProcessFeedbackColumn } = await import("@/lib/ensure-feedback-schema")
+    await ensureFeedbackProcessFeedbackColumn()
   }
   const existing = await get(resource, decodeURIComponent(id))
   if (!existing) return NextResponse.json({ error: "not found" }, { status: 404 })

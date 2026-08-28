@@ -16,6 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Table,
   TableBody,
@@ -34,6 +36,8 @@ const STATUSES: FeedbackTicketStatus[] = ["待处理", "处理中", "已关闭"]
 export default function AdminFeedbackPage() {
   const { data, update, isLoading } = useResource<FeedbackTicket>("feedbackTickets")
   const [detail, setDetail] = useState<FeedbackTicket | null>(null)
+  const [feedbackDraft, setFeedbackDraft] = useState("")
+  const [savingFeedback, setSavingFeedback] = useState(false)
   const [shotIndex, setShotIndex] = useState(0)
 
   const sorted = useMemo(
@@ -47,6 +51,7 @@ export default function AdminFeedbackPage() {
 
   function openDetail(t: FeedbackTicket) {
     setDetail(t)
+    setFeedbackDraft(t.processFeedback ?? "")
     setShotIndex(0)
   }
 
@@ -65,8 +70,32 @@ export default function AdminFeedbackPage() {
     }
   }
 
+  async function saveFeedback() {
+    if (!detail) return
+    const text = feedbackDraft.trim()
+    if (!text) {
+      toast.error("请填写处理反馈")
+      return
+    }
+    setSavingFeedback(true)
+    try {
+      await update(detail.id, {
+        processFeedback: text,
+        __auditAction: "修改",
+        __auditDetail: `工单处理反馈 ${detail.ticketNo}`,
+      })
+      await revalidateResource("feedbackTickets")
+      setDetail((prev) => (prev ? { ...prev, processFeedback: text } : prev))
+      toast.success("处理反馈已保存")
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSavingFeedback(false)
+    }
+  }
+
   function handleExportCsv() {
-    const headers = ["工单号", "类型", "状态", "页面", "内容", "提交人", "创建时间"]
+    const headers = ["工单号", "类型", "状态", "页面", "内容", "提交人", "创建时间", "处理反馈"]
     const rows = sorted.map((t) => [
       t.ticketNo,
       t.type,
@@ -75,6 +104,7 @@ export default function AdminFeedbackPage() {
       t.content,
       `${t.userName}（${t.account}）`,
       t.createdAt,
+      t.processFeedback ?? "",
     ])
     const stamp = new Date().toISOString().slice(0, 10)
     downloadCsv(`反馈工单_${stamp}.csv`, headers, rows)
@@ -145,6 +175,7 @@ export default function AdminFeedbackPage() {
                   <TableHead>页面</TableHead>
                   <TableHead>时间</TableHead>
                   <TableHead>状态</TableHead>
+                  <TableHead>反馈</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -167,6 +198,9 @@ export default function AdminFeedbackPage() {
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={t.status} />
+                    </TableCell>
+                    <TableCell className="max-w-[8rem] truncate text-xs text-muted-foreground" title={t.processFeedback}>
+                      {t.processFeedback ? "已填写" : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" className="gap-1" onClick={() => openDetail(t)}>
@@ -191,7 +225,7 @@ export default function AdminFeedbackPage() {
             </DialogDescription>
           </DialogHeader>
           {detail && (
-            <div className="space-y-3 text-sm">
+            <div className="space-y-4 text-sm">
               <p>
                 <span className="text-muted-foreground">提交人：</span>
                 {detail.userName}（{detail.account}）· {detail.roleName}（{detail.roleId}）
@@ -200,7 +234,29 @@ export default function AdminFeedbackPage() {
                 <span className="text-muted-foreground">页面：</span>
                 {detail.pagePath}
               </p>
-              <div className="rounded-md border bg-muted/30 p-3 whitespace-pre-wrap">{detail.content}</div>
+              <div>
+                <p className="mb-1.5 text-muted-foreground">用户描述</p>
+                <div className="rounded-md border bg-muted/30 p-3 whitespace-pre-wrap">{detail.content}</div>
+              </div>
+
+              <div className="space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3">
+                <Label htmlFor="process-feedback" className="text-sm font-medium text-foreground">
+                  工单处理反馈
+                </Label>
+                <Textarea
+                  id="process-feedback"
+                  rows={4}
+                  placeholder="填写修复说明、验收结论或后续计划…"
+                  value={feedbackDraft}
+                  onChange={(e) => setFeedbackDraft(e.target.value)}
+                />
+                <div className="flex justify-end">
+                  <Button size="sm" disabled={savingFeedback} onClick={() => void saveFeedback()}>
+                    {savingFeedback ? "保存中…" : "保存处理反馈"}
+                  </Button>
+                </div>
+              </div>
+
               {detailShots.length > 0 && (
                 <div className="space-y-2">
                   <div className="relative flex min-h-[12rem] items-center justify-center overflow-hidden rounded-md border bg-muted/20 p-2">
@@ -255,17 +311,20 @@ export default function AdminFeedbackPage() {
                   </p>
                 </div>
               )}
-              <div className="flex flex-wrap gap-2">
-                {STATUSES.map((st) => (
-                  <Button
-                    key={st}
-                    size="sm"
-                    variant={detail.status === st ? "default" : "outline"}
-                    onClick={() => void setStatus(detail.id, st)}
-                  >
-                    {st}
-                  </Button>
-                ))}
+              <div>
+                <p className="mb-2 text-muted-foreground">工单状态</p>
+                <div className="flex flex-wrap gap-2">
+                  {STATUSES.map((st) => (
+                    <Button
+                      key={st}
+                      size="sm"
+                      variant={detail.status === st ? "default" : "outline"}
+                      onClick={() => void setStatus(detail.id, st)}
+                    >
+                      {st}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

@@ -613,6 +613,7 @@ CREATE TABLE `feedback_tickets` (
   `screenshots` JSON NULL,
   `createdAt` VARCHAR(32) NOT NULL,
   `status` VARCHAR(20) NOT NULL DEFAULT '待处理',
+  `processFeedback` TEXT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_fb_status` (`status`),
   KEY `idx_fb_created` (`createdAt`)

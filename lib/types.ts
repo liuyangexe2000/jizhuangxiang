@@ -792,4 +792,6 @@ export interface FeedbackTicket {
   /** 提交时间（表单隐藏字段） */
   createdAt: string
   status: FeedbackTicketStatus
+  /** 管理员处理反馈（关单说明 / 修复结论） */
+  processFeedback?: string
 }

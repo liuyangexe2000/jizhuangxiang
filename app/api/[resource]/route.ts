@@ -81,6 +81,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ res
     const { ensureAccountApplicationsSchema } = await import("@/lib/ensure-account-applications-schema")
     await ensureAccountApplicationsSchema()
   }
+  if (resource === "feedbackTickets") {
+    const { ensureFeedbackProcessFeedbackColumn } = await import("@/lib/ensure-feedback-schema")
+    await ensureFeedbackProcessFeedbackColumn()
+  }
   const data = await list(resource)
   const ctx = await tenantContext(resource)
   const filtered = filterRowsByTenant(resource, data, session, ctx)
@@ -129,6 +133,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
   if (resource === "accountApplications") {
     const { ensureAccountApplicationsSchema } = await import("@/lib/ensure-account-applications-schema")
     await ensureAccountApplicationsSchema()
+  }
+  if (resource === "feedbackTickets") {
+    const { ensureFeedbackProcessFeedbackColumn } = await import("@/lib/ensure-feedback-schema")
+    await ensureFeedbackProcessFeedbackColumn()
   }
   const cfg = RESOURCES[resource]
   const body = await req.json()
