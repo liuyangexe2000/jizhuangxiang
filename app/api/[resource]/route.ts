@@ -74,8 +74,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ res
     await ensureOrdersContainerNosColumn()
   }
   if (resource === "repair") {
-    const { ensureRepairProcessLogColumn } = await import("@/lib/ensure-repair-schema")
-    await ensureRepairProcessLogColumn()
+    const { ensureRepairQuoteColumns } = await import("@/lib/ensure-repair-schema")
+    await ensureRepairQuoteColumns()
+  }
+  if (resource === "accountApplications") {
+    const { ensureAccountApplicationsSchema } = await import("@/lib/ensure-account-applications-schema")
+    await ensureAccountApplicationsSchema()
   }
   const data = await list(resource)
   const ctx = await tenantContext(resource)
@@ -119,8 +123,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
     await ensureOrdersContainerNosColumn()
   }
   if (resource === "repair") {
-    const { ensureRepairProcessLogColumn } = await import("@/lib/ensure-repair-schema")
-    await ensureRepairProcessLogColumn()
+    const { ensureRepairQuoteColumns } = await import("@/lib/ensure-repair-schema")
+    await ensureRepairQuoteColumns()
+  }
+  if (resource === "accountApplications") {
+    const { ensureAccountApplicationsSchema } = await import("@/lib/ensure-account-applications-schema")
+    await ensureAccountApplicationsSchema()
   }
   const cfg = RESOURCES[resource]
   const body = await req.json()

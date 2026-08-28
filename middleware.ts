@@ -3,11 +3,13 @@ import { verifySession, SESSION_COOKIE } from "@/lib/session"
 
 const PUBLIC_PATHS = [
   "/login",
+  "/signup",
   "/api/auth/login",
   "/api/auth/demo-accounts",
   "/api/auth/me",
   "/api/external",
   "/api/settings/public",
+  "/api/account-applications",
 ]
 
 export async function middleware(req: NextRequest) {

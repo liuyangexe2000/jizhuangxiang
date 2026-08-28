@@ -53,6 +53,7 @@ export const statusSoftTone: Record<string, SoftTone> = {
   驳回: "danger",
   未开始: "muted",
   待审核: "muted",
+  待报价: "muted",
   已通过: "success",
   已映射: "success",
   未映射: "warning",

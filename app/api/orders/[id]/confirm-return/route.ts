@@ -13,10 +13,13 @@ import {
   patchContainerOnReturn,
 } from "@/lib/domain/dispatch-ops"
 import { buildDamageFeeBill, buildOverdueFeeBill } from "@/lib/domain/order-ops"
+import {
+  generateBoardingAlightingBill,
+} from "@/lib/domain/multi-bill-plan"
 import { getSetting } from "@/lib/settings"
 import { SETTING_KEYS } from "@/lib/settings-keys"
 import { ensureCustomerIdColumns } from "@/lib/ensure-customer-id-schema"
-import type { Bill, ContainerMaster, InventoryRow, UseBoxOrder } from "@/lib/types"
+import type { Bill, ContainerMaster, InventoryRow, UseBoxOrder, Yard } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -177,6 +180,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   })
 
   let overdueBillNo: string | undefined
+  let boardingBillNo: string | undefined
   try {
     if (!(await hasBillOfType(order.orderNo, "超期费账单"))) {
       const freeDays = await getSetting<number>(SETTING_KEYS.useboxFreeDays, 7)
@@ -204,6 +208,38 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     console.warn("[v0] confirm-return overdue bill skipped:", (e as Error).message)
   }
 
+  try {
+    if (!(await hasBillOfType(order.orderNo, "上下车费账单"))) {
+      const yardRow =
+        (yards as Yard[]).find((y) => y.name === yard || y.name === order.returnYard) ?? null
+      const bill = generateBoardingAlightingBill({
+        order,
+        yard: yardRow,
+        includeBoarding: true,
+        includeAlighting: true,
+      })
+      if (bill) {
+        const created = (await create("bills", bill)) as Bill
+        boardingBillNo = created.billNo
+        await create("notifications", {
+          id: `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+          type: "账单",
+          level: "重要",
+          title: `上下车费账单待确认 · ${order.orderNo}`,
+          desc: `还箱作业上下车费 ¥${bill.amount.toLocaleString()}（${created.billNo}）。`,
+          module: "M01 提还箱作业",
+          href: "/customer/bills",
+          roles: ["R01", "R03"],
+          actionable: true,
+          read: false,
+          createdAt: actedAt,
+        })
+      }
+    }
+  } catch (e) {
+    console.warn("[v0] confirm-return boarding bill skipped:", (e as Error).message)
+  }
+
   await create("notifications", {
     id: `n_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
     type: "任务",
@@ -211,7 +247,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     title: `已确认收箱 · ${order.orderNo}`,
     desc: `${yard} · ${actedBy} 确认收箱，订单已完成${
       overdueBillNo ? `，已出超期费 ${overdueBillNo}` : ""
-    }。`,
+    }${boardingBillNo ? `，已出上下车费 ${boardingBillNo}` : ""}。`,
     module: "M01 提还箱作业",
     href: "/customer/documents",
     roles: ["R01", "R03"],
@@ -225,11 +261,15 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     action: "修改",
     module: "M01 提还箱作业",
     target: order.orderNo,
-    detail: overdueBillNo
-      ? `现场确认收箱（${yard}），库存联动进场，已出超期费 ${overdueBillNo}`
-      : `现场确认收箱（${yard}），库存联动进场`,
+    detail: [
+      `现场确认收箱（${yard}），库存联动进场`,
+      overdueBillNo ? `已出超期费 ${overdueBillNo}` : "",
+      boardingBillNo ? `已出上下车费 ${boardingBillNo}` : "",
+    ]
+      .filter(Boolean)
+      .join("，"),
     ip: clientIp(req),
   })
 
-  return NextResponse.json({ ok: true, conditionCheck, actedBy, actedAt, overdueBillNo })
+  return NextResponse.json({ ok: true, conditionCheck, actedBy, actedAt, overdueBillNo, boardingBillNo })
 }

@@ -18,6 +18,7 @@ import type {
   OutboundEvent,
   AttachmentMeta,
   FeedbackTicket,
+  AccountApplication,
   SystemSetting,
   UseBoxPriceRule,
   DispatchPriceRule,
@@ -846,6 +847,8 @@ export const outboundEvents: OutboundEvent[] = []
 export const attachments: AttachmentMeta[] = []
 
 export const feedbackTickets: FeedbackTicket[] = []
+
+export const accountApplications: AccountApplication[] = []
 
 /** 用箱价目（提箱城市 + 还箱城市 + 箱型） */
 const USEBOX_TYPE_PRICES: Record<ContainerType, number> = {

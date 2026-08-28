@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CircleDollarSign, ClipboardList, Eye, Plus, Search, Trash2, Wrench, X } from "lucide-react"
+import { CircleDollarSign, ClipboardList, Eye, Plus, Search, Trash2, Wrench, X, FileSpreadsheet } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { StatusBadge } from "@/components/status-badge"
@@ -27,6 +27,7 @@ import { compressImageToMaxWidth, revokePreviewUrls } from "@/lib/image-compress
 import { useDictionary } from "@/lib/dictionary-context"
 import { getFieldValue, useListQuery } from "@/lib/list-query"
 import { useRole } from "@/lib/role-context"
+import { RepairQuoteDialog } from "@/components/repair-quote-dialog"
 import { solidTone } from "@/lib/ui-tone"
 import type {
   AttachmentMeta,
@@ -91,9 +92,11 @@ const emptyAdvanceForm = (order?: RepairOrder | null): AdvanceFormState => ({
 })
 
 export default function RepairOrdersPage() {
-  const { user } = useRole()
+  const { user, roleId } = useRole()
   const { pickupCities } = useDictionary()
   const actor = user?.name || user?.account || "系统用户"
+  const canQuoteEdit = ["R00", "R01", "R03", "R04", "R06"].includes(roleId ?? "")
+  const canQuoteApprove = roleId === "R00" || roleId === "R01"
   const { data: orders, create: createRepair, update: updateRepair } = useResource<RepairOrder>("repair")
   const { data: yards } = useResource<Yard>("yards")
   const { data: containers, update: updateContainer } = useResource<ContainerMaster>("containers")
@@ -107,6 +110,7 @@ export default function RepairOrdersPage() {
   const [scrapTarget, setScrapTarget] = useState<RepairOrder | null>(null)
   const [scrapReason, setScrapReason] = useState("")
   const [detailTarget, setDetailTarget] = useState<RepairOrder | null>(null)
+  const [quoteTarget, setQuoteTarget] = useState<RepairOrder | null>(null)
   const [form, setForm] = useState(initialForm)
   const [photos, setPhotos] = useState<PhotoDraft[]>([])
   const [uploading, setUploading] = useState(false)
@@ -605,12 +609,23 @@ export default function RepairOrdersPage() {
                     <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{order.reportedAt}</TableCell>
                     <TableCell>
                       <StatusBadge status={order.status} />
+                      {order.quoteStatus && (
+                        <p className="mt-1">
+                          <StatusBadge status={order.quoteStatus} />
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-right">
                       <Button size="sm" variant="ghost" onClick={() => setDetailTarget(order)}>
                         <Eye className="mr-1 size-3.5" />
                         详情
                       </Button>
+                      {(canQuoteEdit || canQuoteApprove) && (
+                        <Button size="sm" variant="ghost" onClick={() => setQuoteTarget(order)}>
+                          <FileSpreadsheet className="mr-1 size-3.5" />
+                          报价
+                        </Button>
+                      )}
                       {NEXT_STEP[order.status] && (
                         <Button size="sm" variant="ghost" onClick={() => openAdvance(order)}>
                           {NEXT_STEP[order.status]?.label}
@@ -1094,6 +1109,14 @@ export default function RepairOrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RepairQuoteDialog
+        order={quoteTarget}
+        open={!!quoteTarget}
+        onOpenChange={(open) => !open && setQuoteTarget(null)}
+        canEdit={canQuoteEdit}
+        canApprove={canQuoteApprove}
+      />
     </>
   )
 }

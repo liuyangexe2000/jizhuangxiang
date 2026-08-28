@@ -103,6 +103,10 @@ export const defaultResourceAcl: Record<ResourceKey, Access> = {
     read: roles(["R00"]),
     write: ALL,
   },
+  accountApplications: {
+    read: ["R00"],
+    write: ["R00"],
+  },
   useBoxPriceRules: {
     // R03 用箱申请需按线路+箱型报价
     read: roles(["R00", "R01", "R03"]),

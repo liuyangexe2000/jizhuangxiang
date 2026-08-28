@@ -69,8 +69,12 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     await ensureOrdersContainerNosColumn()
   }
   if (resource === "repair") {
-    const { ensureRepairProcessLogColumn } = await import("@/lib/ensure-repair-schema")
-    await ensureRepairProcessLogColumn()
+    const { ensureRepairQuoteColumns } = await import("@/lib/ensure-repair-schema")
+    await ensureRepairQuoteColumns()
+  }
+  if (resource === "accountApplications") {
+    const { ensureAccountApplicationsSchema } = await import("@/lib/ensure-account-applications-schema")
+    await ensureAccountApplicationsSchema()
   }
   const item = await get(resource, decodeURIComponent(id))
   if (!item) return NextResponse.json({ error: "not found" }, { status: 404 })
@@ -113,8 +117,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     await ensureOrdersContainerNosColumn()
   }
   if (resource === "repair") {
-    const { ensureRepairProcessLogColumn } = await import("@/lib/ensure-repair-schema")
-    await ensureRepairProcessLogColumn()
+    const { ensureRepairQuoteColumns } = await import("@/lib/ensure-repair-schema")
+    await ensureRepairQuoteColumns()
+  }
+  if (resource === "accountApplications") {
+    const { ensureAccountApplicationsSchema } = await import("@/lib/ensure-account-applications-schema")
+    await ensureAccountApplicationsSchema()
   }
   const existing = await get(resource, decodeURIComponent(id))
   if (!existing) return NextResponse.json({ error: "not found" }, { status: 404 })

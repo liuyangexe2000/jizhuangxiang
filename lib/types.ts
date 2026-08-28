@@ -1,5 +1,7 @@
 // 集装箱业务管理系统 — 全局类型定义
 
+import type { RepairApprovalStatus, RepairQuoteLine } from "./domain/repair-approval-plan"
+
 export type RoleId = "R00" | "R01" | "R02" | "R03" | "R04" | "R05" | "R06"
 
 export interface Role {
@@ -95,7 +97,15 @@ export interface UseBoxOrder {
   }[]
 }
 
-export type BillType = "用箱账单" | "超期费账单" | "箱损费账单" | "用箱变更费账单" | "调运费账单"
+export type BillType =
+  | "用箱账单"
+  | "超期费账单"
+  | "箱损费账单"
+  | "用箱变更费账单"
+  | "调运费账单"
+  | "维修费账单"
+  | "上下车费账单"
+  | "异常费账单"
 export type BillStatus = "待确认" | "已确认" | "有异议" | "已支付" | "超时默认确认"
 export type BillCurrency = "CNY" | "USD" | "EUR"
 
@@ -556,6 +566,31 @@ export interface RepairOrder {
   status: RepairStatus
   /** 各节点表单录入留痕（按时间追加） */
   processLog?: RepairProcessLogEntry[]
+  /** 报价明细行（Batch D） */
+  quoteLines?: RepairQuoteLine[]
+  quoteStatus?: RepairApprovalStatus
+  quoteTotal?: number
+  quoteApprovedBy?: string
+  quoteApprovedAt?: string
+  quoteRejectReason?: string
+}
+
+/** 公开账号申请（Batch D） */
+export type AccountApplicationStatus = "待审核" | "已通过" | "已驳回"
+
+export interface AccountApplication {
+  id: string
+  name: string
+  org: string
+  email: string
+  phone: string
+  remark?: string
+  status: AccountApplicationStatus
+  createdAt: string
+  reviewedAt?: string
+  reviewedBy?: string
+  rejectReason?: string
+  createdUserId?: string
 }
 
 // ---------- 系统管理：用户与代理 ----------

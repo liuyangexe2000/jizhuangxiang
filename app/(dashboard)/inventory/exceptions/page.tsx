@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Table,
   TableBody,
@@ -40,9 +41,10 @@ import { useResource, revalidateResource } from "@/lib/api"
 import { downloadCsv, parseCsv } from "@/lib/csv"
 import { useDictionary } from "@/lib/dictionary-context"
 import { useListQuery } from "@/lib/list-query"
+import { useRole } from "@/lib/role-context"
 import type { ContainerMaster, DispatchOrder, GateRecord, InventoryRow, UseBoxOrder, Yard } from "@/lib/types"
 import { applyPickupInventory, applyReturnInventory, findInventoryRow, nowLocalStr } from "@/lib/domain/dispatch-ops"
-import { AlertTriangle, Download, Plus, Upload, Wrench, CheckCircle2, Search } from "lucide-react"
+import { AlertTriangle, Download, Plus, Upload, Wrench, CheckCircle2, Search, Receipt } from "lucide-react"
 
 function toInputTime(time: string) {
   return time.replace(" ", "T").slice(0, 16)
@@ -57,6 +59,8 @@ function fromInputTime(time: string) {
 const GATE_CSV_HEADERS = ["箱号", "类型", "城市", "堆场", "时间"] as const
 
 export default function ExceptionsPage() {
+  const { roleId } = useRole()
+  const canBill = roleId === "R00" || roleId === "R01"
   const { pickupCities } = useDictionary()
   const { data: allRecords, create, update } = useResource<GateRecord>("gate")
   const { data: inventory, update: updateInventory } = useResource<InventoryRow>("inventory")
@@ -72,6 +76,10 @@ export default function ExceptionsPage() {
   )
   const [keyword, setKeyword] = useState("")
   const [addOpen, setAddOpen] = useState(false)
+  const [billTarget, setBillTarget] = useState<GateRecord | null>(null)
+  const [billAmount, setBillAmount] = useState("")
+  const [billNote, setBillNote] = useState("")
+  const [billing, setBilling] = useState(false)
   const [form, setForm] = useState({
     containerNo: "",
     type: "进场",
@@ -171,6 +179,35 @@ export default function ExceptionsPage() {
       )
     } catch (e) {
       toast.error((e as Error).message)
+    }
+  }
+
+  async function submitAbnormalBill() {
+    if (!billTarget) return
+    const amount = Number(billAmount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("请填写有效计费金额")
+      return
+    }
+    setBilling(true)
+    try {
+      const res = await fetch(`/api/gate/${encodeURIComponent(billTarget.id)}/abnormal-bill`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, note: billNote }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || "生成失败")
+        return
+      }
+      toast.success(`已生成异常费账单 ${data.billNo}`)
+      setBillTarget(null)
+      setBillAmount("")
+      setBillNote("")
+      await revalidateResource("bills")
+    } finally {
+      setBilling(false)
     }
   }
 
@@ -490,7 +527,21 @@ export default function ExceptionsPage() {
                     <TableCell className="text-sm">{r.yard} · {r.city}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.source}</TableCell>
                     <TableCell><StatusBadge status={r.mappingStatus} /></TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-1">
+                      {canBill && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setBillTarget(r)
+                            setBillAmount("")
+                            setBillNote("")
+                          }}
+                        >
+                          <Receipt className="mr-1 size-3.5" />
+                          异常费
+                        </Button>
+                      )}
                       {r.mappingStatus === "已映射" ? (
                         <span className="inline-flex items-center gap-1 text-xs text-success">
                           <CheckCircle2 className="size-3.5" /> 已处理
@@ -523,6 +574,46 @@ export default function ExceptionsPage() {
           />
         </CardContent>
       </Card>
+
+      <Dialog open={!!billTarget} onOpenChange={(o) => !o && setBillTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>生成异常费账单</DialogTitle>
+            <DialogDescription>
+              {billTarget?.containerNo} · {billTarget?.type} · {billTarget?.yard}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>计费金额（元）*</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={billAmount}
+                onChange={(e) => setBillAmount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>说明</Label>
+              <Textarea
+                rows={2}
+                value={billNote}
+                onChange={(e) => setBillNote(e.target.value)}
+                placeholder="异常计费原因"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBillTarget(null)}>
+              取消
+            </Button>
+            <Button disabled={billing} onClick={() => void submitAbnormalBill()}>
+              确认出账
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
